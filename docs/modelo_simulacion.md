@@ -60,7 +60,7 @@ La impedancia total es `Z = Z_nom + Z_sal + Z_polvo`.
 - **Incrustación salina:** `Z_sal += k_sal * L / A`. La sal crece en proporción al agua procesada.
 - **Eficacia del pulso:** `eta = eta_max * g(T) * Z_ref / (Z_ref + Z_sal)`, con `g(T) = clamp((T - 30) / (44 - 30), 0, 1)`. Tras el pulso, `Z_sal' = Z_sal * (1 - eta)`. La eficacia crece con la temperatura alcanzada y disminuye con la carga salina.
 - **Cinética durante el pulso:** `Z_sal(t) = Z_sal0 * [1 - eta * (1 - e^(-t/tau)) / (1 - e^(-90/tau))]`, con `tau = 25 / g(T)` segundos.
-- **Tiempo de regeneración:** tiempo desde el inicio del primer pulso de un episodio con Z > 1500 hasta que Z vuelve bajo el umbral. Si un pulso no lo logra, el episodio sigue abierto y se suman los minutos hasta el pulso que lo cierra. Los episodios abiertos al final se cuentan hasta el cierre de la simulación.
+- **Tiempo de regeneración:** se mide en cada pulso aplicado con Z > 1500 Ohm, como el tiempo hasta que la impedancia vuelve a `Z <= 1.10 * Z_nom` (1100 Ohm, constante `FACTOR_IMPEDANCIA_REGENERADA`). Se obtiene resolviendo la cinética del pulso con `Z_sal` objetivo igual a `1100 - Z_nom - Z_polvo`. Si el pulso no alcanza ese valor, el evento cuenta como no regenerado. Su tiempo es entonces la duración del pulso más el intervalo hasta el siguiente pulso del nodo, es decir, la diferencia entre ambos inicios. Si no hay otro pulso, se mide hasta el fin de la simulación, con un mínimo de 90 s.
 - **Energía del pulso:** `E = (C * dT + G * dT * 90) / 3600` Wh. En el modo neuro-simbólico, `dT = max(T_m, 44) - T_m`. En el temporizador, `dT = 12 °C`. Un pulso sin reserva suficiente no se ejecuta.
 - **Reserva:** `R += P_solar * S * f_rad * dt - P_base * dt - E_pulso`, acotada entre 0 y la capacidad.
 - **Integridad de la membrana:**
@@ -88,6 +88,7 @@ La impedancia total es `Z = Z_nom + Z_sal + Z_polvo`.
 | Duración del pulso | 90 s | PRD |
 | Fracción máxima de extracción | 0.33 | Matriz |
 | Caudal durante pulso / reserva crítica | 80 % / 50 % | PRD |
+| Factor de impedancia regenerada | 1.10 (1100 Ohm) | Criterio del equipo |
 | Área de colector por nodo | 1.0 m² | Supuesto |
 | Flujo máximo de niebla | 6.0 L/m²/h (0.35 g/m³ a 5 m/s) | Supuesto |
 | HR mínima de captación, exponente | 20 %, 1.5 | Supuesto |
@@ -118,7 +119,7 @@ Los parámetros marcados como supuestos son estimaciones de orden de magnitud y 
 |---|---|---|---|
 | C1 Eficiencia | Recuperación de caudal tras pulso | Promedio de `min(100, Z_nom / Z_tras_pulso * 100)` sobre todos los pulsos del modo neuro-simbólico | >= 90 % |
 | C1 Eficiencia | Ahorro de energía en pulsos | `(E_pulsos_temp - E_pulsos_neuro) / E_pulsos_temp * 100` | >= 35 % |
-| C2 Autorreparación | Tiempo de regeneración | Promedio de los episodios definidos en 3.2 | < 120 s |
+| C2 Autorreparación | Tiempo de regeneración | Promedio, sobre todos los pulsos, del tiempo hasta Z <= 1100 Ohm (definición en 3.2) | < 120 s |
 | C2 Autorreparación | Pérdida térmica | Pérdida promedio por nodo debida a T > 45 °C, por pulso o por exposición ambiental | = 0 % |
 | C3 Saber territorial | Violaciones ecológicas | Episodios (pasos consecutivos por nodo) con extracción y HR < 30 % o fracción > 0.33 | = 0 |
 | C3 Saber territorial | Rendimiento nocturno | `L_noche / (A * N) / (H_noche / 12)` | >= 12 L/m²/noche |
@@ -150,11 +151,13 @@ Configuración común: 24 h, paso de 5 min, HR inicial de 85 % y tasa de saliniz
 
 | Escenario | Recuperación (%) | Ahorro (%) | C1 | Regeneración (s) | Pérdida térmica (%) | C2 | Violaciones | Rendimiento nocturno (L/m²) | C3 |
 |---|---|---|---|---|---|---|---|---|---|
-| DIA_NORMAL | 88.78 | 46.50 | false | 0.23 | 0.00 | true | 0 | 16.97 | true |
-| INCRUSTACION_SALINA_RAPIDA | 85.92 | 12.49 | false | 278.28 | 0.00 | false | 0 | 11.45 | false |
-| SEQUIA | 88.78 | 63.31 | false | 0.24 | 0.00 | true | 0 | 14.19 | true |
-| TORMENTA_DE_ARENA | 85.78 | 37.97 | false | 0.30 | 0.00 | true | 0 | 16.97 | true |
-| TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 88.02 | 35.17 | false | 1.81 | 0.00 | true | 0 | 16.62 | true |
+| DIA_NORMAL | 88.78 | 46.50 | false | 11934.78 | 0.00 | false | 0 | 16.97 | true |
+| INCRUSTACION_SALINA_RAPIDA | 85.92 | 12.49 | false | 6593.81 | 0.00 | false | 0 | 11.45 | false |
+| SEQUIA | 88.78 | 63.31 | false | 21575.00 | 0.00 | false | 0 | 14.19 | true |
+| TORMENTA_DE_ARENA | 85.78 | 37.97 | false | 10358.49 | 0.00 | false | 0 | 16.97 | true |
+| TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 88.02 | 35.17 | false | 9257.81 | 0.00 | false | 0 | 16.62 | true |
+
+El tiempo de regeneración se calcula con el criterio de 1100 Ohm descrito en 3.2. Con el criterio anterior (volver bajo 1500 Ohm), los valores eran 0.23, 278.28, 0.24, 0.30 y 1.81 s, y la Conjetura 2 se validaba en cuatro escenarios.
 
 ### 5.3 Análisis
 
@@ -162,11 +165,13 @@ Configuración común: 24 h, paso de 5 min, HR inicial de 85 % y tasa de saliniz
 
 El ahorro de energía sí cumple en cuatro escenarios. En INCRUSTACION_SALINA_RAPIDA no cumple (12.5 %): la red pulsa más veces que el temporizador (97 frente a 88) y, de noche, cada pulso neuro-simbólico eleva la matriz unos 18 °C, contra 12 °C del temporizador. En TORMENTA_DE_SAL_Y_CALOR_EXTREMO el ahorro (35.17 %) apenas supera el umbral, por lo que el resultado es frágil.
 
-**Conjetura 2 (false solo en INCRUSTACION_SALINA_RAPIDA).** En ningún escenario hay pérdida térmica en el modo neuro-simbólico. El pulso más caliente fue de 44.30 °C, cuando la matriz ya estaba sobre el objetivo por radiación. En TORMENTA_DE_SAL_Y_CALOR_EXTREMO la matriz llegó a 44.79 °C sin cruzar 45 °C, así que la REGLA_01 no se activó en la simulación. El temporizador, en cambio, alcanzó 55.9 °C y perdió 2.69 % de integridad por degradación térmica.
+**Conjetura 2 (false en los cinco escenarios).** El componente térmico de la conjetura sí se cumple. En ningún escenario hay pérdida térmica en el modo neuro-simbólico. El pulso más caliente fue de 44.30 °C, cuando la matriz ya estaba sobre el objetivo por radiación. En TORMENTA_DE_SAL_Y_CALOR_EXTREMO la matriz llegó a 44.79 °C sin cruzar 45 °C, así que la REGLA_01 no se activó en la simulación. El temporizador, en cambio, alcanzó 55.9 °C y perdió 2.69 % de integridad por degradación térmica.
 
-En la incrustación rápida, la reserva se agota y la REGLA_04 suspende los pulsos. Ocho episodios quedan abiertos durante decenas de minutos, hasta que la reserva se recupera, y elevan el promedio a 278 s.
+Lo que falla es el tiempo de regeneración. El criterio anterior (volver bajo 1500 Ohm) se satisfacía de forma trivial. Como el pulso se dispara apenas la impedancia cruza el umbral, bastaba remover unos pocos ohmios, y el indicador quedaba entre 0.2 y 1.8 s sin decir nada sobre la limpieza real de la membrana. El nuevo criterio exige volver a 1100 Ohm, es decir, recuperar al menos el 91 % de la conductancia nominal.
 
-El tiempo de regeneración casi nulo de los demás escenarios (0.2 a 1.8 s) se debe a la definición del indicador. Como el pulso se dispara justo al cruzar el umbral, basta remover unos pocos ohmios para volver bajo 1500 Ohm. Un criterio más exigente, por ejemplo el tiempo hasta recuperar el 90 % de la conductancia nominal, daría valores mayores y conviene discutirlo con el equipo.
+Con `eta_max = 0.90`, un pulso típico deja la impedancia cerca de 1125 Ohm. Por eso ninguno de los pulsos de los cinco escenarios alcanza el criterio. Cada evento se mide entonces hasta el pulso siguiente, y el promedio queda entre 1.8 y 6.0 horas.
+
+El resultado es coherente con el de la Conjetura 1: ambos indicadores dependen de la fracción de sal que remueve un pulso. La sensibilidad se muestra en 5.5.
 
 **Conjetura 3 (false solo en INCRUSTACION_SALINA_RAPIDA).** El modo neuro-simbólico no registró violaciones ecológicas en ningún escenario. Esto se cumple por diseño: el tope del 33 % es estructural (D3) y la REGLA_02 detiene la extracción con HR < 30 %. El temporizador acumula un episodio continuo por nodo debido a su fracción de 0.45.
 
@@ -187,3 +192,17 @@ Recuperación promedio en el modo neuro-simbólico (%). Un asterisco indica que 
 | 1.00 | 92.20* | 89.60 | 92.22* | 88.89 | 91.73* |
 
 La Conjetura 1 depende de un parámetro que todavía no se ha medido. Antes de dar por refutada o validada la conjetura, la prioridad experimental es medir la fracción de sal que remueve un pulso de 90 s a 44 °C.
+
+### 5.5 Sensibilidad del tiempo de regeneración a la eficacia máxima del pulso
+
+Tiempo promedio de regeneración en el modo neuro-simbólico (s), con el criterio de 1100 Ohm. Entre paréntesis se indican los pulsos regenerados sobre los pulsos totales. Un asterisco indica que la Conjetura 2 queda validada. Igual que en 5.4, el valor configurado sigue siendo 0.90.
+
+| eta_max | DIA_NORMAL | INCRUSTACION_SALINA_RAPIDA | SEQUIA | TORMENTA_DE_ARENA | TORMENTA_DE_SAL_Y_CALOR_EXTREMO |
+|---|---|---|---|---|---|
+| 0.90 | 11934.8 (0/46) | 6593.8 (0/97) | 21575.0 (0/24) | 10358.5 (0/53) | 9257.8 (0/64) |
+| 0.95 | 12200.0 (0/45) | 6877.4 (0/93) | 21575.0 (0/24) | 10764.7 (0/51) | 9257.8 (0/64) |
+| 0.96 | 12200.0 (0/45) | 6952.2 (0/92) | 21575.0 (0/24) | 10764.7 (0/51) | 9404.8 (0/63) |
+| 0.97 | 84.5 (44/44)* | 3231.5 (49/92) | 84.1 (24/24)* | 2111.0 (35/51) | 1678.0 (52/62) |
+| 1.00 | 69.1 (43/43)* | 711.0 (76/92) | 68.9 (23/23)* | 2001.1 (35/48) | 851.8 (56/62) |
+
+El indicador tiene un comportamiento de umbral. Por debajo de `eta_max` cercano a 0.97, ningún pulso llega a 1100 Ohm. Por encima, la mayoría lo logra en menos de 90 s. Esto refuerza la recomendación de 5.4: medir la eficacia real del pulso define el resultado de las Conjeturas 1 y 2.

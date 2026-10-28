@@ -137,11 +137,11 @@ def test_reserva_baja_sin_impedancia_alta_es_nominal():
 def test_payload_prd_activa_regla_03():
     telemetria = TelemetryInput(
         nodo_id="NODO_04",
-        impedancia_ohms=1850.5,
-        temperatura_celsius=38.2,
-        reserva_calor_pct=65.0,
-        humedad_relativa_pct=82.0,
-        flujo_actual_ml_min=12.5,
+        impedancia_ohms=1650.5,
+        temperatura_celsius=36.2,
+        reserva_calor_pct=55.0,
+        humedad_relativa_pct=42.0,
+        flujo_actual_ml_min=14.5,
         modo_operacion=ModoOperacion.NEURO_SIMBOLICO,
     )
     decision = evaluar_telemetria(telemetria)

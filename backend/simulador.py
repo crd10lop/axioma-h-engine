@@ -200,7 +200,7 @@ class _EstadoNodo:
     ultimo_pulso_min: int = 0
     regla_previa: Optional[str] = None
     en_violacion: bool = False
-    inicio_regeneracion_min: Optional[int] = None
+    pulso_no_regenerado_min: Optional[int] = None
 
     @property
     def impedancia(self) -> float:
@@ -228,6 +228,8 @@ class DiagnosticoModo:
     integridad_minima: float = 100.0
     recuperaciones_pct: List[float] = field(default_factory=list)
     tiempos_regeneracion_seg: List[float] = field(default_factory=list)
+    pulsos_regenerados: int = 0
+    pulsos_no_regenerados: int = 0
     temperaturas_pulso_c: List[float] = field(default_factory=list)
     pulsos_omitidos_por_energia: int = 0
     impedancia_promedio: List[float] = field(default_factory=list)
@@ -256,6 +258,14 @@ def simular_modo(entorno: Entorno, modo: ModoOperacion) -> DiagnosticoModo:
     programación fija), se ejecuta el pulso si corresponde, se calcula el
     agua captada, se actualizan impedancia, integridad y reserva, y se
     registran las violaciones ecológicas por episodios.
+
+    Tiempo de regeneración: por cada pulso aplicado con impedancia sobre el
+    umbral, se mide el tiempo que tarda la impedancia en volver a
+    <= FACTOR_IMPEDANCIA_REGENERADA * Z_nominal. Si el pulso no lo logra, el
+    evento cuenta como no regenerado y su tiempo es la duración del pulso más
+    el intervalo hasta el siguiente pulso del nodo, es decir, la diferencia
+    entre ambos inicios; si no hay otro pulso, se mide hasta el fin de la
+    simulación, con un mínimo de la duración del pulso.
     """
     neuro = modo == ModoOperacion.NEURO_SIMBOLICO
     nodos = [_EstadoNodo() for _ in range(entorno.numero_nodos)]
@@ -335,18 +345,23 @@ def simular_modo(entorno: Entorno, modo: ModoOperacion) -> DiagnosticoModo:
                     diag.recuperaciones_pct.append(
                         min(100.0, modelo_fisico.conductancia_relativa(estado.impedancia) * 100.0)
                     )
+                    # Un pulso previo no regenerado se cierra al iniciar el siguiente.
+                    if estado.pulso_no_regenerado_min is not None:
+                        diag.tiempos_regeneracion_seg.append((minuto - estado.pulso_no_regenerado_min) * 60.0)
+                        estado.pulso_no_regenerado_min = None
                     if impedancia_inicial > config.UMBRAL_IMPEDANCIA_OHMS:
-                        if estado.inicio_regeneracion_min is None:
-                            estado.inicio_regeneracion_min = minuto
                         objetivo_sal = (
-                            config.UMBRAL_IMPEDANCIA_OHMS - config.IMPEDANCIA_NOMINAL_OHMS - estado.impedancia_polvo
+                            config.FACTOR_IMPEDANCIA_REGENERADA * config.IMPEDANCIA_NOMINAL_OHMS
+                            - config.IMPEDANCIA_NOMINAL_OHMS
+                            - estado.impedancia_polvo
                         )
                         segundos = modelo_fisico.tiempo_hasta_impedancia(t_pulso, sal_antes, objetivo_sal)
                         if segundos is not None:
-                            diag.tiempos_regeneracion_seg.append(
-                                (minuto - estado.inicio_regeneracion_min) * 60.0 + segundos
-                            )
-                            estado.inicio_regeneracion_min = None
+                            diag.tiempos_regeneracion_seg.append(segundos)
+                            diag.pulsos_regenerados += 1
+                        else:
+                            estado.pulso_no_regenerado_min = minuto
+                            diag.pulsos_no_regenerados += 1
                 else:
                     diag.pulsos_omitidos_por_energia += 1
 
@@ -400,11 +415,6 @@ def simular_modo(entorno: Entorno, modo: ModoOperacion) -> DiagnosticoModo:
                 _descontar_integridad(estado, config.DEGRADACION_CRISTALIZACION_PCT_H * dt_h)
             diag.integridad_minima = min(diag.integridad_minima, estado.integridad)
 
-            # Cierre de un episodio de regeneración sin pulso (limpieza del polvo).
-            if estado.inicio_regeneracion_min is not None and estado.impedancia <= config.UMBRAL_IMPEDANCIA_OHMS:
-                diag.tiempos_regeneracion_seg.append((minuto + paso_min - estado.inicio_regeneracion_min) * 60.0)
-                estado.inicio_regeneracion_min = None
-
             # Balance de la reserva térmica.
             recarga = config.POTENCIA_RECARGA_SOLAR_W * entorno.radiacion[i] * dt_h
             estado.reserva_wh = max(
@@ -417,11 +427,13 @@ def simular_modo(entorno: Entorno, modo: ModoOperacion) -> DiagnosticoModo:
         diag.energia_acumulada.append(diag.energia_total_wh)
         diag.integridad_promedio.append(sum(e.integridad for e in nodos) / len(nodos))
 
-    # Los episodios abiertos al final se cuentan hasta el cierre de la simulación.
+    # Los pulsos no regenerados sin pulso posterior se miden hasta el fin de la simulación.
     fin_min = entorno.numero_pasos * paso_min
     for estado in nodos:
-        if estado.inicio_regeneracion_min is not None:
-            diag.tiempos_regeneracion_seg.append((fin_min - estado.inicio_regeneracion_min) * 60.0)
+        if estado.pulso_no_regenerado_min is not None:
+            diag.tiempos_regeneracion_seg.append(
+                max(float(config.DURACION_PULSO_SEG), (fin_min - estado.pulso_no_regenerado_min) * 60.0)
+            )
 
     diag.integridad_final_promedio = sum(e.integridad for e in nodos) / len(nodos)
     diag.perdida_termica_pulso_pct = perdida_pulso_total / len(nodos)
@@ -490,8 +502,9 @@ def verificar_conjeturas(
     - Conjetura 1: recuperación promedio tras pulso >= 90 % y ahorro de
       energía en pulsos frente al temporizador >= 35 %, con
       ahorro = (E_temporizador - E_neuro) / E_temporizador * 100.
-    - Conjetura 2: tiempo promedio de regeneración < 120 s y pérdida de
-      integridad por degradación térmica (pulso y ambiente) igual a 0 %.
+    - Conjetura 2: tiempo promedio de regeneración < 120 s, medido hasta
+      Z <= 1.10 * Z_nominal (ver `simular_modo`), y pérdida de integridad por
+      degradación térmica (pulso y ambiente) igual a 0 %.
     - Conjetura 3: cero episodios de violación ecológica y rendimiento
       nocturno >= 12 L/m²/noche (ver `rendimiento_nocturno_l_m2`).
     """

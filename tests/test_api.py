@@ -8,11 +8,11 @@ cliente = TestClient(app)
 
 PAYLOAD_TELEMETRIA_PRD = {
     "nodo_id": "NODO_04",
-    "impedancia_ohms": 1850.5,
-    "temperatura_celsius": 38.2,
-    "reserva_calor_pct": 65.0,
-    "humedad_relativa_pct": 82.0,
-    "flujo_actual_ml_min": 12.5,
+    "impedancia_ohms": 1650.5,
+    "temperatura_celsius": 36.2,
+    "reserva_calor_pct": 55.0,
+    "humedad_relativa_pct": 42.0,
+    "flujo_actual_ml_min": 14.5,
     "modo_operacion": "NEURO_SIMBOLICO",
 }
 

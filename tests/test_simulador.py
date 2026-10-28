@@ -3,6 +3,7 @@
 import pytest
 
 from backend import config
+from backend.modelo_fisico import tiempo_hasta_impedancia
 from backend.schemas import Escenario, SimulationConfig, TasaSalinizacion
 from backend.simulador import ejecutar_simulacion, ejecutar_simulacion_detallada
 
@@ -80,6 +81,31 @@ def test_conjeturas_se_derivan_de_indicadores(escenario):
         verificacion = getattr(detalle, nombre)
         assert verificacion.validada == all(i.cumple for i in verificacion.indicadores.values())
         assert getattr(validadas, nombre) == verificacion.validada
+
+
+def test_criterio_regeneracion_exige_volver_a_1100_ohm():
+    objetivo_sal = config.FACTOR_IMPEDANCIA_REGENERADA * config.IMPEDANCIA_NOMINAL_OHMS - config.IMPEDANCIA_NOMINAL_OHMS
+    assert objetivo_sal == pytest.approx(100.0)
+    # Con 505 Ohm de carga salina, cruzar el umbral de 1500 Ohm es casi inmediato,
+    # pero el criterio de 1100 Ohm no se alcanza en un solo pulso.
+    assert tiempo_hasta_impedancia(44.0, 505.0, 500.0) < 5.0
+    assert tiempo_hasta_impedancia(44.0, 505.0, objetivo_sal) is None
+    assert tiempo_hasta_impedancia(44.0, 150.0, objetivo_sal) <= config.DURACION_PULSO_SEG
+
+
+@pytest.mark.parametrize("escenario", list(Escenario))
+def test_cada_pulso_neuro_genera_un_evento_de_regeneracion(corridas, escenario):
+    _, neuro, _ = corridas[escenario]
+    assert neuro.pulsos_regenerados + neuro.pulsos_no_regenerados == neuro.pulsos
+    assert len(neuro.tiempos_regeneracion_seg) == neuro.pulsos
+
+
+@pytest.mark.parametrize("escenario", list(Escenario))
+def test_pulsos_no_regenerados_duran_al_menos_un_pulso(corridas, escenario):
+    _, neuro, _ = corridas[escenario]
+    tiempos = sorted(neuro.tiempos_regeneracion_seg)
+    assert all(t <= config.DURACION_PULSO_SEG for t in tiempos[: neuro.pulsos_regenerados])
+    assert all(t >= config.DURACION_PULSO_SEG for t in tiempos[neuro.pulsos_regenerados :])
 
 
 def test_bitacora_registra_solo_cambios_de_regla():
