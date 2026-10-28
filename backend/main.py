@@ -5,11 +5,19 @@ monitoreo de salud del servicio. Las reglas neuro-simbólicas y los endpoints
 de evaluación y simulación se incorporarán en iteraciones posteriores.
 """
 
+import logging
 from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from backend.routers import nodo, simulacion
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 
 NOMBRE_SERVICIO = "Axioma-H Engine"
 VERSION_SERVICIO = "0.1.0"
@@ -42,6 +50,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(nodo.router)
+app.include_router(simulacion.router)
 
 
 class EstadoMotor(BaseModel):
