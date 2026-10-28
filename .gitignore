@@ -1,0 +1,59 @@
+# Entornos virtuales
+venv/
+.venv/
+env/
+ENV/
+
+# Bytecode y caché de Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*$py.class
+CLAUDE.md
+
+
+# Variables de entorno y secretos
+.env
+.env.*
+!.env.example
+
+# Pruebas, cobertura y análisis estático
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# Empaquetado y distribución
+build/
+dist/
+*.egg-info/
+.eggs/
+wheels/
+
+# Registros
+*.log
+logs/
+
+# IDE y editores
+.vscode/
+.idea/
+*.swp
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Sistema operativo Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
