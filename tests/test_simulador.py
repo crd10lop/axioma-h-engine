@@ -108,6 +108,18 @@ def test_pulsos_no_regenerados_duran_al_menos_un_pulso(corridas, escenario):
     assert all(t >= config.DURACION_PULSO_SEG for t in tiempos[neuro.pulsos_regenerados :])
 
 
+@pytest.mark.parametrize("escenario", list(Escenario))
+def test_indicadores_informativos_de_conjetura_2(corridas, escenario):
+    _, neuro, _ = corridas[escenario]
+    detalle = ejecutar_simulacion(configuracion(escenario)).detalle_verificacion
+    informativos = detalle.conjetura_2_autorreparacion.indicadores_informativos
+    assert informativos == {"pulsos_regenerados": neuro.pulsos_regenerados, "pulsos_totales": neuro.pulsos}
+    assert detalle.conjetura_1_eficiencia.indicadores_informativos == {}
+    assert detalle.conjetura_3_saber_territorial.indicadores_informativos == {}
+    # Los informativos no forman parte de los indicadores que deciden la validación.
+    assert not set(informativos) & set(detalle.conjetura_2_autorreparacion.indicadores)
+
+
 def test_bitacora_registra_solo_cambios_de_regla():
     resultado = ejecutar_simulacion(configuracion())
     ultima_regla = {}

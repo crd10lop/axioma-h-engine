@@ -2,6 +2,8 @@
 
 Este documento describe el motor de reglas neuro-simbólico, el simulador comparativo y la forma en que se verifican las conjeturas del Ciclo 2. Los valores de todos los parámetros están en `backend/config.py`. Las ecuaciones compartidas por el motor y el simulador están en `backend/modelo_fisico.py`.
 
+Los documentos de referencia son el PRD de la API ([02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md](02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md)) y la Matriz de Operacionalización ([01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md)). Las decisiones de la sección 1 resuelven las diferencias entre ambos.
+
 ## 1. Decisiones de diseño
 
 | Id | Decisión | Justificación |
@@ -128,11 +130,53 @@ El rendimiento nocturno se normaliza a 12 horas. Si la corrida no cubre una noch
 
 Una conjetura se valida solo si todos sus indicadores cumplen. Si la corrida no produce datos para un indicador, este se reporta con valor nulo y como no cumplido. Esto ocurre, por ejemplo, en una corrida de 1 h sin pulsos del temporizador.
 
-## 5. Resultados con semilla 42 y 8 nodos
+La Conjetura 2 incluye además dos indicadores informativos, `pulsos_regenerados` y `pulsos_totales`, en el campo `indicadores_informativos` de la respuesta. Muestran cuántos pulsos del modo neuro-simbólico alcanzaron el criterio de 1100 Ohm y no intervienen en la validación.
 
-Configuración común: 24 h, paso de 5 min, HR inicial de 85 % y tasa de salinización ALTA. Esta es la configuración de ejemplo de la API.
+## 5. Resultados
 
-### 5.1 Comparativa de modos
+Todas las corridas comparten estas condiciones:
+
+- 24 h, inicio a las 18:00, paso de 5 min;
+- 8 nodos, semilla 42, tasa de salinización ALTA;
+- parámetros de `backend/config.py` sin modificar (eficacia máxima del pulso 0.90 y criterio de regeneración de 1100 Ohm).
+
+Solo cambia la humedad inicial, que se indica en el título de cada tabla.
+
+### 5.1 Corrida de referencia del PRD (TORMENTA_DE_SAL_Y_CALOR_EXTREMO, humedad inicial 45 %)
+
+Es el payload de ejemplo del PRD (sección 3.2): `duracion_horas` 24, `escenario` TORMENTA_DE_SAL_Y_CALOR_EXTREMO, `humedad_ambiente_inicial_pct` 45.0 y `tasa_salinizacion` ALTA. Los valores numéricos de la respuesta de ejemplo del PRD son ilustrativos. Los de esta tabla son los que calcula el modelo.
+
+| Métrica | Neuro-simbólico | Temporizador fijo | Diferencia |
+|---|---|---|---|
+| Agua captada (L) | 81.652 | 120.408 | -32.2 % |
+| Pulsos térmicos | 19 | 88 | -78.4 % |
+| Energía consumida (Wh) | 323.155 | 1065.067 | -69.7 % |
+| Integridad final (%) | 99.9525 | 97.0941 | +2.9 % |
+| Violaciones ecológicas | 0 | 8 | -100.0 % |
+
+| Conjetura | Indicador | Valor | Umbral | Cumple | Estado |
+|---|---|---|---|---|---|
+| C1 Eficiencia | Recuperación de caudal tras pulso (%) | 88.81 | >= 90 | No | false |
+| C1 Eficiencia | Ahorro de energía en pulsos (%) | 79.74 | >= 35 | Sí | |
+| C2 Autorreparación | Tiempo promedio de regeneración (s) | 22263.16 | < 120 | No | false |
+| C2 Autorreparación | Pulsos regenerados / totales (informativo) | 0 / 19 | No aplica | Informativo | |
+| C2 Autorreparación | Pérdida de integridad térmica (%) | 0.00 | <= 0 | Sí | |
+| C3 Saber territorial | Violaciones ecológicas | 0 | <= 0 | Sí | false |
+| C3 Saber territorial | Rendimiento nocturno (L/m²/noche) | 5.95 | >= 12 | No | |
+
+### 5.2 Cinco escenarios con humedad inicial 45 %
+
+| Escenario | Recuperación (%) | Ahorro (%) | C1 | Regeneración (s) | Pulsos regenerados | Pérdida térmica (%) | C2 | Violaciones | Rendimiento nocturno (L/m²) | C3 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DIA_NORMAL | 88.85 | 87.38 | false | 32400.00 | 0/10 | 0.00 | false | 0 | 6.01 | false |
+| INCRUSTACION_SALINA_RAPIDA | 88.76 | 45.57 | false | 12013.64 | 0/44 | 0.00 | false | 0 | 5.78 | false |
+| SEQUIA | Sin datos | 100.00 | false | Sin datos | 0/0 | 0.00 | false | 0 | 4.01 | false |
+| TORMENTA_DE_ARENA | 83.92 | 81.52 | false | 18000.00 | 0/18 | 0.00 | false | 0 | 6.01 | false |
+| TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 88.81 | 79.74 | false | 22263.16 | 0/19 | 0.00 | false | 0 | 5.95 | false |
+
+En SEQUIA con humedad inicial de 45 %, el modo neuro-simbólico no ejecutó ningún pulso. La humedad baja reduce la captación y, con ella, la incrustación salina, de modo que la impedancia nunca superó 1500 Ohm. Sin pulsos, la recuperación y el tiempo de regeneración no tienen datos y se reportan como no cumplidos (sección 4).
+
+### 5.3 Cinco escenarios con humedad inicial 85 %: comparativa de modos
 
 | Escenario | Modo | Litros | Pulsos | Energía (Wh) | Integridad final (%) | Violaciones |
 |---|---|---|---|---|---|---|
@@ -147,21 +191,23 @@ Configuración común: 24 h, paso de 5 min, HR inicial de 85 % y tasa de saliniz
 | TORMENTA_DE_SAL_Y_CALOR_EXTREMO | Neuro-simbólico | 234.98 | 64 | 780.8 | 99.59 | 0 |
 | TORMENTA_DE_SAL_Y_CALOR_EXTREMO | Temporizador fijo | 305.83 | 88 | 1065.1 | 96.10 | 8 |
 
-### 5.2 Verificación de conjeturas
+### 5.4 Cinco escenarios con humedad inicial 85 %: verificación de conjeturas
 
-| Escenario | Recuperación (%) | Ahorro (%) | C1 | Regeneración (s) | Pérdida térmica (%) | C2 | Violaciones | Rendimiento nocturno (L/m²) | C3 |
-|---|---|---|---|---|---|---|---|---|---|
-| DIA_NORMAL | 88.78 | 46.50 | false | 11934.78 | 0.00 | false | 0 | 16.97 | true |
-| INCRUSTACION_SALINA_RAPIDA | 85.92 | 12.49 | false | 6593.81 | 0.00 | false | 0 | 11.45 | false |
-| SEQUIA | 88.78 | 63.31 | false | 21575.00 | 0.00 | false | 0 | 14.19 | true |
-| TORMENTA_DE_ARENA | 85.78 | 37.97 | false | 10358.49 | 0.00 | false | 0 | 16.97 | true |
-| TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 88.02 | 35.17 | false | 9257.81 | 0.00 | false | 0 | 16.62 | true |
+| Escenario | Recuperación (%) | Ahorro (%) | C1 | Regeneración (s) | Pulsos regenerados | Pérdida térmica (%) | C2 | Violaciones | Rendimiento nocturno (L/m²) | C3 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DIA_NORMAL | 88.78 | 46.50 | false | 11934.78 | 0/46 | 0.00 | false | 0 | 16.97 | true |
+| INCRUSTACION_SALINA_RAPIDA | 85.92 | 12.49 | false | 6593.81 | 0/97 | 0.00 | false | 0 | 11.45 | false |
+| SEQUIA | 88.78 | 63.31 | false | 21575.00 | 0/24 | 0.00 | false | 0 | 14.19 | true |
+| TORMENTA_DE_ARENA | 85.78 | 37.97 | false | 10358.49 | 0/53 | 0.00 | false | 0 | 16.97 | true |
+| TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 88.02 | 35.17 | false | 9257.81 | 0/64 | 0.00 | false | 0 | 16.62 | true |
 
 El tiempo de regeneración se calcula con el criterio de 1100 Ohm descrito en 3.2. Con el criterio anterior (volver bajo 1500 Ohm), los valores eran 0.23, 278.28, 0.24, 0.30 y 1.81 s, y la Conjetura 2 se validaba en cuatro escenarios.
 
-### 5.3 Análisis
+### 5.5 Análisis
 
-**Conjetura 1 (false en los cinco escenarios).** El indicador que falla es la recuperación de caudal, que queda entre 85.8 % y 88.8 %. El pulso se dispara apenas Z supera 1500 Ohm, es decir, con unos 500 Ohm de carga salina. Con `eta_max = 0.90` y la atenuación por carga, cada pulso remueve cerca del 75 % de esa carga y la impedancia queda alrededor de 1125 Ohm, lo que equivale a un 89 % de conductancia. Para superar el 90 % haría falta `eta_max` de 0.94 o más (ver 5.4), un valor que hoy no tiene respaldo experimental.
+Salvo que se indique otra cosa, el análisis se refiere a las corridas con humedad inicial de 85 % (secciones 5.3 y 5.4). Las diferencias de la corrida del PRD con 45 % se tratan al final de esta sección.
+
+**Conjetura 1 (false en los cinco escenarios).** El indicador que falla es la recuperación de caudal, que queda entre 85.8 % y 88.8 %. El pulso se dispara apenas Z supera 1500 Ohm, es decir, con unos 500 Ohm de carga salina. Con `eta_max = 0.90` y la atenuación por carga, cada pulso remueve cerca del 75 % de esa carga y la impedancia queda alrededor de 1125 Ohm, lo que equivale a un 89 % de conductancia. Para superar el 90 % haría falta `eta_max` de 0.94 o más (ver 5.6), un valor que hoy no tiene respaldo experimental.
 
 El ahorro de energía sí cumple en cuatro escenarios. En INCRUSTACION_SALINA_RAPIDA no cumple (12.5 %): la red pulsa más veces que el temporizador (97 frente a 88) y, de noche, cada pulso neuro-simbólico eleva la matriz unos 18 °C, contra 12 °C del temporizador. En TORMENTA_DE_SAL_Y_CALOR_EXTREMO el ahorro (35.17 %) apenas supera el umbral, por lo que el resultado es frágil.
 
@@ -171,7 +217,7 @@ Lo que falla es el tiempo de regeneración. El criterio anterior (volver bajo 15
 
 Con `eta_max = 0.90`, un pulso típico deja la impedancia cerca de 1125 Ohm. Por eso ninguno de los pulsos de los cinco escenarios alcanza el criterio. Cada evento se mide entonces hasta el pulso siguiente, y el promedio queda entre 1.8 y 6.0 horas.
 
-El resultado es coherente con el de la Conjetura 1: ambos indicadores dependen de la fracción de sal que remueve un pulso. La sensibilidad se muestra en 5.5.
+El resultado es coherente con el de la Conjetura 1: ambos indicadores dependen de la fracción de sal que remueve un pulso. La sensibilidad se muestra en 5.7.
 
 **Conjetura 3 (false solo en INCRUSTACION_SALINA_RAPIDA).** El modo neuro-simbólico no registró violaciones ecológicas en ningún escenario. Esto se cumple por diseño: el tope del 33 % es estructural (D3) y la REGLA_02 detiene la extracción con HR < 30 %. El temporizador acumula un episodio continuo por nodo debido a su fracción de 0.45.
 
@@ -179,9 +225,15 @@ En la incrustación rápida, el rendimiento nocturno cae a 11.45 L/m² porque la
 
 **Observación adicional.** El modo neuro-simbólico capta entre 23 % y 27 % menos agua que el temporizador. Esto es consecuencia directa del tope ecológico (0.33 frente a 0.45) y es el costo esperado de la Conjetura 3: el temporizador obtiene más agua a costa de violar el límite territorial.
 
-### 5.4 Sensibilidad de la recuperación a la eficacia máxima del pulso
+**Corrida del PRD con humedad inicial de 45 % (secciones 5.1 y 5.2).** Con 45 % a las 18:00, la humedad nocturna alcanza como máximo entre 64 % y 68 %, según el nodo. El recurso hídrico disponible es mucho menor que con 85 % y aparecen tres diferencias:
 
-Recuperación promedio en el modo neuro-simbólico (%). Un asterisco indica que la Conjetura 1 queda validada con ese valor. Esta tabla es solo un análisis de sensibilidad: el valor configurado sigue siendo 0.90.
+- **Conjetura 3:** pasa a false en los cinco escenarios. El modo neuro-simbólico mantiene cero violaciones, pero el rendimiento nocturno cae a 4.0–6.0 L/m²/noche, menos de la mitad del umbral. Esto refleja un límite del recurso atmosférico, no una falla del control: el temporizador, que extrae al 45 % sin restricciones, también queda por debajo del umbral, con 5.8–8.9 L/m²/noche.
+- **Conjetura 1:** el ahorro de energía es mayor (46 % a 100 %), porque con menos captación hay menos sal y menos pulsos (10 a 44 frente a 88 del temporizador). La recuperación tras pulso sigue entre 83.9 % y 88.9 %, bajo el umbral.
+- **Conjetura 2:** el resultado no cambia. La pérdida térmica es 0 % y ningún pulso se regenera.
+
+### 5.6 Sensibilidad de la recuperación a la eficacia máxima del pulso
+
+Recuperación promedio en el modo neuro-simbólico (%), con humedad inicial de 85 %. Un asterisco indica que la Conjetura 1 queda validada con ese valor. Esta tabla es solo un análisis de sensibilidad: el valor configurado sigue siendo 0.90.
 
 | eta_max | DIA_NORMAL | INCRUSTACION_SALINA_RAPIDA | SEQUIA | TORMENTA_DE_ARENA | TORMENTA_DE_SAL_Y_CALOR_EXTREMO |
 |---|---|---|---|---|---|
@@ -193,9 +245,9 @@ Recuperación promedio en el modo neuro-simbólico (%). Un asterisco indica que 
 
 La Conjetura 1 depende de un parámetro que todavía no se ha medido. Antes de dar por refutada o validada la conjetura, la prioridad experimental es medir la fracción de sal que remueve un pulso de 90 s a 44 °C.
 
-### 5.5 Sensibilidad del tiempo de regeneración a la eficacia máxima del pulso
+### 5.7 Sensibilidad del tiempo de regeneración a la eficacia máxima del pulso
 
-Tiempo promedio de regeneración en el modo neuro-simbólico (s), con el criterio de 1100 Ohm. Entre paréntesis se indican los pulsos regenerados sobre los pulsos totales. Un asterisco indica que la Conjetura 2 queda validada. Igual que en 5.4, el valor configurado sigue siendo 0.90.
+Tiempo promedio de regeneración en el modo neuro-simbólico (s), con el criterio de 1100 Ohm y humedad inicial de 85 %. Entre paréntesis se indican los pulsos regenerados sobre los pulsos totales. Un asterisco indica que la Conjetura 2 queda validada. Igual que en 5.6, el valor configurado sigue siendo 0.90.
 
 | eta_max | DIA_NORMAL | INCRUSTACION_SALINA_RAPIDA | SEQUIA | TORMENTA_DE_ARENA | TORMENTA_DE_SAL_Y_CALOR_EXTREMO |
 |---|---|---|---|---|---|
@@ -205,4 +257,59 @@ Tiempo promedio de regeneración en el modo neuro-simbólico (s), con el criteri
 | 0.97 | 84.5 (44/44)* | 3231.5 (49/92) | 84.1 (24/24)* | 2111.0 (35/51) | 1678.0 (52/62) |
 | 1.00 | 69.1 (43/43)* | 711.0 (76/92) | 68.9 (23/23)* | 2001.1 (35/48) | 851.8 (56/62) |
 
-El indicador tiene un comportamiento de umbral. Por debajo de `eta_max` cercano a 0.97, ningún pulso llega a 1100 Ohm. Por encima, la mayoría lo logra en menos de 90 s. Esto refuerza la recomendación de 5.4: medir la eficacia real del pulso define el resultado de las Conjeturas 1 y 2.
+El indicador tiene un comportamiento de umbral. Por debajo de `eta_max` cercano a 0.97, ningún pulso llega a 1100 Ohm. Por encima, la mayoría lo logra en menos de 90 s. Esto refuerza la recomendación de 5.6: medir la eficacia real del pulso define el resultado de las Conjeturas 1 y 2.
+
+## 6. Interpretación de resultados
+
+### 6.1 La Conjetura 2 contiene dos afirmaciones distintas
+
+La Conjetura 2 sostiene que el pulso térmico controlado (<= 45 °C) disuelve las costras de NaCl sin degradar la matriz. Contiene dos afirmaciones que el simulador puede evaluar de forma muy distinta:
+
+- **Ausencia de degradación térmica.** Se sostiene en el modelo. La pérdida de integridad térmica del modo neuro-simbólico es 0 % en los diez escenarios simulados (cinco con 45 % y cinco con 85 % de humedad inicial). Este resultado se deriva de la lógica de control y no de un parámetro supuesto: la REGLA_01 corta antes de 45 °C, el pulso apunta a 44 °C y en ningún caso el pulso superó 44.30 °C. El temporizador fijo, sin esas reglas, llegó a 55.9 °C y perdió hasta 2.69 % de integridad.
+- **Eficacia de disolución.** No es verificable por simulación. Que un pulso de 90 s devuelva la membrana a 1100 Ohm depende de la eficacia del pulso (`eta_max`), un parámetro supuesto sin respaldo experimental. El modelo solo permite establecer qué eficacia haría falta, como se muestra en 6.2.
+
+Por eso, el valor false de la Conjetura 2 no refuta la autorreparación. Indica que, con la eficacia supuesta de 0.90, el modelo no alcanza el criterio de regeneración.
+
+### 6.2 Eficacia mínima del pulso para validar las Conjeturas 1 y 2
+
+La tabla resume una búsqueda de `eta_max` entre 0.90 y 1.00 con paso de 0.01, manteniendo fijos los demás parámetros y el criterio de 1100 Ohm. Cada celda indica el menor valor con el que la conjetura completa queda validada, con todos sus indicadores cumpliendo. "No alcanza" significa que la conjetura no se valida ni con 1.00.
+
+| Escenario | C1 (HR 45 %) | C2 (HR 45 %) | C1 (HR 85 %) | C2 (HR 85 %) |
+|---|---|---|---|---|
+| DIA_NORMAL | 0.94 | 0.97 | 0.94 | 0.97 |
+| INCRUSTACION_SALINA_RAPIDA | 0.94 | 0.97 | No alcanza | No alcanza |
+| SEQUIA | No alcanza (sin pulsos) | No alcanza (sin pulsos) | 0.94 | 0.97 |
+| TORMENTA_DE_ARENA | No alcanza | No alcanza | No alcanza | No alcanza |
+| TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 0.94 | 0.97 | 0.97 | No alcanza |
+
+`eta_max` es un parámetro del modelo y no se mide directamente. Para el pulso típico de las simulaciones (44 °C y unos 500 Ohm de carga salina), la fracción de costra que remueve un pulso es `eta = eta_max * 2500 / (2500 + 505)`. Por eso:
+
+- `eta_max = 0.94` equivale a remover al menos el **78 %** de la costra en un pulso, que es lo que exige la Conjetura 1;
+- `eta_max = 0.97` equivale a remover al menos el **81 %**, que es lo que exige la Conjetura 2.
+
+Los casos que no alcanzan tienen causas identificables:
+
+- **TORMENTA_DE_ARENA:** el ensuciamiento por polvo no se remueve con el pulso.
+- **INCRUSTACION_SALINA_RAPIDA con 85 %:** la reserva se agota y el ahorro de energía no llega al 35 %.
+- **TORMENTA_DE_SAL_Y_CALOR_EXTREMO con 85 %:** la REGLA_04 posterga pulsos cuando la reserva es baja. Algunos pulsos se aplican entonces con cargas de hasta unos 770 Ohm, y un solo pulso no alcanza a llevarlas a 1100 Ohm.
+- **SEQUIA con 45 %:** no hay pulsos que medir.
+
+### 6.3 Medición experimental prioritaria para el siguiente ciclo
+
+Los valores de 6.2 definen el experimento prioritario del siguiente ciclo. Hay que medir, en una muestra de membrana con costra de NaCl equivalente a unos 500 Ohm sobre la impedancia nominal, qué fracción de la costra remueve un pulso de 90 s a 44 °C. El resultado decide el estado de dos conjeturas:
+
+- si la fracción removida es menor que 78 %, el modelo predice que ni la Conjetura 1 ni la 2 se validan;
+- entre 78 % y 81 %, se validaría la Conjetura 1 en los escenarios favorables;
+- desde 81 %, se validarían ambas en esos escenarios.
+
+Como mediciones secundarias, conviene registrar:
+
+- el tiempo de disolución, que calibra la constante de 25 s;
+- la diferencia entre la impedancia causada por sal y la causada por polvo, que explica el resultado de TORMENTA_DE_ARENA;
+- el flujo de niebla disponible en Cabo de la Vela, del que depende el rendimiento nocturno de la Conjetura 3, como muestra la corrida con 45 %.
+
+### 6.4 Endurecimiento del criterio de regeneración
+
+El tiempo de regeneración se medía al principio hasta que la impedancia volvía bajo el umbral de 1500 Ohm. Ese criterio se cumplía de forma trivial. Como el pulso se dispara apenas la impedancia cruza 1500 Ohm, bastaba remover unos pocos ohmios, y el indicador daba entre 0.2 y 1.8 s sin informar sobre la limpieza real de la membrana.
+
+Por esa razón, el criterio se endureció a 1100 Ohm (`FACTOR_IMPEDANCIA_REGENERADA = 1.10`, al menos 91 % de la conductancia nominal). Después de ese cambio, el criterio, la eficacia del pulso (0.90) y los demás parámetros se mantuvieron fijos. Ningún valor se ajustó para cambiar el resultado de una conjetura (decisión D5). Los análisis de sensibilidad de 5.6, 5.7 y 6.2 varían `eta_max` solo en memoria, con fines exploratorios, y no modifican la configuración del modelo.

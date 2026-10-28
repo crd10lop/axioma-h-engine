@@ -473,9 +473,17 @@ def _indicador(valor: Optional[float], umbral: float, operador: str) -> Indicado
     )
 
 
-def _verificacion(indicadores: dict) -> VerificacionConjetura:
-    """Una conjetura se valida solo si todos sus indicadores cumplen."""
-    return VerificacionConjetura(validada=all(i.cumple for i in indicadores.values()), indicadores=indicadores)
+def _verificacion(indicadores: dict, informativos: Optional[dict] = None) -> VerificacionConjetura:
+    """Una conjetura se valida solo si todos sus indicadores cumplen.
+
+    Los indicadores informativos se adjuntan como contexto y no intervienen
+    en la validación.
+    """
+    return VerificacionConjetura(
+        validada=all(i.cumple for i in indicadores.values()),
+        indicadores=indicadores,
+        indicadores_informativos=informativos or {},
+    )
 
 
 def rendimiento_nocturno_l_m2(diag: DiagnosticoModo, numero_nodos: int) -> Optional[float]:
@@ -504,7 +512,9 @@ def verificar_conjeturas(
       ahorro = (E_temporizador - E_neuro) / E_temporizador * 100.
     - Conjetura 2: tiempo promedio de regeneración < 120 s, medido hasta
       Z <= 1.10 * Z_nominal (ver `simular_modo`), y pérdida de integridad por
-      degradación térmica (pulso y ambiente) igual a 0 %.
+      degradación térmica (pulso y ambiente) igual a 0 %. Se informan además,
+      sin efecto en la validación, los pulsos regenerados y los pulsos totales
+      del modo neuro-simbólico.
     - Conjetura 3: cero episodios de violación ecológica y rendimiento
       nocturno >= 12 L/m²/noche (ver `rendimiento_nocturno_l_m2`).
     """
@@ -531,7 +541,11 @@ def verificar_conjeturas(
             "perdida_integridad_termica_pct": _indicador(
                 neuro.perdida_termica_pct, config.PERDIDA_TERMICA_MAXIMA_PCT, "<="
             ),
-        }
+        },
+        informativos={
+            "pulsos_regenerados": neuro.pulsos_regenerados,
+            "pulsos_totales": neuro.pulsos,
+        },
     )
     conjetura_3 = _verificacion(
         {

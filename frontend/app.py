@@ -413,7 +413,8 @@ def seccion_conjeturas(resultado: dict) -> None:
     st.subheader("Verificación de conjeturas")
     st.caption(
         "Resultados calculados por el modelo con parámetros físicos supuestos. "
-        "Una conjetura se valida solo si todos sus indicadores cumplen. Ver docs/modelo_simulacion.md."
+        "Una conjetura se valida solo si todos sus indicadores cumplen; los marcados como informativos "
+        "no intervienen en la validación. Ver docs/modelo_simulacion.md."
     )
     columnas = st.columns(3)
     for columna, conjetura in zip(columnas, tr.conjeturas_a_lista(resultado)):

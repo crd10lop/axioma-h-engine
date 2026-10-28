@@ -82,6 +82,30 @@ def test_indicadores_a_dataframe(resultado):
     assert all(isinstance(valor, str) for valor in df["Valor obtenido"])
 
 
+def test_indicadores_informativos_junto_al_tiempo_de_regeneracion(resultado):
+    verificacion = resultado["detalle_verificacion"]["conjetura_2_autorreparacion"]
+    df = tr.indicadores_a_dataframe(verificacion)
+    nombres = list(df["Indicador"])
+    posicion = nombres.index("Tiempo promedio de regeneración (s)")
+    assert nombres[posicion + 1 : posicion + 3] == [
+        "Pulsos regenerados (informativo)",
+        "Pulsos totales (informativo)",
+    ]
+    informativos = df[df["Cumple"] == "Informativo"]
+    assert list(informativos["Umbral"]) == ["No aplica", "No aplica"]
+    totales = verificacion["indicadores_informativos"]["pulsos_totales"]
+    assert informativos.iloc[1]["Valor obtenido"] == str(totales)
+
+
+def test_indicadores_informativos_sin_ancla_se_agregan_al_final():
+    verificacion = {
+        "indicadores": {"violaciones_ecologicas": {"valor": 0.0, "umbral": 0.0, "operador": "<=", "cumple": True}},
+        "indicadores_informativos": {"pulsos_totales": 4},
+    }
+    df = tr.indicadores_a_dataframe(verificacion)
+    assert list(df["Cumple"]) == ["Sí", "Informativo"]
+
+
 def test_indicadores_sin_datos():
     verificacion = {"indicadores": {"ahorro_energia_pulsos_pct": {"valor": None, "umbral": 35.0, "operador": ">=", "cumple": False}}}
     df = tr.indicadores_a_dataframe(verificacion)

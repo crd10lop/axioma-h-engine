@@ -37,7 +37,12 @@ NOMBRES_INDICADOR = {
     "perdida_integridad_termica_pct": "Pérdida de integridad térmica (%)",
     "violaciones_ecologicas": "Violaciones ecológicas (episodios)",
     "rendimiento_nocturno_l_m2_noche": "Rendimiento nocturno (L/m²/noche)",
+    "pulsos_regenerados": "Pulsos regenerados (informativo)",
+    "pulsos_totales": "Pulsos totales (informativo)",
 }
+
+# Los indicadores informativos se muestran a continuación de este indicador.
+ANCLA_INDICADORES_INFORMATIVOS = "tiempo_regeneracion_promedio_seg"
 
 
 def minuto_a_hora_local(minuto: int, hora_inicio: int = config.HORA_INICIO_SIMULACION) -> str:
@@ -128,8 +133,19 @@ def indicadores_a_dataframe(verificacion: dict) -> pd.DataFrame:
     """Tabla de indicadores de una conjetura: valor, umbral y cumplimiento.
 
     Los valores se entregan como texto para que la columna tenga un tipo
-    homogéneo aun cuando un indicador no tenga datos.
+    homogéneo aun cuando un indicador no tenga datos. Los indicadores
+    informativos se insertan después del tiempo de regeneración (o al final
+    si ese indicador no existe), sin umbral y marcados como "Informativo".
     """
+    informativos = [
+        {
+            "Indicador": NOMBRES_INDICADOR.get(clave, clave),
+            "Valor obtenido": f"{valor:g}",
+            "Umbral": "No aplica",
+            "Cumple": "Informativo",
+        }
+        for clave, valor in verificacion.get("indicadores_informativos", {}).items()
+    ]
     filas = []
     for clave, indicador in verificacion.get("indicadores", {}).items():
         valor = indicador.get("valor")
@@ -141,6 +157,10 @@ def indicadores_a_dataframe(verificacion: dict) -> pd.DataFrame:
                 "Cumple": "Sí" if indicador["cumple"] else "No",
             }
         )
+        if clave == ANCLA_INDICADORES_INFORMATIVOS:
+            filas.extend(informativos)
+            informativos = []
+    filas.extend(informativos)
     return pd.DataFrame(filas, columns=["Indicador", "Valor obtenido", "Umbral", "Cumple"])
 
 

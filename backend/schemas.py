@@ -7,7 +7,7 @@ unifican los valores usados en el PRD y en la Matriz de Operacionalización
 
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -136,7 +136,7 @@ class SimulationConfig(BaseModel):
                 {
                     "duracion_horas": 24,
                     "escenario": "TORMENTA_DE_SAL_Y_CALOR_EXTREMO",
-                    "humedad_ambiente_inicial_pct": 85.0,
+                    "humedad_ambiente_inicial_pct": 45.0,
                     "tasa_salinizacion": "ALTA",
                 }
             ]
@@ -197,6 +197,10 @@ class VerificacionConjetura(BaseModel):
 
     validada: bool = Field(..., description="Verdadero solo si todos los indicadores cumplen.")
     indicadores: Dict[str, IndicadorVerificacion] = Field(..., description="Indicadores evaluados por nombre.")
+    indicadores_informativos: Dict[str, Union[int, float]] = Field(
+        default_factory=dict,
+        description="Valores de contexto que se reportan junto a los indicadores y no intervienen en la validación.",
+    )
 
 
 class DetalleVerificacion(BaseModel):

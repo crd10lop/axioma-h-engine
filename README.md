@@ -32,6 +32,8 @@ axioma-h-engine/
 │   └── transformaciones.py Conversión de respuestas en DataFrames
 ├── tests/                  Pruebas con pytest
 ├── docs/
+│   ├── 01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md
+│   ├── 02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md
 │   └── modelo_simulacion.md
 ├── pytest.ini
 └── requirements.txt
@@ -149,43 +151,53 @@ Respuesta:
 
 ### POST /api/v1/simulacion/ejecutar
 
-Solicitud. Los campos `numero_nodos` (1 a 8, por defecto 8), `paso_minutos` (1 a 60, por defecto 5) y `semilla` (por defecto 42) son opcionales.
+Solicitud: es el payload de ejemplo del PRD. Los campos `numero_nodos` (1 a 8, por defecto 8), `paso_minutos` (1 a 60, por defecto 5) y `semilla` (por defecto 42) son opcionales.
 
 ```json
 {
   "duracion_horas": 24,
   "escenario": "TORMENTA_DE_SAL_Y_CALOR_EXTREMO",
-  "humedad_ambiente_inicial_pct": 85.0,
+  "humedad_ambiente_inicial_pct": 45.0,
   "tasa_salinizacion": "ALTA"
 }
 ```
 
-Respuesta (abreviada):
+Respuesta calculada por el modelo (abreviada). Los valores de la respuesta de ejemplo del PRD son ilustrativos.
 
 ```json
 {
   "comparativa": {
     "modo_neuro_simbolico": {
-      "litros_totales_agua": 234.977,
-      "pulsos_termicos_ejecutados": 64,
-      "consumo_energia_wh": 780.795,
-      "integridad_membrana_final_pct": 99.5921,
+      "litros_totales_agua": 81.652,
+      "pulsos_termicos_ejecutados": 19,
+      "consumo_energia_wh": 323.155,
+      "integridad_membrana_final_pct": 99.9525,
       "violaciones_ecologicas": 0
     },
     "modo_temporizador_fijo": {
-      "litros_totales_agua": 305.832,
+      "litros_totales_agua": 120.408,
       "pulsos_termicos_ejecutados": 88,
       "consumo_energia_wh": 1065.067,
-      "integridad_membrana_final_pct": 96.0972,
+      "integridad_membrana_final_pct": 97.0941,
       "violaciones_ecologicas": 8
     }
   },
   "conjeturas_validadas": {
     "conjetura_1_eficiencia": false,
     "conjetura_2_autorreparacion": false,
-    "conjetura_3_saber_territorial": true
+    "conjetura_3_saber_territorial": false
   },
-  "detalle_verificacion": { "...": "indicadores de cada conjetura con valor, umbral y cumplimiento" },
+  "detalle_verificacion": {
+    "conjetura_2_autorreparacion": {
+      "validada": false,
+      "indicadores": {
+        "tiempo_regeneracion_promedio_seg": { "valor": 22263.1579, "umbral": 120.0, "operador": "<", "cumple": false },
+        "perdida_integridad_termica_pct": { "valor": 0.0, "umbral": 0.0, "operador": "<=", "cumple": true }
+      },
+      "indicadores_informativos": { "pulsos_regenerados": 0, "pulsos_totales": 19 }
+    },
+    "...": "conjetura_1_eficiencia y conjetura_3_saber_territorial con la misma estructura"
+  },
   "series_temporales": [ { "minuto": 0, "humedad_relativa_pct": 84.85, "...": "..." } ],
   "bitacora": [ { "minuto": 0, "nodo_id": "NODO_01", "regla_activada": "REGLA_05_OPERACION_NOMINAL", "motivo": "..." } ]
 }
@@ -217,21 +229,49 @@ La suite cubre el motor de reglas (cada regla, casos límite y prioridad), el si
 
 ## Resultados
 
-Configuración: semilla 42, 8 nodos, 24 h, humedad inicial de 85 % y salinización ALTA.
+Todas las corridas usan las mismas condiciones:
 
-| Escenario | C1 Eficiencia | C2 Autorreparación | C3 Saber territorial |
-|---|---|---|---|
-| Día normal | No validada | No validada | Validada |
-| Incrustación salina rápida | No validada | No validada | No validada |
-| Sequía | No validada | No validada | Validada |
-| Tormenta de arena | No validada | No validada | Validada |
-| Tormenta de sal y calor extremo | No validada | No validada | Validada |
+- 24 h, inicio a las 18:00, paso de 5 min;
+- 8 nodos, semilla 42, salinización ALTA;
+- parámetros sin modificar: eficacia del pulso 0.90 y criterio de regeneración de 1100 Ω.
 
-- **C3 (saber territorial):** se valida en cuatro de cinco escenarios. El modo neuro-simbólico no registró violaciones ecológicas en ningún escenario.
-- **C1 (eficiencia):** no se valida. El ahorro de energía cumple en cuatro escenarios, pero la recuperación de caudal tras el pulso queda entre 85.8 % y 88.8 %, bajo el umbral de 90 %.
-- **C2 (autorreparación):** no se valida. La pérdida térmica es nula en todos los escenarios, pero ningún pulso devuelve la impedancia a 1100 Ω, por lo que el tiempo de regeneración supera los 120 s.
+### Corrida de referencia del PRD (Tormenta de sal y calor extremo, humedad inicial 45 %)
 
-Ambos resultados dependen de la eficacia del pulso, que es un parámetro supuesto. El análisis completo, las ecuaciones, los parámetros y las tablas de sensibilidad están en [docs/modelo_simulacion.md](docs/modelo_simulacion.md).
+| Métrica | Neuro-simbólico | Temporizador fijo |
+|---|---|---|
+| Agua captada (L) | 81.65 | 120.41 |
+| Pulsos térmicos | 19 | 88 |
+| Energía consumida (Wh) | 323.2 | 1065.1 |
+| Integridad final (%) | 99.95 | 97.09 |
+| Violaciones ecológicas | 0 | 8 |
+
+| Conjetura | Estado | Indicador que no cumple |
+|---|---|---|
+| C1 Eficiencia | No validada | Recuperación de caudal 88.81 % (umbral 90 %). El ahorro de energía, 79.74 %, sí cumple. |
+| C2 Autorreparación | No validada | Tiempo de regeneración 22 263 s (umbral 120 s), con 0 de 19 pulsos regenerados. La pérdida térmica, 0 %, sí cumple. |
+| C3 Saber territorial | No validada | Rendimiento nocturno 5.95 L/m²/noche (umbral 12). Las violaciones ecológicas, 0, sí cumplen. |
+
+### Estado de las conjeturas por escenario y humedad inicial
+
+| Escenario | C1 (45 %) | C2 (45 %) | C3 (45 %) | C1 (85 %) | C2 (85 %) | C3 (85 %) |
+|---|---|---|---|---|---|---|
+| Día normal | No validada | No validada | No validada | No validada | No validada | Validada |
+| Incrustación salina rápida | No validada | No validada | No validada | No validada | No validada | No validada |
+| Sequía | No validada | No validada | No validada | No validada | No validada | Validada |
+| Tormenta de arena | No validada | No validada | No validada | No validada | No validada | Validada |
+| Tormenta de sal y calor extremo | No validada | No validada | No validada | No validada | No validada | Validada |
+
+### Interpretación de los resultados
+
+- **C3 (saber territorial):** el modo neuro-simbólico no registró violaciones ecológicas en ningún escenario. La conjetura se valida en cuatro escenarios con 85 % de humedad inicial. Con 45 % no se valida, porque el recurso atmosférico no alcanza: el rendimiento nocturno queda entre 4 y 6 L/m²/noche, y el temporizador tampoco llega a 12 L/m²/noche.
+- **C1 (eficiencia):** el ahorro de energía cumple en casi todos los casos, pero la recuperación de caudal tras el pulso queda bajo el 90 %.
+- **C2 (autorreparación):**
+  - la ausencia de degradación térmica se sostiene en el modelo: 0 % en los diez escenarios;
+  - la eficacia de disolución no es verificable por simulación, porque depende de la eficacia del pulso, un parámetro supuesto.
+- **Eficacia necesaria:** según el análisis de sensibilidad, validar la C1 requiere que un pulso de 90 s a 44 °C remueva al menos el 78 % de la costra salina (`eta_max` >= 0.94). Validar la C2 requiere al menos el 81 % (`eta_max` >= 0.97). Esa es la medición experimental prioritaria para el siguiente ciclo.
+- **Criterio de regeneración:** se endureció de 1500 Ω a 1100 Ω porque el anterior se cumplía trivialmente, y se mantuvo fijo después de ese cambio.
+
+El análisis completo, las ecuaciones, los parámetros y las tablas de sensibilidad están en [docs/modelo_simulacion.md](docs/modelo_simulacion.md).
 
 ## Limitaciones conocidas
 
