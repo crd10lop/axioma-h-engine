@@ -76,6 +76,7 @@ La impedancia total es `Z = Z_nom + Z_sal + Z_polvo`.
 
 - **Neuro-simbólico:** en cada paso y nodo se construye un `TelemetryInput` y se llama a `evaluar_telemetria`. El simulador reutiliza el mismo motor de reglas del endpoint.
 - **Temporizador fijo:** aplica un pulso cada 120 min sin leer sensores, a `T_m + 12 °C` y sin corte térmico. La fracción de extracción es fija en 0.45 y no hay pausa ecológica.
+- **Temporizador con tope ecológico (referencia):** es el mismo temporizador fijo, con la misma programación de pulsos y sin corte térmico ni pausa ecológica, pero con la fracción de 0.33 del modo neuro-simbólico. Se ejecuta sobre el mismo entorno y se reporta en `comparativa.modo_temporizador_tope_ecologico`. No interviene en la validación de las conjeturas ni en las series temporales. Su función es separar el efecto del tope ecológico del de la lógica de control (sección 8.4).
 
 ### 3.4 Parámetros
 
@@ -131,6 +132,26 @@ El rendimiento nocturno se normaliza a 12 horas. Si la corrida no cubre una noch
 Una conjetura se valida solo si todos sus indicadores cumplen. Si la corrida no produce datos para un indicador, este se reporta con valor nulo y como no cumplido. Esto ocurre, por ejemplo, en una corrida de 1 h sin pulsos del temporizador.
 
 La Conjetura 2 incluye además dos indicadores informativos, `pulsos_regenerados` y `pulsos_totales`, en el campo `indicadores_informativos` de la respuesta. Muestran cuántos pulsos del modo neuro-simbólico alcanzaron el criterio de 1100 Ohm y no intervienen en la validación.
+
+Cada conjetura informa también otros indicadores informativos, redondeados a 4 decimales. Una clave se omite si la corrida no produce datos para calcularla. Ninguno interviene en la validación.
+
+| Conjetura | Indicador informativo | Cálculo |
+|---|---|---|
+| C1 | `reduccion_degradacion_pct` | `(D_temp - D_neuro) / D_temp * 100`, con `D = 100 - integridad final`. Corresponde al enunciado de vida útil de la conjetura. |
+| C2 | `tiempo_desprendimiento_t95_promedio_seg` | Promedio, sobre los pulsos neuro-simbólicos, de `t_95 = -tau * ln(1 - 0.95 * (1 - e^(-90/tau)))`, el tiempo en que el pulso logra el 95 % de su remoción total (`FRACCION_TIEMPO_DESPRENDIMIENTO`, criterio del equipo). |
+| C2 | `impedancia_promedio_tras_pulso_ohms` | Promedio de la impedancia al terminar cada pulso neuro-simbólico. |
+| C3 | `rendimiento_nocturno_temporizador_l_m2_noche` | Rendimiento nocturno del temporizador fijo, con la misma fórmula del indicador. |
+
+El campo `causas_no_validacion` de cada conjetura lista, en el orden de los indicadores y sin repetir, la causa de cada indicador que no cumple. Una conjetura validada tiene la lista vacía.
+
+| Causa | Cuándo se asigna |
+|---|---|
+| `SIN_DATOS` | El indicador no tiene valor, porque la corrida no generó datos para medirlo. |
+| `DEPENDE_DE_PARAMETRO_SUPUESTO` | No cumple la recuperación de caudal o el tiempo de regeneración, que dependen de la eficacia del pulso (`eta_max`), un parámetro supuesto (secciones 5.6 y 5.7). |
+| `LIMITE_DEL_RECURSO_ATMOSFERICO` | No cumple el rendimiento nocturno y el temporizador fijo, que extrae al 45 %, tampoco alcanza el umbral. |
+| `DESEMPENO_DEL_CONTROL` | No cumple el rendimiento nocturno, pero el temporizador sí alcanza el umbral, o no cumple cualquier otro indicador. |
+
+La clasificación se asigna por indicador y no es un diagnóstico completo. Por ejemplo, en TORMENTA_DE_ARENA la recuperación se atribuye a la eficacia del pulso, aunque el polvo, que el pulso no remueve, también contribuye (sección 6.2).
 
 ## 5. Resultados
 
@@ -418,3 +439,60 @@ c) ¿Un estimador sub-simbólico puede distinguir la impedancia causada por sal 
 d) ¿Cuál es el rendimiento real de niebla en Cabo de la Vela? De él dependen el flujo supuesto y la pertinencia del umbral de la Conjetura 3 (sección 8.2).
 
 e) Reoperacionalizar la Conjetura 2 en dos indicadores declarados antes de ejecutar las simulaciones: la cinética de desprendimiento (< 120 s) y la extensión de la limpieza (Z <= 1100 Ohm). Hoy ambos aspectos se miden en un solo indicador, el tiempo hasta 1100 Ohm, y el criterio se endureció después de observar los primeros resultados (sección 6.4).
+
+### 8.4 Control de confusión: tope ecológico frente a lógica de control
+
+El modo neuro-simbólico capta menos agua que el temporizador fijo (sección 5.5), pero los dos modos difieren en dos aspectos a la vez: la lógica de control (reglas frente a programación fija) y la fracción de extracción (0.33 frente a 0.45). Para separar ambos efectos, cada simulación ejecuta además un temporizador con tope ecológico (sección 3.3): la misma programación del temporizador fijo con la fracción de 0.33.
+
+Con L_neuro, L_temp y L_temp33 como el agua captada por el neuro-simbólico, el temporizador fijo y el temporizador con tope:
+
+- brecha total = `L_temp - L_neuro`;
+- parte debida al tope ecológico = `L_temp - L_temp33`;
+- parte debida a la lógica de control = `L_temp33 - L_neuro`.
+
+Condiciones: 24 h, inicio a las 18:00, paso de 5 min, 8 nodos, semilla 42, tasa ALTA y parámetros de `backend/config.py` sin modificar. Las columnas de neuro-simbólico y temporizador 0.45 coinciden con las secciones 5.2 a 5.4.
+
+| Escenario | Humedad inicial | Neuro-simbólico (L) | Temporizador 0.45 (L) | Temporizador 0.33 (L) | Brecha total (L) | Por tope (L) | Por lógica de control (L) | Brecha debida al tope (%) | Violaciones del temporizador 0.33 |
+|---|---|---|---|---|---|---|---|---|---|
+| DIA_NORMAL | 45 % | 82.7 | 126.6 | 95.5 | 43.9 | 31.1 | 12.8 | 70.9 | 0 |
+| INCRUSTACION_SALINA_RAPIDA | 45 % | 80.5 | 106.2 | 83.1 | 25.7 | 23.1 | 2.6 | 89.8 | 0 |
+| SEQUIA | 45 % | 40.8 | 63.6 | 47.7 | 22.9 | 16.0 | 6.9 | 69.8 | 8 |
+| TORMENTA_DE_ARENA | 45 % | 77.9 | 116.8 | 88.1 | 38.9 | 28.6 | 10.2 | 73.7 | 0 |
+| TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 45 % | 81.7 | 120.4 | 91.8 | 38.8 | 28.6 | 10.1 | 73.9 | 0 |
+| DIA_NORMAL | 85 % | 254.6 | 340.4 | 266.1 | 85.8 | 74.3 | 11.5 | 86.6 | 0 |
+| INCRUSTACION_SALINA_RAPIDA | 85 % | 185.4 | 240.9 | 198.6 | 55.6 | 42.3 | 13.2 | 76.2 | 0 |
+| SEQUIA | 85 % | 149.4 | 204.4 | 158.7 | 55.0 | 45.7 | 9.3 | 83.1 | 8 |
+| TORMENTA_DE_ARENA | 85 % | 232.4 | 306.4 | 239.3 | 74.0 | 67.1 | 6.8 | 90.8 | 0 |
+| TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 85 % | 235.0 | 305.8 | 243.7 | 70.9 | 62.2 | 8.7 | 87.7 | 0 |
+
+Las partes se calculan con los litros de la respuesta (3 decimales) y se redondean después, por lo que su suma puede diferir de la brecha total en 0.1 L.
+
+- **La mayor parte de la brecha se debe al tope ecológico.** Entre 69.8 % y 89.8 % con humedad inicial de 45 %, y entre 76.2 % y 90.8 % con 85 %. El menor rendimiento del modo neuro-simbólico es, sobre todo, el costo de la decisión D3, no de la lógica de control.
+- **La lógica de control explica entre 2.6 y 13.2 L** en 24 h y 8 nodos. Es el efecto neto de las demás diferencias entre los dos modos: la pausa ecológica, la reducción del caudal durante el pulso y en reserva crítica (80 % y 50 % del tope), la impedancia con que opera cada modo y la integridad de la membrana.
+- **El tope por sí solo no evita las violaciones ecológicas.** En SEQUIA, el temporizador con tope registra 8 violaciones, un episodio por nodo, porque extrae con humedad relativa menor que 30 %. El neuro-simbólico no tiene violaciones porque, además del tope, aplica la REGLA_02.
+
+El modo de referencia es informativo: no cambia la validación de las conjeturas ni los resultados de los otros dos modos.
+
+### 8.5 Cinética frente a extensión en la Conjetura 2
+
+La sección 8.3 e) propone separar la Conjetura 2 en dos aspectos: qué tan rápido actúa el pulso (cinética) y cuánto limpia (extensión). Los indicadores informativos de la sección 4 permiten observarlos por separado, sin cambiar el indicador que decide la validación.
+
+| Escenario | Humedad inicial | t95 promedio (s) | Impedancia promedio tras pulso (Ohm) | Pulsos regenerados | Tiempo de regeneración (s) |
+|---|---|---|---|---|---|
+| DIA_NORMAL | 45 % | 64.4 | 1125.6 | 0/10 | 32400.00 |
+| INCRUSTACION_SALINA_RAPIDA | 45 % | 64.4 | 1126.6 | 0/44 | 12013.64 |
+| SEQUIA | 45 % | Sin datos | Sin datos | 0/0 | Sin datos |
+| TORMENTA_DE_ARENA | 45 % | 64.4 | 1196.8 | 0/18 | 18000.00 |
+| TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 45 % | 64.4 | 1126.0 | 0/19 | 22263.16 |
+| DIA_NORMAL | 85 % | 64.4 | 1126.3 | 0/46 | 11934.78 |
+| INCRUSTACION_SALINA_RAPIDA | 85 % | 64.4 | 1174.7 | 0/97 | 6593.81 |
+| SEQUIA | 85 % | 64.4 | 1126.4 | 0/24 | 21575.00 |
+| TORMENTA_DE_ARENA | 85 % | 64.4 | 1170.1 | 0/53 | 10358.49 |
+| TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 85 % | 64.4 | 1136.7 | 0/64 | 9257.81 |
+
+- **Cinética.** El pulso logra el 95 % de su remoción en 64.4 s, por debajo del umbral de 120 s. El valor es el mismo en todos los escenarios porque cada pulso neuro-simbólico alcanza al menos 44 °C, de modo que `g(T) = 1` y `t95` depende solo de la constante de disolución supuesta (25 s). Es una propiedad del modelo y no una medición.
+- **Extensión.** Al terminar el pulso, la impedancia promedio queda entre 1125.6 y 1126.6 Ohm cuando el pulso se aplica apenas Z supera 1500 Ohm, por encima del criterio de 1100 Ohm. Por eso ningún pulso se regenera. El promedio sube en dos casos:
+  - en TORMENTA_DE_ARENA (1170.1 y 1196.8 Ohm), porque el pulso no remueve el polvo;
+  - con 85 % en INCRUSTACION_SALINA_RAPIDA (1174.7 Ohm) y TORMENTA_DE_SAL_Y_CALOR_EXTREMO (1136.7 Ohm), porque la REGLA_04 se activa con la reserva baja (16 y 8 veces en la bitácora) y posterga pulsos, que luego se aplican con más carga salina (sección 6.2). En DIA_NORMAL con 85 % la REGLA_04 no se activa.
+
+En el modelo, el pulso actúa rápido pero no limpia lo suficiente. La Conjetura 2 no falla por la cinética, sino por la extensión de la limpieza, que depende de la eficacia del pulso (`eta_max`), un parámetro supuesto. Si los dos indicadores de la pregunta 8.3 e) se declaran antes de ejecutar, la cinética cumpliría en el modelo y la extensión no, y el experimento de la sección 6.3 es el que decide la extensión.

@@ -267,6 +267,17 @@ def probar_simulacion(cliente: httpx.Client, api: str, configuracion: dict, nomb
             all(clave in resultado["detalle_verificacion"] for clave in claves_conjeturas),
             "detalle_verificacion incompleto",
         )
+        _verificar(
+            isinstance(comparativa.get("modo_temporizador_tope_ecologico"), dict),
+            "comparativa sin modo_temporizador_tope_ecologico",
+        )
+        _verificar(
+            all(
+                isinstance(resultado["detalle_verificacion"][clave].get("causas_no_validacion"), list)
+                for clave in claves_conjeturas
+            ),
+            "causas_no_validacion ausente o no es una lista en alguna conjetura",
+        )
         serie = resultado["series_temporales"]
         _verificar(isinstance(serie, list) and len(serie) > 0, "series_temporales vacía")
         estado_conjeturas = "".join("V" if conjeturas[clave] else "F" for clave in claves_conjeturas)

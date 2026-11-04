@@ -80,6 +80,25 @@ def tiempo_hasta_impedancia(
     return min(duracion, -tau * math.log(argumento))
 
 
+def tiempo_fraccion_remocion(
+    temperatura_alcanzada_c: float, fraccion: float = config.FRACCION_TIEMPO_DESPRENDIMIENTO
+) -> float | None:
+    """Segundos que tarda el pulso en lograr la fracción indicada de su remoción total.
+
+    Mide la cinética del desprendimiento, independiente de cuánta sal remueve
+    el pulso completo:
+        t_f = -tau * ln(1 - f * (1 - e^(-D/tau)))
+    con tau = tau_0 / g(T) y D la duración del pulso. Devuelve None si la
+    temperatura alcanzada no produce efecto de disolución (g(T) <= 0).
+    """
+    g = factor_temperatura_pulso(temperatura_alcanzada_c)
+    if g <= 0:
+        return None
+    tau = config.CONSTANTE_TIEMPO_DISOLUCION_SEG / g
+    duracion = float(config.DURACION_PULSO_SEG)
+    return -tau * math.log(1.0 - fraccion * (1.0 - math.exp(-duracion / tau)))
+
+
 def energia_pulso_wh(incremento_temperatura_c: float) -> float:
     """Energía eléctrica de un pulso en Wh.
 

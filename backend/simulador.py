@@ -18,6 +18,7 @@ from typing import List, Optional, Tuple
 from backend import config, modelo_fisico
 from backend.motor_reglas import evaluar_telemetria, temperatura_alcanzada_pulso
 from backend.schemas import (
+    CausaNoValidacion,
     ComparativaModos,
     ConjeturasValidadas,
     DetalleVerificacion,
@@ -258,6 +259,8 @@ class DiagnosticoModo:
     pulsos_regenerados: int = 0
     pulsos_no_regenerados: int = 0
     temperaturas_pulso_c: List[float] = field(default_factory=list)
+    tiempos_desprendimiento_seg: List[float] = field(default_factory=list)
+    impedancias_tras_pulso_ohms: List[float] = field(default_factory=list)
     pulsos_omitidos_por_energia: int = 0
     impedancia_promedio: List[float] = field(default_factory=list)
     litros_acumulados: List[float] = field(default_factory=list)
@@ -287,12 +290,13 @@ def _decidir_accion(
     humedad: float,
     t_matriz: float,
     impedancia_inicial: float,
+    fraccion_temporizador: float,
 ) -> Tuple[float, bool, float]:
     """Decide la fracción de extracción, si se ordena un pulso y su temperatura objetivo.
 
     En modo neuro-simbólico consulta el motor de reglas y registra en la
     bitácora cada cambio de regla; en modo temporizador aplica la
-    programación fija.
+    programación fija con la fracción de extracción indicada.
     """
     if neuro:
         telemetria = TelemetryInput(
@@ -319,7 +323,7 @@ def _decidir_accion(
         ordena_pulso = decision.pulso_termico_activo
         t_pulso = temperatura_alcanzada_pulso(t_matriz) if ordena_pulso else t_matriz
     else:
-        fraccion = config.FRACCION_EXTRACCION_TEMPORIZADOR
+        fraccion = fraccion_temporizador
         ordena_pulso = minuto - estado.ultimo_pulso_min >= config.INTERVALO_PULSO_TEMPORIZADOR_MIN
         if ordena_pulso:
             estado.ultimo_pulso_min = minuto
@@ -389,6 +393,10 @@ def _ejecutar_pulso(
         diag.recuperaciones_pct.append(
             min(100.0, modelo_fisico.conductancia_relativa(estado.impedancia) * 100.0)
         )
+        diag.impedancias_tras_pulso_ohms.append(estado.impedancia)
+        desprendimiento = modelo_fisico.tiempo_fraccion_remocion(t_pulso)
+        if desprendimiento is not None:
+            diag.tiempos_desprendimiento_seg.append(desprendimiento)
         _registrar_regeneracion(estado, diag, t_pulso, sal_antes, impedancia_inicial, minuto)
         return energia, perdida_pulso
     diag.pulsos_omitidos_por_energia += 1
@@ -453,8 +461,15 @@ def _cerrar_regeneraciones_pendientes(nodos: List[_EstadoNodo], diag: Diagnostic
             )
 
 
-def simular_modo(entorno: Entorno, modo: ModoOperacion) -> DiagnosticoModo:
+def simular_modo(
+    entorno: Entorno, modo: ModoOperacion, fraccion_temporizador: float | None = None
+) -> DiagnosticoModo:
     """Simula la red completa bajo una estrategia de control.
+
+    En modo temporizador, `fraccion_temporizador` fija la fracción de
+    extracción; si se omite, se usa FRACCION_EXTRACCION_TEMPORIZADOR. El
+    temporizador conserva su programación (pulso cada intervalo fijo, sin corte
+    térmico ni pausa ecológica) con cualquier fracción.
 
     En cada paso y para cada nodo: se decide la acción (motor de reglas o
     programación fija), se ejecuta el pulso si corresponde, se calcula el
@@ -470,6 +485,7 @@ def simular_modo(entorno: Entorno, modo: ModoOperacion) -> DiagnosticoModo:
     simulación, con un mínimo de la duración del pulso.
     """
     neuro = modo == ModoOperacion.NEURO_SIMBOLICO
+    fraccion_fija = config.FRACCION_EXTRACCION_TEMPORIZADOR if fraccion_temporizador is None else fraccion_temporizador
     nodos = [_EstadoNodo() for _ in range(entorno.numero_nodos)]
     diag = DiagnosticoModo(modo=modo)
     paso_min = entorno.paso_minutos
@@ -494,7 +510,7 @@ def simular_modo(entorno: Entorno, modo: ModoOperacion) -> DiagnosticoModo:
 
             # Decisión de control.
             fraccion, ordena_pulso, t_pulso = _decidir_accion(
-                neuro, estado, diag, nodo_id, minuto, humedad, t_matriz, impedancia_inicial
+                neuro, estado, diag, nodo_id, minuto, humedad, t_matriz, impedancia_inicial, fraccion_fija
             )
 
             # Ejecución del pulso resistivo.
@@ -586,17 +602,86 @@ def _indicador(valor: Optional[float], umbral: float, operador: str) -> Indicado
     )
 
 
-def _verificacion(indicadores: dict, informativos: Optional[dict] = None) -> VerificacionConjetura:
+# Causa de no validación de los indicadores que dependen de la eficacia del pulso,
+# un parámetro supuesto sin medición experimental. Los demás indicadores se
+# atribuyen al desempeño del control, salvo el rendimiento nocturno.
+_CAUSA_POR_INDICADOR = {
+    "recuperacion_caudal_promedio_pct": CausaNoValidacion.DEPENDE_DE_PARAMETRO_SUPUESTO,
+    "tiempo_regeneracion_promedio_seg": CausaNoValidacion.DEPENDE_DE_PARAMETRO_SUPUESTO,
+}
+_INDICADOR_RENDIMIENTO_NOCTURNO = "rendimiento_nocturno_l_m2_noche"
+
+
+def _causa_indicador(
+    nombre: str, indicador: IndicadorVerificacion, rendimiento_temporizador: float | None
+) -> CausaNoValidacion:
+    """Causa por la que un indicador no cumple su umbral.
+
+    El rendimiento nocturno se atribuye al recurso atmosférico cuando el
+    temporizador, sin restricciones de control, tampoco alcanza el umbral.
+    """
+    if indicador.valor is None:
+        return CausaNoValidacion.SIN_DATOS
+    if nombre == _INDICADOR_RENDIMIENTO_NOCTURNO:
+        recurso_insuficiente = rendimiento_temporizador is not None and rendimiento_temporizador < indicador.umbral
+        if recurso_insuficiente:
+            return CausaNoValidacion.LIMITE_DEL_RECURSO_ATMOSFERICO
+        return CausaNoValidacion.DESEMPENO_DEL_CONTROL
+    return _CAUSA_POR_INDICADOR.get(nombre, CausaNoValidacion.DESEMPENO_DEL_CONTROL)
+
+
+def _causas_no_validacion(
+    indicadores: dict[str, IndicadorVerificacion], rendimiento_temporizador: float | None
+) -> list[CausaNoValidacion]:
+    """Causas de los indicadores que no cumplen, en su orden y sin repetir.
+
+    Una conjetura validada no tiene indicadores incumplidos y devuelve una
+    lista vacía.
+    """
+    causas: list[CausaNoValidacion] = []
+    for nombre, indicador in indicadores.items():
+        if indicador.cumple:
+            continue
+        causa = _causa_indicador(nombre, indicador, rendimiento_temporizador)
+        if causa not in causas:
+            causas.append(causa)
+    return causas
+
+
+def _informativos(valores: dict[str, float | None]) -> dict[str, float]:
+    """Redondea a 4 decimales los indicadores informativos y omite los que no tienen datos."""
+    return {clave: round(valor, 4) for clave, valor in valores.items() if valor is not None}
+
+
+def _verificacion(
+    indicadores: dict,
+    informativos: Optional[dict] = None,
+    rendimiento_temporizador: float | None = None,
+) -> VerificacionConjetura:
     """Una conjetura se valida solo si todos sus indicadores cumplen.
 
-    Los indicadores informativos se adjuntan como contexto y no intervienen
-    en la validación.
+    Los indicadores informativos y las causas de no validación se adjuntan
+    como contexto y no intervienen en la validación.
     """
     return VerificacionConjetura(
         validada=all(i.cumple for i in indicadores.values()),
         indicadores=indicadores,
         indicadores_informativos=informativos or {},
+        causas_no_validacion=_causas_no_validacion(indicadores, rendimiento_temporizador),
     )
+
+
+def _reduccion_degradacion_pct(neuro: DiagnosticoModo, temporizador: DiagnosticoModo) -> float | None:
+    """Reducción relativa de la degradación del neuro-simbólico frente al temporizador.
+
+    (D_temp - D_neuro) / D_temp * 100, con D = 100 - integridad final. Devuelve
+    None si el temporizador no acumuló degradación.
+    """
+    degradacion_temporizador = 100.0 - temporizador.integridad_final_promedio
+    if degradacion_temporizador <= 0:
+        return None
+    degradacion_neuro = 100.0 - neuro.integridad_final_promedio
+    return (degradacion_temporizador - degradacion_neuro) / degradacion_temporizador * 100.0
 
 
 def rendimiento_nocturno_l_m2(diag: DiagnosticoModo, numero_nodos: int) -> Optional[float]:
@@ -630,6 +715,13 @@ def verificar_conjeturas(
       del modo neuro-simbólico.
     - Conjetura 3: cero episodios de violación ecológica y rendimiento
       nocturno >= 12 L/m²/noche (ver `rendimiento_nocturno_l_m2`).
+
+    Indicadores informativos, sin efecto en la validación: reducción de la
+    degradación frente al temporizador (Conjetura 1, enunciado de vida útil);
+    tiempo promedio hasta el 95 % de la remoción de cada pulso e impedancia
+    promedio tras el pulso (Conjetura 2); y rendimiento nocturno del
+    temporizador (Conjetura 3). Cada conjetura informa además las causas de
+    los indicadores que no cumplen.
     """
     if temporizador.energia_pulsos_wh > 0:
         ahorro = (temporizador.energia_pulsos_wh - neuro.energia_pulsos_wh) / temporizador.energia_pulsos_wh * 100.0
@@ -637,6 +729,7 @@ def verificar_conjeturas(
         ahorro = None
 
     rendimiento = rendimiento_nocturno_l_m2(neuro, numero_nodos)
+    rendimiento_temporizador = rendimiento_nocturno_l_m2(temporizador, numero_nodos)
 
     conjetura_1 = _verificacion(
         {
@@ -644,7 +737,8 @@ def verificar_conjeturas(
                 _promedio(neuro.recuperaciones_pct), config.RECUPERACION_MINIMA_PCT, ">="
             ),
             "ahorro_energia_pulsos_pct": _indicador(ahorro, config.AHORRO_ENERGIA_MINIMO_PCT, ">="),
-        }
+        },
+        informativos=_informativos({"reduccion_degradacion_pct": _reduccion_degradacion_pct(neuro, temporizador)}),
     )
     conjetura_2 = _verificacion(
         {
@@ -658,6 +752,12 @@ def verificar_conjeturas(
         informativos={
             "pulsos_regenerados": neuro.pulsos_regenerados,
             "pulsos_totales": neuro.pulsos,
+            **_informativos(
+                {
+                    "tiempo_desprendimiento_t95_promedio_seg": _promedio(neuro.tiempos_desprendimiento_seg),
+                    "impedancia_promedio_tras_pulso_ohms": _promedio(neuro.impedancias_tras_pulso_ohms),
+                }
+            ),
         },
     )
     conjetura_3 = _verificacion(
@@ -665,10 +765,12 @@ def verificar_conjeturas(
             "violaciones_ecologicas": _indicador(
                 float(neuro.violaciones_ecologicas), float(config.VIOLACIONES_ECOLOGICAS_MAXIMAS), "<="
             ),
-            "rendimiento_nocturno_l_m2_noche": _indicador(
+            _INDICADOR_RENDIMIENTO_NOCTURNO: _indicador(
                 rendimiento, config.RENDIMIENTO_MINIMO_L_M2_NOCHE, ">="
             ),
-        }
+        },
+        informativos=_informativos({"rendimiento_nocturno_temporizador_l_m2_noche": rendimiento_temporizador}),
+        rendimiento_temporizador=rendimiento_temporizador,
     )
     return DetalleVerificacion(
         conjetura_1_eficiencia=conjetura_1,
@@ -706,6 +808,11 @@ def ejecutar_simulacion(cfg: SimulationConfig) -> SimulationResult:
     """Ejecuta la simulación comparativa y arma la respuesta de la API."""
     entorno, neuro, temporizador = ejecutar_simulacion_detallada(cfg)
     detalle = verificar_conjeturas(neuro, temporizador, entorno.numero_nodos)
+    # Referencia: el temporizador con el tope ecológico del modo neuro-simbólico separa el
+    # efecto del tope del de la lógica de control. No se agrega a las series temporales.
+    referencia = simular_modo(
+        entorno, ModoOperacion.TEMPORIZADOR_FIJO, fraccion_temporizador=config.FRACCION_MAXIMA_EXTRACCION
+    )
 
     series = [
         PuntoSerieTemporal(
@@ -728,6 +835,7 @@ def ejecutar_simulacion(cfg: SimulationConfig) -> SimulationResult:
         comparativa=ComparativaModos(
             modo_neuro_simbolico=_resultado_modo(neuro),
             modo_temporizador_fijo=_resultado_modo(temporizador),
+            modo_temporizador_tope_ecologico=_resultado_modo(referencia),
         ),
         conjeturas_validadas=ConjeturasValidadas(
             conjetura_1_eficiencia=detalle.conjetura_1_eficiencia.validada,

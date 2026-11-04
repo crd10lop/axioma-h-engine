@@ -488,6 +488,14 @@ def seccion_comparativa(resultado: dict) -> None:
             f"Temporizador fijo: {formatear_valor(fila['clave'], fila[tr.NOMBRES_MODO['temporizador']])}"
         )
 
+    # Referencia con el mismo tope ecológico: separa el efecto del tope del de la lógica de control.
+    linea_referencia = tr.texto_modo_referencia(resultado)
+    if linea_referencia is not None:
+        st.caption(linea_referencia)
+    brecha = tr.texto_brecha_agua(resultado)
+    if brecha is not None:
+        st.info(brecha)
+
 
 def seccion_conjeturas(resultado: dict) -> None:
     """Estado de las tres conjeturas con su tabla de indicadores."""
@@ -505,6 +513,8 @@ def seccion_conjeturas(resultado: dict) -> None:
                 st.success("VALIDADA")
             else:
                 st.error("NO VALIDADA")
+                for causa in conjetura["causas"]:
+                    st.markdown(f"- {causa}")
             st.dataframe(conjetura["indicadores"], hide_index=True, width="stretch")
 
 

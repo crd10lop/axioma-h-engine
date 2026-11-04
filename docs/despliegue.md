@@ -68,7 +68,7 @@ Comprobaciones realizadas:
 2. `GET /docs` y `GET /openapi.json` responden 200 y el esquema publica `/api/v1/nodo/evaluar` y `/api/v1/simulacion/ejecutar`.
 3. `POST /api/v1/nodo/evaluar` aplica cada regla del motor (REGLA_01 a REGLA_05) con la acción y el estado esperados, respetando el orden de prioridad.
 4. `POST /api/v1/nodo/evaluar` rechaza una telemetría inválida con código 422.
-5. `POST /api/v1/simulacion/ejecutar` responde para el ejemplo del esquema y para cada escenario, con comparativa entre modos, conjeturas validadas y serie temporal no vacía.
+5. `POST /api/v1/simulacion/ejecutar` responde para el ejemplo del esquema y para cada escenario, con comparativa entre modos (incluido `modo_temporizador_tope_ecologico`), conjeturas validadas, `causas_no_validacion` como lista en cada conjetura y serie temporal no vacía.
 6. `GET /_stcore/health` del dashboard responde 200 con el cuerpo `ok`.
 7. `GET /` del dashboard responde 200.
 8. Las funciones de `frontend/cliente_api.py` funcionan contra la URL pública de la API.

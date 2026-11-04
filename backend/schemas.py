@@ -180,6 +180,22 @@ class ComparativaModos(BaseModel):
 
     modo_neuro_simbolico: ResultadoModo
     modo_temporizador_fijo: ResultadoModo
+    modo_temporizador_tope_ecologico: ResultadoModo | None = Field(
+        default=None,
+        description=(
+            "Temporizador fijo con la misma fracción de 0.33 del modo neuro-simbólico; referencia para "
+            "separar el efecto del tope ecológico del de la lógica de control."
+        ),
+    )
+
+
+class CausaNoValidacion(str, Enum):
+    """Motivo por el que un indicador de una conjetura no cumple su umbral."""
+
+    SIN_DATOS = "SIN_DATOS"
+    DEPENDE_DE_PARAMETRO_SUPUESTO = "DEPENDE_DE_PARAMETRO_SUPUESTO"
+    LIMITE_DEL_RECURSO_ATMOSFERICO = "LIMITE_DEL_RECURSO_ATMOSFERICO"
+    DESEMPENO_DEL_CONTROL = "DESEMPENO_DEL_CONTROL"
 
 
 class ConjeturasValidadas(BaseModel):
@@ -209,6 +225,13 @@ class VerificacionConjetura(BaseModel):
     indicadores_informativos: Dict[str, int | float] = Field(
         default_factory=dict,
         description="Valores de contexto que se reportan junto a los indicadores y no intervienen en la validación.",
+    )
+    causas_no_validacion: List[CausaNoValidacion] = Field(
+        default_factory=list,
+        description=(
+            "Causas de los indicadores que no cumplen, en el orden de los indicadores y sin repetir; "
+            "vacía si la conjetura se valida. No intervienen en la validación."
+        ),
     )
 
 

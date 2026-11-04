@@ -4,15 +4,31 @@ import pytest
 
 from backend import config
 from backend.modelo_fisico import energia_pulso_wh, tiempo_hasta_impedancia
-from backend.schemas import Escenario, ModoOperacion, SimulationConfig, TasaSalinizacion
+from backend.schemas import (
+    CausaNoValidacion,
+    Escenario,
+    IndicadorVerificacion,
+    ModoOperacion,
+    SimulationConfig,
+    TasaSalinizacion,
+)
 from backend.simulador import (
+    DiagnosticoModo,
     Entorno,
+    _causas_no_validacion,
     _indicador,
     ejecutar_simulacion,
     ejecutar_simulacion_detallada,
+    generar_entorno,
     rendimiento_nocturno_l_m2,
     simular_modo,
+    verificar_conjeturas,
 )
+
+RECUPERACION = "recuperacion_caudal_promedio_pct"
+REGENERACION = "tiempo_regeneracion_promedio_seg"
+RENDIMIENTO = "rendimiento_nocturno_l_m2_noche"
+AHORRO = "ahorro_energia_pulsos_pct"
 
 
 def configuracion(escenario=Escenario.DIA_NORMAL, **cambios):
@@ -138,9 +154,14 @@ def test_indicadores_informativos_de_conjetura_2(corridas, escenario):
     _, neuro, _ = corridas[escenario]
     detalle = ejecutar_simulacion(configuracion(escenario)).detalle_verificacion
     informativos = detalle.conjetura_2_autorreparacion.indicadores_informativos
-    assert informativos == {"pulsos_regenerados": neuro.pulsos_regenerados, "pulsos_totales": neuro.pulsos}
-    assert detalle.conjetura_1_eficiencia.indicadores_informativos == {}
-    assert detalle.conjetura_3_saber_territorial.indicadores_informativos == {}
+    assert informativos["pulsos_regenerados"] == neuro.pulsos_regenerados
+    assert informativos["pulsos_totales"] == neuro.pulsos
+    impedancia_promedio = sum(neuro.impedancias_tras_pulso_ohms) / len(neuro.impedancias_tras_pulso_ohms)
+    assert informativos["impedancia_promedio_tras_pulso_ohms"] == pytest.approx(impedancia_promedio, abs=1e-4)
+    assert set(detalle.conjetura_1_eficiencia.indicadores_informativos) == {"reduccion_degradacion_pct"}
+    assert set(detalle.conjetura_3_saber_territorial.indicadores_informativos) == {
+        "rendimiento_nocturno_temporizador_l_m2_noche"
+    }
     # Los informativos no forman parte de los indicadores que deciden la validación.
     assert not set(informativos) & set(detalle.conjetura_2_autorreparacion.indicadores)
 
@@ -236,3 +257,147 @@ def test_rendimiento_nocturno_sin_horas_nocturnas():
 def test_indicador_rechaza_operador_no_soportado():
     with pytest.raises(ValueError, match="Operador no soportado: >"):
         _indicador(1.0, 0.0, ">")
+
+
+# ---------------------------------------------------------------------------
+# Temporizador con tope ecológico (modo de referencia)
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("escenario", list(Escenario))
+def test_modo_referencia_nunca_supera_el_tope_ecologico(escenario):
+    entorno = generar_entorno(configuracion(escenario))
+    referencia = simular_modo(
+        entorno, ModoOperacion.TEMPORIZADOR_FIJO, fraccion_temporizador=config.FRACCION_MAXIMA_EXTRACCION
+    )
+    assert referencia.fraccion_maxima_extraida <= config.FRACCION_MAXIMA_EXTRACCION
+
+
+def test_modo_referencia_conserva_la_programacion_del_temporizador():
+    entorno = generar_entorno(configuracion(Escenario.TORMENTA_DE_SAL_Y_CALOR_EXTREMO, humedad_ambiente_inicial_pct=45.0))
+    temporizador = simular_modo(entorno, ModoOperacion.TEMPORIZADOR_FIJO)
+    referencia = simular_modo(
+        entorno, ModoOperacion.TEMPORIZADOR_FIJO, fraccion_temporizador=config.FRACCION_MAXIMA_EXTRACCION
+    )
+    assert referencia.pulsos == temporizador.pulsos
+    assert referencia.energia_pulsos_wh == pytest.approx(temporizador.energia_pulsos_wh)
+    assert referencia.bitacora == []
+
+
+def test_payload_prd_conserva_resultados_y_agrega_referencia():
+    cfg = configuracion(Escenario.TORMENTA_DE_SAL_Y_CALOR_EXTREMO, humedad_ambiente_inicial_pct=45.0)
+    comparativa = ejecutar_simulacion(cfg).comparativa
+    assert comparativa.modo_neuro_simbolico.litros_totales_agua == pytest.approx(81.652)
+    assert comparativa.modo_temporizador_fijo.litros_totales_agua == pytest.approx(120.408)
+    assert comparativa.modo_temporizador_tope_ecologico.litros_totales_agua == pytest.approx(91.8, abs=0.1)
+
+
+def test_modo_referencia_no_se_agrega_a_las_series():
+    resultado = ejecutar_simulacion(configuracion(duracion_horas=1, numero_nodos=1))
+    campos = set(resultado.series_temporales[0].model_dump())
+    assert not any("tope" in campo for campo in campos)
+
+
+# ---------------------------------------------------------------------------
+# Indicadores informativos nuevos
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("escenario", list(Escenario))
+def test_cada_pulso_registra_impedancia_y_desprendimiento(corridas, escenario):
+    _, neuro, _ = corridas[escenario]
+    assert len(neuro.impedancias_tras_pulso_ohms) == neuro.pulsos
+    assert len(neuro.tiempos_desprendimiento_seg) == neuro.pulsos
+
+
+def test_desprendimiento_t95_del_pulso_a_44_grados():
+    detalle = ejecutar_simulacion(configuracion()).detalle_verificacion
+    informativos = detalle.conjetura_2_autorreparacion.indicadores_informativos
+    assert informativos["tiempo_desprendimiento_t95_promedio_seg"] == pytest.approx(64.4, abs=0.1)
+
+
+def test_reduccion_degradacion_frente_al_temporizador():
+    resultado = ejecutar_simulacion(configuracion())
+    neuro = resultado.comparativa.modo_neuro_simbolico.degradacion_acumulada_pct
+    temporizador = resultado.comparativa.modo_temporizador_fijo.degradacion_acumulada_pct
+    esperado = (temporizador - neuro) / temporizador * 100.0
+    informativos = resultado.detalle_verificacion.conjetura_1_eficiencia.indicadores_informativos
+    assert informativos["reduccion_degradacion_pct"] == pytest.approx(esperado, abs=1e-2)
+
+
+def test_informativos_sin_datos_se_omiten():
+    neuro = DiagnosticoModo(modo=ModoOperacion.NEURO_SIMBOLICO)
+    temporizador = DiagnosticoModo(modo=ModoOperacion.TEMPORIZADOR_FIJO)
+    detalle = verificar_conjeturas(neuro, temporizador, numero_nodos=1)
+    assert detalle.conjetura_1_eficiencia.indicadores_informativos == {}
+    assert set(detalle.conjetura_2_autorreparacion.indicadores_informativos) == {
+        "pulsos_regenerados",
+        "pulsos_totales",
+    }
+    assert detalle.conjetura_3_saber_territorial.indicadores_informativos == {}
+
+
+# ---------------------------------------------------------------------------
+# Causas de no validación
+# ---------------------------------------------------------------------------
+def _ind(valor, cumple, umbral=10.0):
+    """Indicador mínimo para probar la clasificación de causas."""
+    return IndicadorVerificacion(valor=valor, umbral=umbral, operador=">=", cumple=cumple)
+
+
+def test_causas_vacias_si_todos_los_indicadores_cumplen():
+    causas = _causas_no_validacion({RECUPERACION: _ind(95.0, True), AHORRO: _ind(40.0, True)}, None)
+    assert causas == []
+
+
+def test_causa_sin_datos():
+    causas = _causas_no_validacion({RECUPERACION: _ind(None, False)}, None)
+    assert causas == [CausaNoValidacion.SIN_DATOS]
+
+
+@pytest.mark.parametrize("nombre", [RECUPERACION, REGENERACION])
+def test_causa_parametro_supuesto(nombre):
+    causas = _causas_no_validacion({nombre: _ind(5.0, False)}, None)
+    assert causas == [CausaNoValidacion.DEPENDE_DE_PARAMETRO_SUPUESTO]
+
+
+def test_causa_limite_del_recurso_atmosferico():
+    causas = _causas_no_validacion({RENDIMIENTO: _ind(6.0, False, umbral=12.0)}, 8.0)
+    assert causas == [CausaNoValidacion.LIMITE_DEL_RECURSO_ATMOSFERICO]
+
+
+@pytest.mark.parametrize("rendimiento_temporizador", [15.0, None])
+def test_causa_desempeno_en_rendimiento(rendimiento_temporizador):
+    causas = _causas_no_validacion({RENDIMIENTO: _ind(11.0, False, umbral=12.0)}, rendimiento_temporizador)
+    assert causas == [CausaNoValidacion.DESEMPENO_DEL_CONTROL]
+
+
+def test_causa_desempeno_en_otros_indicadores():
+    causas = _causas_no_validacion({AHORRO: _ind(12.0, False)}, None)
+    assert causas == [CausaNoValidacion.DESEMPENO_DEL_CONTROL]
+
+
+def test_causas_en_orden_y_sin_repetir():
+    indicadores = {
+        AHORRO: _ind(12.0, False),
+        RECUPERACION: _ind(85.0, False),
+        REGENERACION: _ind(500.0, False),
+    }
+    causas = _causas_no_validacion(indicadores, None)
+    assert causas == [CausaNoValidacion.DESEMPENO_DEL_CONTROL, CausaNoValidacion.DEPENDE_DE_PARAMETRO_SUPUESTO]
+
+
+@pytest.mark.parametrize("escenario", list(Escenario))
+def test_causas_vacias_solo_en_conjeturas_validadas(escenario):
+    detalle = ejecutar_simulacion(configuracion(escenario)).detalle_verificacion
+    for verificacion in (
+        detalle.conjetura_1_eficiencia,
+        detalle.conjetura_2_autorreparacion,
+        detalle.conjetura_3_saber_territorial,
+    ):
+        assert verificacion.validada == (verificacion.causas_no_validacion == [])
+
+
+def test_pulso_sin_efecto_termico_no_registra_desprendimiento():
+    # Con la matriz a 15 °C, el pulso del temporizador llega a 27 °C, bajo la temperatura mínima de efecto.
+    entorno = entorno_constante(pasos=4 * 12, t_matriz=15.0)
+    diag = simular_modo(entorno, ModoOperacion.TEMPORIZADOR_FIJO)
+    assert diag.pulsos > 0
+    assert diag.tiempos_desprendimiento_seg == []
+    assert len(diag.impedancias_tras_pulso_ohms) == diag.pulsos

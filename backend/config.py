@@ -29,6 +29,8 @@ AHORRO_ENERGIA_MINIMO_PCT = 35.0  # %. Conjetura 1.
 TIEMPO_REGENERACION_MAX_SEG = 120  # s. Conjetura 2.
 # Una membrana se considera regenerada cuando su impedancia vuelve a <= 1.10 * Z_nominal (1100 Ohm).
 FACTOR_IMPEDANCIA_REGENERADA = 1.10  # Adimensional. Criterio del equipo para la Conjetura 2.
+# Fracción de la remoción total de un pulso usada para medir la cinética de desprendimiento (t95).
+FRACCION_TIEMPO_DESPRENDIMIENTO = 0.95  # Adimensional. Criterio del equipo. Indicador informativo de la Conjetura 2.
 PERDIDA_TERMICA_MAXIMA_PCT = 0.0  # % de integridad. Conjetura 2.
 VIOLACIONES_ECOLOGICAS_MAXIMAS = 0  # Episodios. Conjetura 3.
 RENDIMIENTO_MINIMO_L_M2_NOCHE = 12.0  # L/m²/noche. Conjetura 3.

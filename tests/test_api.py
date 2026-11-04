@@ -34,6 +34,7 @@ CAMPOS_RESULTADO_MODO = {
     "degradacion_acumulada_pct",
 }
 CONJETURAS = {"conjetura_1_eficiencia", "conjetura_2_autorreparacion", "conjetura_3_saber_territorial"}
+MODOS_COMPARATIVA = {"modo_neuro_simbolico", "modo_temporizador_fijo", "modo_temporizador_tope_ecologico"}
 
 
 def test_raiz():
@@ -82,7 +83,7 @@ def test_ejecutar_simulacion_payload_prd():
     respuesta = cliente.post("/api/v1/simulacion/ejecutar", json=PAYLOAD_SIMULACION_PRD)
     assert respuesta.status_code == 200
     datos = respuesta.json()
-    assert set(datos["comparativa"]) == {"modo_neuro_simbolico", "modo_temporizador_fijo"}
+    assert set(datos["comparativa"]) == MODOS_COMPARATIVA
     assert set(datos["conjeturas_validadas"]) == {
         "conjetura_1_eficiencia",
         "conjetura_2_autorreparacion",
@@ -106,7 +107,7 @@ def test_simulacion_payload_prd_estructura_completa():
         "bitacora",
     }
 
-    for modo in ("modo_neuro_simbolico", "modo_temporizador_fijo"):
+    for modo in MODOS_COMPARATIVA:
         resultado_modo = datos["comparativa"][modo]
         assert set(resultado_modo) == CAMPOS_RESULTADO_MODO
         assert isinstance(resultado_modo["pulsos_termicos_ejecutados"], int)
@@ -122,9 +123,16 @@ def test_simulacion_payload_prd_estructura_completa():
         for indicador in verificacion["indicadores"].values():
             assert set(indicador) == {"valor", "umbral", "operador", "cumple"}
             assert isinstance(indicador["cumple"], bool)
+        assert isinstance(verificacion["causas_no_validacion"], list)
     informativos = datos["detalle_verificacion"]["conjetura_2_autorreparacion"]["indicadores_informativos"]
-    assert set(informativos) == {"pulsos_regenerados", "pulsos_totales"}
-    assert all(isinstance(valor, int) for valor in informativos.values())
+    assert set(informativos) == {
+        "pulsos_regenerados",
+        "pulsos_totales",
+        "tiempo_desprendimiento_t95_promedio_seg",
+        "impedancia_promedio_tras_pulso_ohms",
+    }
+    assert isinstance(informativos["pulsos_regenerados"], int)
+    assert isinstance(informativos["pulsos_totales"], int)
 
     # 24 h con paso de 5 min.
     assert len(datos["series_temporales"]) == 288

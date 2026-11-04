@@ -104,6 +104,9 @@ La barra lateral presenta un recorrido de tres vistas numeradas, en el orden rec
 - Mantiene una recuperación de caudal estable, entre 86 % y 89 %. La del temporizador cae de 96 % a 63 % a medida que aumenta la sal. Con poca sal el temporizador recupera más, porque limpia membranas casi limpias.
 - Nunca supera 45 °C ni viola el límite ecológico. El temporizador alcanzó 55.9 °C.
 - Capta entre 23 % y 27 % menos agua que el temporizador. Es el costo de respetar el límite del 33 %.
+- Un temporizador de referencia con el mismo límite del 33 % confirma que la mayor parte de esa diferencia se debe al límite y no a las reglas: entre 70 % y 91 %, según el escenario y la humedad. El dashboard muestra esa descomposición debajo de la comparativa.
+- Cada pulso logra el 95 % de su limpieza en unos 64 s, por debajo del límite de 120 s, pero deja la membrana en unos 1126 Ω, por encima del criterio de 1100 Ω. La Conjetura 2 falla porque el pulso no limpia lo suficiente, no porque sea lento.
+- Cada conjetura no validada indica su causa. Los valores insuficientes de recuperación y regeneración dependen de un parámetro supuesto, y no equivalen a una refutación. Con humedad baja, el rendimiento nocturno no alcanza porque la niebla disponible es insuficiente, incluso para el temporizador.
 - Las Conjeturas 1 y 2 todavía no se validan. Ambas dependen de cuánta sal remueve realmente un pulso: el modelo supone una eficacia de 0.90 y harían falta valores de 0.94 a 0.97 para validarlas. Medir esa eficacia en laboratorio es la prioridad del siguiente ciclo.
 
 ## 8. Limitaciones

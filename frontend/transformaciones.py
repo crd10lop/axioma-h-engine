@@ -11,6 +11,12 @@ import pandas as pd
 
 from frontend import config
 
+# Claves de la comparativa de modos en la respuesta de la API.
+MODO_NEURO = "modo_neuro_simbolico"
+MODO_TEMPORIZADOR = "modo_temporizador_fijo"
+MODO_REFERENCIA = "modo_temporizador_tope_ecologico"
+CLAVE_LITROS = "litros_totales_agua"
+
 NOMBRES_MODO = {
     "neuro": "Neuro-simbólico",
     "temporizador": "Temporizador fijo",
@@ -18,7 +24,7 @@ NOMBRES_MODO = {
 
 # Clave en ResultadoModo, etiqueta y si un valor mayor es favorable.
 METRICAS_COMPARATIVA = [
-    ("litros_totales_agua", "Agua captada (L)", True),
+    (CLAVE_LITROS, "Agua captada (L)", True),
     ("pulsos_termicos_ejecutados", "Pulsos térmicos", False),
     ("consumo_energia_wh", "Energía consumida (Wh)", False),
     ("integridad_membrana_final_pct", "Integridad final (%)", True),
@@ -42,6 +48,23 @@ NOMBRES_INDICADOR = {
     "rendimiento_nocturno_l_m2_noche": "Rendimiento nocturno (L/m²/noche)",
     "pulsos_regenerados": "Pulsos regenerados (informativo)",
     "pulsos_totales": "Pulsos totales (informativo)",
+    "reduccion_degradacion_pct": "Reducción de la degradación frente al temporizador (%, informativo)",
+    "tiempo_desprendimiento_t95_promedio_seg": "Tiempo hasta el 95 % de la remoción del pulso (s, informativo)",
+    "impedancia_promedio_tras_pulso_ohms": "Impedancia promedio tras el pulso (Ω, informativo)",
+    "rendimiento_nocturno_temporizador_l_m2_noche": "Rendimiento nocturno del temporizador (L/m²/noche, informativo)",
+}
+
+# Explicación en lenguaje llano de cada causa de no validación que entrega la API.
+TEXTO_CAUSA = {
+    "SIN_DATOS": "La corrida no generó datos para medir al menos un indicador.",
+    "DEPENDE_DE_PARAMETRO_SUPUESTO": (
+        "Depende de cuánta sal remueve un pulso, un parámetro supuesto que aún no se ha medido; "
+        "no equivale a una refutación."
+    ),
+    "LIMITE_DEL_RECURSO_ATMOSFERICO": (
+        "La niebla disponible no alcanza: el temporizador, sin límites ecológicos, tampoco llega al umbral."
+    ),
+    "DESEMPENO_DEL_CONTROL": "El control no alcanzó el umbral con los parámetros actuales.",
 }
 
 # Los indicadores informativos se muestran a continuación de este indicador.
@@ -99,8 +122,8 @@ def series_formato_largo(df: pd.DataFrame, columna_neuro: str, columna_temporiza
 def comparativa_a_dataframe(resultado: dict) -> pd.DataFrame:
     """Tabla de métricas finales de ambos modos con la diferencia porcentual."""
     comparativa = resultado["comparativa"]
-    neuro = comparativa["modo_neuro_simbolico"]
-    temporizador = comparativa["modo_temporizador_fijo"]
+    neuro = comparativa[MODO_NEURO]
+    temporizador = comparativa[MODO_TEMPORIZADOR]
     filas = []
     for clave, etiqueta, mayor_es_mejor in METRICAS_COMPARATIVA:
         filas.append(
@@ -120,14 +143,14 @@ def totales_a_dataframe(resultado: dict) -> pd.DataFrame:
     """Totales finales en formato largo para el gráfico de barras."""
     comparativa = resultado["comparativa"]
     claves = [
-        ("litros_totales_agua", "Agua captada (L)"),
+        (CLAVE_LITROS, "Agua captada (L)"),
         ("consumo_energia_wh", "Energía consumida (Wh)"),
         ("integridad_membrana_final_pct", "Integridad final (%)"),
     ]
     filas = []
     for clave_modo, nombre_modo in (
-        ("modo_neuro_simbolico", NOMBRES_MODO["neuro"]),
-        ("modo_temporizador_fijo", NOMBRES_MODO["temporizador"]),
+        (MODO_NEURO, NOMBRES_MODO["neuro"]),
+        (MODO_TEMPORIZADOR, NOMBRES_MODO["temporizador"]),
     ):
         for clave, etiqueta in claves:
             filas.append({"Métrica": etiqueta, "Modo": nombre_modo, "Valor": comparativa[clave_modo][clave]})
@@ -170,7 +193,11 @@ def indicadores_a_dataframe(verificacion: dict) -> pd.DataFrame:
 
 
 def conjeturas_a_lista(resultado: dict) -> List[dict]:
-    """Lista ordenada de conjeturas con su estado y la tabla de indicadores."""
+    """Lista ordenada de conjeturas con su estado, la tabla de indicadores y las causas de no validación.
+
+    Las causas se traducen con TEXTO_CAUSA; una respuesta sin el campo
+    `causas_no_validacion` produce una lista vacía.
+    """
     detalle = resultado["detalle_verificacion"]
     return [
         {
@@ -178,9 +205,63 @@ def conjeturas_a_lista(resultado: dict) -> List[dict]:
             "nombre": nombre,
             "validada": detalle[clave]["validada"],
             "indicadores": indicadores_a_dataframe(detalle[clave]),
+            "causas": [TEXTO_CAUSA.get(causa, causa) for causa in detalle[clave].get("causas_no_validacion", [])],
         }
         for clave, nombre in NOMBRES_CONJETURA.items()
     ]
+
+
+def descomponer_brecha_agua(resultado: dict) -> dict | None:
+    """Separa la diferencia de agua entre temporizador y neuro-simbólico en dos partes.
+
+    Con L_temp, L_neuro y L_temp33 (temporizador con tope ecológico):
+    - brecha_total_l = L_temp - L_neuro;
+    - por_tope_ecologico_l = L_temp - L_temp33;
+    - por_logica_control_l = L_temp33 - L_neuro;
+    - pct_por_tope = por_tope_ecologico_l / brecha_total_l * 100, o None si la brecha no es positiva.
+    Devuelve None si la respuesta no incluye el modo de referencia.
+    """
+    comparativa = resultado["comparativa"]
+    referencia = comparativa.get(MODO_REFERENCIA)
+    if referencia is None:
+        return None
+    litros_neuro = comparativa[MODO_NEURO][CLAVE_LITROS]
+    litros_temporizador = comparativa[MODO_TEMPORIZADOR][CLAVE_LITROS]
+    litros_referencia = referencia[CLAVE_LITROS]
+    brecha_total = litros_temporizador - litros_neuro
+    por_tope = litros_temporizador - litros_referencia
+    return {
+        "brecha_total_l": brecha_total,
+        "por_tope_ecologico_l": por_tope,
+        "por_logica_control_l": litros_referencia - litros_neuro,
+        "pct_por_tope": None if brecha_total <= 0 else por_tope / brecha_total * 100.0,
+    }
+
+
+def texto_brecha_agua(resultado: dict) -> str | None:
+    """Frase con la descomposición de la diferencia de agua, o None si no es calculable."""
+    brecha = descomponer_brecha_agua(resultado)
+    pct_por_tope = None if brecha is None else brecha["pct_por_tope"]
+    if pct_por_tope is None:
+        return None
+    return (
+        f"De {brecha['brecha_total_l']:.1f} L de diferencia, {brecha['por_tope_ecologico_l']:.1f} L "
+        f"({pct_por_tope:.1f} %) se deben al tope ecológico de 33 % y "
+        f"{brecha['por_logica_control_l']:.1f} L a la lógica de control."
+    )
+
+
+def texto_modo_referencia(resultado: dict) -> str | None:
+    """Línea con los totales del temporizador con tope ecológico, o None si la respuesta no lo incluye."""
+    referencia = resultado["comparativa"].get(MODO_REFERENCIA)
+    if referencia is None:
+        return None
+    return (
+        f"Temporizador con tope ecológico (33 %): {referencia[CLAVE_LITROS]:.1f} L, "
+        f"{referencia['pulsos_termicos_ejecutados']} pulsos, {referencia['consumo_energia_wh']:.1f} Wh, "
+        f"integridad final {referencia['integridad_membrana_final_pct']:.2f} %, "
+        f"{referencia['violaciones_ecologicas']} violaciones ecológicas."
+    )
 
 
 def filtrar_bitacora(

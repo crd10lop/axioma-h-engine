@@ -236,6 +236,15 @@ Respuesta calculada por el modelo (abreviada). Los valores de la respuesta de ej
       "violaciones_ecologicas": 8,
       "recuperacion_caudal_promedio_pct": 91.882,
       "degradacion_acumulada_pct": 2.9059
+    },
+    "modo_temporizador_tope_ecologico": {
+      "litros_totales_agua": 91.784,
+      "pulsos_termicos_ejecutados": 88,
+      "consumo_energia_wh": 1065.067,
+      "integridad_membrana_final_pct": 97.0941,
+      "violaciones_ecologicas": 0,
+      "recuperacion_caudal_promedio_pct": 93.9574,
+      "degradacion_acumulada_pct": 2.9059
     }
   },
   "conjeturas_validadas": {
@@ -250,7 +259,13 @@ Respuesta calculada por el modelo (abreviada). Los valores de la respuesta de ej
         "tiempo_regeneracion_promedio_seg": { "valor": 22263.1579, "umbral": 120.0, "operador": "<", "cumple": false },
         "perdida_integridad_termica_pct": { "valor": 0.0, "umbral": 0.0, "operador": "<=", "cumple": true }
       },
-      "indicadores_informativos": { "pulsos_regenerados": 0, "pulsos_totales": 19 }
+      "indicadores_informativos": {
+        "pulsos_regenerados": 0,
+        "pulsos_totales": 19,
+        "tiempo_desprendimiento_t95_promedio_seg": 64.4395,
+        "impedancia_promedio_tras_pulso_ohms": 1125.9662
+      },
+      "causas_no_validacion": ["DEPENDE_DE_PARAMETRO_SUPUESTO"]
     },
     "...": "conjetura_1_eficiencia y conjetura_3_saber_territorial con la misma estructura"
   },
@@ -356,6 +371,27 @@ Responde la pregunta de investigación. Usa `DIA_NORMAL` e `INCRUSTACION_SALINA_
 | 240 | 85.92 / 63.21 | 1.073 / 4.117 |
 
 El control neuro-simbólico reduce la degradación acumulada entre 74 % y 99 % en todos los niveles. Su recuperación se mantiene estable, mientras que la del temporizador cae con la salinidad: el temporizador recupera más con salinidad baja, porque limpia membranas casi limpias, y el neuro-simbólico lo supera desde 60 Ohm por L/m². El método y las limitaciones están en [docs/modelo_simulacion.md](docs/modelo_simulacion.md), sección 7.
+
+### Tope ecológico frente a lógica de control
+
+Cada simulación ejecuta además un temporizador con tope ecológico: la misma programación del temporizador fijo, con la fracción de 0.33 del neuro-simbólico. Se reporta en `comparativa.modo_temporizador_tope_ecologico` y no interviene en la validación. Permite separar la diferencia de agua entre los dos modos en la parte debida al tope y la parte debida a la lógica de control.
+
+| Corrida | Neuro-simbólico (L) | Temporizador 0.45 (L) | Temporizador 0.33 (L) | Brecha debida al tope |
+|---|---|---|---|---|
+| Tormenta de sal y calor extremo, humedad 45 % | 81.7 | 120.4 | 91.8 | 73.9 % |
+| Día normal, humedad 85 % | 254.6 | 340.4 | 266.1 | 86.6 % |
+
+En los cinco escenarios, el tope explica entre 69.8 % y 89.8 % de la brecha con humedad inicial de 45 %, y entre 76.2 % y 90.8 % con 85 %. El menor rendimiento del neuro-simbólico es, sobre todo, el costo del límite ecológico, no de la lógica de control. El tope por sí solo tampoco evita las violaciones: en Sequía, el temporizador con tope registra 8, porque no tiene pausa ecológica.
+
+### Indicadores informativos y causas de no validación
+
+Cada conjetura informa indicadores adicionales que no intervienen en la validación, y la causa de cada indicador que no cumple (`causas_no_validacion`):
+
+- **C1:** reducción de la degradación frente al temporizador, que corresponde al enunciado de vida útil. Va de 73.9 % a 100 % en las diez corridas.
+- **C2:** el pulso logra el 95 % de su remoción en 64.4 s (cinética, bajo el umbral de 120 s), pero deja la impedancia en unos 1126 Ohm (extensión, sobre el criterio de 1100 Ohm). La conjetura falla por la extensión de la limpieza, no por la cinética.
+- **C3:** rendimiento nocturno del temporizador. Con 45 % tampoco alcanza 12 L/m²/noche, por lo que la causa es el límite del recurso atmosférico.
+
+Las causas de no validación son, en las diez corridas: dependencia de un parámetro supuesto en C1 y C2 (o falta de datos cuando no hay pulsos, en Sequía con 45 %), límite del recurso atmosférico en C3 con 45 % y desempeño del control en dos casos de Incrustación salina rápida con 85 % (ahorro de energía de C1 y rendimiento nocturno de C3). El detalle está en [docs/modelo_simulacion.md](docs/modelo_simulacion.md), secciones 4, 8.4 y 8.5.
 
 El análisis completo, las ecuaciones, los parámetros y las tablas de sensibilidad están en [docs/modelo_simulacion.md](docs/modelo_simulacion.md).
 

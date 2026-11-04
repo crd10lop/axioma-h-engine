@@ -1,9 +1,11 @@
 """Pruebas de las transformaciones del dashboard."""
 
+import copy
+
 import pandas as pd
 import pytest
 
-from backend.schemas import Escenario, SimulationConfig, TasaSalinizacion
+from backend.schemas import CausaNoValidacion, Escenario, SimulationConfig, TasaSalinizacion
 from backend.simulador import ejecutar_simulacion
 from frontend import transformaciones as tr
 
@@ -84,8 +86,10 @@ def test_indicadores_a_dataframe(resultado):
     verificacion = resultado["detalle_verificacion"]["conjetura_3_saber_territorial"]
     df = tr.indicadores_a_dataframe(verificacion)
     assert list(df.columns) == ["Indicador", "Valor obtenido", "Umbral", "Cumple"]
-    assert len(df) == len(verificacion["indicadores"])
-    assert set(df["Cumple"]) <= {"Sí", "No"}
+    assert len(df) == len(verificacion["indicadores"]) + len(verificacion["indicadores_informativos"])
+    assert set(df["Cumple"]) <= {"Sí", "No", "Informativo"}
+    # El rendimiento del temporizador se informa al final, después de los indicadores.
+    assert df.iloc[-1]["Indicador"] == "Rendimiento nocturno del temporizador (L/m²/noche, informativo)"
     assert all(isinstance(valor, str) for valor in df["Valor obtenido"])
 
 
@@ -94,12 +98,14 @@ def test_indicadores_informativos_junto_al_tiempo_de_regeneracion(resultado):
     df = tr.indicadores_a_dataframe(verificacion)
     nombres = list(df["Indicador"])
     posicion = nombres.index("Tiempo promedio de regeneración (s)")
-    assert nombres[posicion + 1 : posicion + 3] == [
+    assert nombres[posicion + 1 : posicion + 5] == [
         "Pulsos regenerados (informativo)",
         "Pulsos totales (informativo)",
+        "Tiempo hasta el 95 % de la remoción del pulso (s, informativo)",
+        "Impedancia promedio tras el pulso (Ω, informativo)",
     ]
     informativos = df[df["Cumple"] == "Informativo"]
-    assert list(informativos["Umbral"]) == ["No aplica", "No aplica"]
+    assert list(informativos["Umbral"]) == ["No aplica"] * 4
     totales = verificacion["indicadores_informativos"]["pulsos_totales"]
     assert informativos.iloc[1]["Valor obtenido"] == str(totales)
 
@@ -127,6 +133,7 @@ def test_conjeturas_a_lista(resultado):
     for conjetura in conjeturas:
         assert conjetura["validada"] == resultado["conjeturas_validadas"][conjetura["clave"]]
         assert isinstance(conjetura["indicadores"], pd.DataFrame)
+        assert conjetura["validada"] == (conjetura["causas"] == [])
 
 
 def test_bitacora_a_texto_con_filtros(resultado):
@@ -186,3 +193,100 @@ def test_comparativa_tolera_recuperacion_sin_datos(resultado):
     fila = df[df["clave"] == "recuperacion_caudal_promedio_pct"].iloc[0]
     assert pd.isna(fila["Neuro-simbólico"])
     assert pd.isna(fila["Diferencia (%)"])
+
+
+# ---------------------------------------------------------------------------
+# Causas de no validación y modo de referencia
+# ---------------------------------------------------------------------------
+def _respuesta_minima(litros_neuro, litros_temporizador, litros_referencia=None):
+    """Respuesta con solo los campos que usan la descomposición y la línea del modo de referencia."""
+    def modo(litros):
+        return {
+            tr.CLAVE_LITROS: litros,
+            "pulsos_termicos_ejecutados": 88,
+            "consumo_energia_wh": 1065.067,
+            "integridad_membrana_final_pct": 97.5,
+            "violaciones_ecologicas": 0,
+        }
+
+    comparativa = {tr.MODO_NEURO: modo(litros_neuro), tr.MODO_TEMPORIZADOR: modo(litros_temporizador)}
+    if litros_referencia is not None:
+        comparativa[tr.MODO_REFERENCIA] = modo(litros_referencia)
+    return {"comparativa": comparativa}
+
+
+def test_conjeturas_a_lista_traduce_las_causas(resultado):
+    conjeturas = {c["clave"]: c for c in tr.conjeturas_a_lista(resultado)}
+    causas_api = resultado["detalle_verificacion"]["conjetura_1_eficiencia"]["causas_no_validacion"]
+    esperado = [tr.TEXTO_CAUSA[causa] for causa in causas_api]
+    assert conjeturas["conjetura_1_eficiencia"]["causas"] == esperado
+
+
+def test_texto_causa_cubre_todas_las_causas():
+    assert set(tr.TEXTO_CAUSA) == {causa.value for causa in CausaNoValidacion}
+
+
+def test_conjeturas_a_lista_tolera_respuesta_sin_campos_nuevos(resultado):
+    antiguo = copy.deepcopy(resultado)
+    for verificacion in antiguo["detalle_verificacion"].values():
+        verificacion.pop("causas_no_validacion")
+    for conjetura in tr.conjeturas_a_lista(antiguo):
+        assert conjetura["causas"] == []
+
+
+def test_causa_desconocida_se_muestra_sin_traducir(resultado):
+    modificado = copy.deepcopy(resultado)
+    modificado["detalle_verificacion"]["conjetura_1_eficiencia"]["causas_no_validacion"] = ["OTRA_CAUSA"]
+    conjeturas = {c["clave"]: c for c in tr.conjeturas_a_lista(modificado)}
+    assert conjeturas["conjetura_1_eficiencia"]["causas"] == ["OTRA_CAUSA"]
+
+
+def test_descomponer_brecha_agua():
+    brecha = tr.descomponer_brecha_agua(_respuesta_minima(81.652, 120.408, 91.784))
+    assert brecha["brecha_total_l"] == pytest.approx(38.756)
+    assert brecha["por_tope_ecologico_l"] == pytest.approx(28.624)
+    assert brecha["por_logica_control_l"] == pytest.approx(10.132)
+    assert brecha["pct_por_tope"] == pytest.approx(28.624 / 38.756 * 100.0)
+
+
+def test_descomponer_brecha_agua_con_respuesta_real(resultado):
+    brecha = tr.descomponer_brecha_agua(resultado)
+    suma = brecha["por_tope_ecologico_l"] + brecha["por_logica_control_l"]
+    assert suma == pytest.approx(brecha["brecha_total_l"])
+
+
+def test_descomponer_brecha_sin_brecha_positiva():
+    brecha = tr.descomponer_brecha_agua(_respuesta_minima(100.0, 100.0, 90.0))
+    assert brecha["pct_por_tope"] is None
+
+
+def test_descomponer_brecha_sin_modo_de_referencia():
+    assert tr.descomponer_brecha_agua(_respuesta_minima(81.652, 120.408)) is None
+
+
+def test_texto_brecha_agua():
+    texto = tr.texto_brecha_agua(_respuesta_minima(81.652, 120.408, 91.784))
+    assert texto == (
+        "De 38.8 L de diferencia, 28.6 L (73.9 %) se deben al tope ecológico de 33 % "
+        "y 10.1 L a la lógica de control."
+    )
+
+
+@pytest.mark.parametrize(
+    "respuesta",
+    [_respuesta_minima(81.652, 120.408), _respuesta_minima(100.0, 100.0, 90.0)],
+)
+def test_texto_brecha_agua_no_calculable(respuesta):
+    assert tr.texto_brecha_agua(respuesta) is None
+
+
+def test_texto_modo_referencia():
+    texto = tr.texto_modo_referencia(_respuesta_minima(81.652, 120.408, 91.784))
+    assert texto == (
+        "Temporizador con tope ecológico (33 %): 91.8 L, 88 pulsos, 1065.1 Wh, "
+        "integridad final 97.50 %, 0 violaciones ecológicas."
+    )
+
+
+def test_texto_modo_referencia_sin_modo():
+    assert tr.texto_modo_referencia(_respuesta_minima(81.652, 120.408)) is None
