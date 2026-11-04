@@ -6,6 +6,19 @@ El proyecto incluye una API REST y un dashboard simulador. El simulador compara 
 
 Lo desarrolla el equipo AXIOMA en el curso Fundamentos de Investigación de la Universidad de Antioquia (UdeA), Ciclo 2.
 
+Para una explicación general de qué hace la aplicación y cómo funciona, ver [docs/funcionamiento.md](docs/funcionamiento.md).
+
+## Enlaces
+
+<!-- Tras el despliegue, reemplazar PENDIENTE_URL_DASHBOARD y PENDIENTE_URL_API por las URL públicas (ver docs/despliegue.md, sección 8). -->
+
+| Recurso | Enlace |
+|---|---|
+| Código fuente | https://github.com/crd10lop/axioma-h-engine |
+| Dashboard desplegado | [Abrir dashboard](PENDIENTE_URL_DASHBOARD) |
+| API desplegada (documentación interactiva) | [Abrir API](PENDIENTE_URL_API/docs) |
+| Salud de la API | [Verificar estado](PENDIENTE_URL_API/api/v1/health) |
+
 ## Pregunta de investigación
 
 > ¿En qué medida un sistema de control neuro-simbólico, evaluado mediante simulación, mejora la recuperación del caudal de agua y reduce el desgaste de las membranas de un captador de agua atmosférica, en comparación con un control convencional por temporizador, a medida que aumenta la salinidad del ambiente?
@@ -41,7 +54,8 @@ axioma-h-engine/
 │   ├── 01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md
 │   ├── 02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md
 │   ├── modelo_simulacion.md
-│   └── despliegue.md
+│   ├── despliegue.md
+│   └── funcionamiento.md
 ├── pytest.ini
 ├── render.yaml             Blueprint de despliegue en Render
 └── requirements.txt

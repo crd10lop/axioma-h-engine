@@ -1,6 +1,8 @@
 # Plan de Investigación y Matriz de Operacionalización - Ciclo 2
 **Proyecto:** *Axioma-H: Sistema de Captación Pasiva de Agua Atmosférica con Control Neuro-Simbólico*  
 **Curso:** Fundamentos de Investigación en Ingeniería — Universidad de Antioquia (2026-2)  
+**Repositorio:** https://github.com/crd10lop/axioma-h-engine  
+**Aplicación desplegada:** [Dashboard](PENDIENTE_URL_DASHBOARD) | [API](PENDIENTE_URL_API/docs)  
 **Equipo AXIOMA:**
 - Juan Esteban Gil Quintero (Líder de Metodología y Calidad)
 - Cristian David Diez López (Analista de Vigilancia Tecnológica)

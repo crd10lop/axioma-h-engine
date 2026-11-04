@@ -2,6 +2,8 @@
 **Proyecto:** Axioma-H — Captación Pasiva de Agua Atmosférica  
 **Equipo:** AXIOMA — Curso Fundamentos de Investigación (UdeA)  
 **Ciclo:** 2 — Operacionalización, Simulación y Verificación de Conjeturas  
+**Repositorio:** https://github.com/crd10lop/axioma-h-engine  
+**API desplegada:** [Documentación interactiva](PENDIENTE_URL_API/docs)  
 
 ---
 

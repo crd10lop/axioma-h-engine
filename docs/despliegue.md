@@ -14,7 +14,7 @@ Ambas opciones son gratuitas y se despliegan desde el repositorio de GitHub. Cad
 ## 2. Antes de desplegar
 
 1. Ejecutar las pruebas localmente: `pytest -q`.
-2. Subir los cambios a GitHub: `git push origin main`.
+2. Subir los cambios al repositorio https://github.com/crd10lop/axioma-h-engine: `git push origin main`.
 
 ## 3. Opción A: Render con Blueprint
 
@@ -66,3 +66,23 @@ Ambas opciones son gratuitas y se despliegan desde el repositorio de GitHub. Cad
 - Antes de una presentación, abrir la URL de salud de la API y el dashboard uno o dos minutos antes para reactivarlos.
 - Render ofrece 750 horas mensuales de instancia gratuita por cuenta. Con la suspensión por inactividad, dos servicios de uso académico quedan dentro de ese límite.
 - El sistema no guarda estado entre solicitudes, por lo que la suspensión no implica pérdida de datos.
+
+## 8. Registrar las URL públicas
+
+Los documentos contienen dos marcadores que deben reemplazarse por las URL reales una vez desplegada la aplicación:
+
+| Marcador | Valor | Ejemplo con la opción A |
+|---|---|---|
+| `PENDIENTE_URL_DASHBOARD` | URL pública del dashboard | `https://axioma-h-dashboard.onrender.com` |
+| `PENDIENTE_URL_API` | URL pública de la API, sin barra final | `https://axioma-h-api.onrender.com` |
+
+Las URL exactas aparecen en el panel de Render, en la parte superior de cada servicio.
+
+Archivos que contienen los marcadores:
+
+- `README.md`, sección Enlaces;
+- `docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md`, encabezado;
+- `docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md`, encabezado;
+- `docs/funcionamiento.md`, encabezado.
+
+En VS Code, el reemplazo se hace de una vez en todos los archivos con **Buscar y reemplazar en archivos** (Ctrl+Shift+H): buscar `PENDIENTE_URL_DASHBOARD`, escribir la URL del dashboard y elegir **Reemplazar todo**. Luego repetir con `PENDIENTE_URL_API`. Los enlaces a `/docs` y `/api/v1/health` se completan solos, porque el marcador de la API va seguido de esas rutas.
