@@ -1,0 +1,1235 @@
+{
+  "condiciones": {
+    "version_servicio": "0.1.0",
+    "escenarios": {
+      "duracion_horas": 24,
+      "tasa_salinizacion": "ALTA",
+      "numero_nodos": 8,
+      "paso_minutos": 5,
+      "semilla": 42,
+      "humedades_iniciales_pct": [
+        45.0,
+        85.0
+      ]
+    },
+    "barrido": {
+      "humedad_inicial_pct": 85.0,
+      "duracion_horas": 24,
+      "semillas": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    "nota": "Las corridas omiten series_temporales y bitacora; se reproducen con POST /api/v1/simulacion/ejecutar y la misma configuración."
+  },
+  "escenarios": [
+    {
+      "escenario": "DIA_NORMAL",
+      "humedad_inicial_pct": 45.0,
+      "comparativa": {
+        "modo_neuro_simbolico": {
+          "litros_totales_agua": 82.69,
+          "pulsos_termicos_ejecutados": 10,
+          "consumo_energia_wh": 244.739,
+          "integridad_membrana_final_pct": 99.975,
+          "violaciones_ecologicas": 0,
+          "recuperacion_caudal_promedio_pct": 88.8451,
+          "degradacion_acumulada_pct": 0.025
+        },
+        "modo_temporizador_fijo": {
+          "litros_totales_agua": 126.616,
+          "pulsos_termicos_ejecutados": 88,
+          "consumo_energia_wh": 1065.067,
+          "integridad_membrana_final_pct": 97.9293,
+          "violaciones_ecologicas": 8,
+          "recuperacion_caudal_promedio_pct": 94.4852,
+          "degradacion_acumulada_pct": 2.0707
+        },
+        "modo_temporizador_tope_ecologico": {
+          "litros_totales_agua": 95.488,
+          "pulsos_termicos_ejecutados": 88,
+          "consumo_energia_wh": 1065.067,
+          "integridad_membrana_final_pct": 97.9293,
+          "violaciones_ecologicas": 0,
+          "recuperacion_caudal_promedio_pct": 95.9197,
+          "degradacion_acumulada_pct": 2.0707
+        }
+      },
+      "conjeturas_validadas": {
+        "conjetura_1_eficiencia": false,
+        "conjetura_2_autorreparacion": false,
+        "conjetura_3_saber_territorial": false
+      },
+      "detalle_verificacion": {
+        "conjetura_1_eficiencia": {
+          "validada": false,
+          "indicadores": {
+            "recuperacion_caudal_promedio_pct": {
+              "valor": 88.8451,
+              "umbral": 90.0,
+              "operador": ">=",
+              "cumple": false
+            },
+            "ahorro_energia_pulsos_pct": {
+              "valor": 87.3826,
+              "umbral": 35.0,
+              "operador": ">=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "reduccion_degradacion_pct": 98.7927
+          },
+          "causas_no_validacion": [
+            "DEPENDE_DE_PARAMETRO_SUPUESTO"
+          ]
+        },
+        "conjetura_2_autorreparacion": {
+          "validada": false,
+          "indicadores": {
+            "tiempo_regeneracion_promedio_seg": {
+              "valor": 32400.0,
+              "umbral": 120.0,
+              "operador": "<",
+              "cumple": false
+            },
+            "perdida_integridad_termica_pct": {
+              "valor": 0.0,
+              "umbral": 0.0,
+              "operador": "<=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "pulsos_regenerados": 0,
+            "pulsos_totales": 10,
+            "tiempo_desprendimiento_t95_promedio_seg": 64.4395,
+            "impedancia_promedio_tras_pulso_ohms": 1125.5543
+          },
+          "causas_no_validacion": [
+            "DEPENDE_DE_PARAMETRO_SUPUESTO"
+          ]
+        },
+        "conjetura_3_saber_territorial": {
+          "validada": false,
+          "indicadores": {
+            "violaciones_ecologicas": {
+              "valor": 0.0,
+              "umbral": 0.0,
+              "operador": "<=",
+              "cumple": true
+            },
+            "rendimiento_nocturno_l_m2_noche": {
+              "valor": 6.0134,
+              "umbral": 12.0,
+              "operador": ">=",
+              "cumple": false
+            }
+          },
+          "indicadores_informativos": {
+            "rendimiento_nocturno_temporizador_l_m2_noche": 8.877
+          },
+          "causas_no_validacion": [
+            "LIMITE_DEL_RECURSO_ATMOSFERICO"
+          ]
+        }
+      }
+    },
+    {
+      "escenario": "INCRUSTACION_SALINA_RAPIDA",
+      "humedad_inicial_pct": 45.0,
+      "comparativa": {
+        "modo_neuro_simbolico": {
+          "litros_totales_agua": 80.462,
+          "pulsos_termicos_ejecutados": 44,
+          "consumo_energia_wh": 674.003,
+          "integridad_membrana_final_pct": 99.89,
+          "violaciones_ecologicas": 0,
+          "recuperacion_caudal_promedio_pct": 88.7594,
+          "degradacion_acumulada_pct": 0.11
+        },
+        "modo_temporizador_fijo": {
+          "litros_totales_agua": 106.185,
+          "pulsos_termicos_ejecutados": 88,
+          "consumo_energia_wh": 1065.067,
+          "integridad_membrana_final_pct": 97.4824,
+          "violaciones_ecologicas": 8,
+          "recuperacion_caudal_promedio_pct": 84.75,
+          "degradacion_acumulada_pct": 2.5176
+        },
+        "modo_temporizador_tope_ecologico": {
+          "litros_totales_agua": 83.084,
+          "pulsos_termicos_ejecutados": 88,
+          "consumo_energia_wh": 1065.067,
+          "integridad_membrana_final_pct": 97.8179,
+          "violaciones_ecologicas": 0,
+          "recuperacion_caudal_promedio_pct": 88.4212,
+          "degradacion_acumulada_pct": 2.1821
+        }
+      },
+      "conjeturas_validadas": {
+        "conjetura_1_eficiencia": false,
+        "conjetura_2_autorreparacion": false,
+        "conjetura_3_saber_territorial": false
+      },
+      "detalle_verificacion": {
+        "conjetura_1_eficiencia": {
+          "validada": false,
+          "indicadores": {
+            "recuperacion_caudal_promedio_pct": {
+              "valor": 88.7594,
+              "umbral": 90.0,
+              "operador": ">=",
+              "cumple": false
+            },
+            "ahorro_energia_pulsos_pct": {
+              "valor": 45.5711,
+              "umbral": 35.0,
+              "operador": ">=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "reduccion_degradacion_pct": 95.6307
+          },
+          "causas_no_validacion": [
+            "DEPENDE_DE_PARAMETRO_SUPUESTO"
+          ]
+        },
+        "conjetura_2_autorreparacion": {
+          "validada": false,
+          "indicadores": {
+            "tiempo_regeneracion_promedio_seg": {
+              "valor": 12013.6364,
+              "umbral": 120.0,
+              "operador": "<",
+              "cumple": false
+            },
+            "perdida_integridad_termica_pct": {
+              "valor": 0.0,
+              "umbral": 0.0,
+              "operador": "<=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "pulsos_regenerados": 0,
+            "pulsos_totales": 44,
+            "tiempo_desprendimiento_t95_promedio_seg": 64.4395,
+            "impedancia_promedio_tras_pulso_ohms": 1126.6423
+          },
+          "causas_no_validacion": [
+            "DEPENDE_DE_PARAMETRO_SUPUESTO"
+          ]
+        },
+        "conjetura_3_saber_territorial": {
+          "validada": false,
+          "indicadores": {
+            "violaciones_ecologicas": {
+              "valor": 0.0,
+              "umbral": 0.0,
+              "operador": "<=",
+              "cumple": true
+            },
+            "rendimiento_nocturno_l_m2_noche": {
+              "valor": 5.778,
+              "umbral": 12.0,
+              "operador": ">=",
+              "cumple": false
+            }
+          },
+          "indicadores_informativos": {
+            "rendimiento_nocturno_temporizador_l_m2_noche": 7.3807
+          },
+          "causas_no_validacion": [
+            "LIMITE_DEL_RECURSO_ATMOSFERICO"
+          ]
+        }
+      }
+    },
+    {
+      "escenario": "SEQUIA",
+      "humedad_inicial_pct": 45.0,
+      "comparativa": {
+        "modo_neuro_simbolico": {
+          "litros_totales_agua": 40.781,
+          "pulsos_termicos_ejecutados": 0,
+          "consumo_energia_wh": 115.2,
+          "integridad_membrana_final_pct": 100.0,
+          "violaciones_ecologicas": 0,
+          "recuperacion_caudal_promedio_pct": null,
+          "degradacion_acumulada_pct": 0.0
+        },
+        "modo_temporizador_fijo": {
+          "litros_totales_agua": 63.634,
+          "pulsos_termicos_ejecutados": 88,
+          "consumo_energia_wh": 1065.067,
+          "integridad_membrana_final_pct": 97.9231,
+          "violaciones_ecologicas": 8,
+          "recuperacion_caudal_promedio_pct": 96.7156,
+          "degradacion_acumulada_pct": 2.0769
+        },
+        "modo_temporizador_tope_ecologico": {
+          "litros_totales_agua": 47.676,
+          "pulsos_termicos_ejecutados": 88,
+          "consumo_energia_wh": 1065.067,
+          "integridad_membrana_final_pct": 97.9231,
+          "violaciones_ecologicas": 8,
+          "recuperacion_caudal_promedio_pct": 97.5691,
+          "degradacion_acumulada_pct": 2.0769
+        }
+      },
+      "conjeturas_validadas": {
+        "conjetura_1_eficiencia": false,
+        "conjetura_2_autorreparacion": false,
+        "conjetura_3_saber_territorial": false
+      },
+      "detalle_verificacion": {
+        "conjetura_1_eficiencia": {
+          "validada": false,
+          "indicadores": {
+            "recuperacion_caudal_promedio_pct": {
+              "valor": null,
+              "umbral": 90.0,
+              "operador": ">=",
+              "cumple": false
+            },
+            "ahorro_energia_pulsos_pct": {
+              "valor": 100.0,
+              "umbral": 35.0,
+              "operador": ">=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "reduccion_degradacion_pct": 100.0
+          },
+          "causas_no_validacion": [
+            "SIN_DATOS"
+          ]
+        },
+        "conjetura_2_autorreparacion": {
+          "validada": false,
+          "indicadores": {
+            "tiempo_regeneracion_promedio_seg": {
+              "valor": null,
+              "umbral": 120.0,
+              "operador": "<",
+              "cumple": false
+            },
+            "perdida_integridad_termica_pct": {
+              "valor": 0.0,
+              "umbral": 0.0,
+              "operador": "<=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "pulsos_regenerados": 0,
+            "pulsos_totales": 0
+          },
+          "causas_no_validacion": [
+            "SIN_DATOS"
+          ]
+        },
+        "conjetura_3_saber_territorial": {
+          "validada": false,
+          "indicadores": {
+            "violaciones_ecologicas": {
+              "valor": 0.0,
+              "umbral": 0.0,
+              "operador": "<=",
+              "cumple": true
+            },
+            "rendimiento_nocturno_l_m2_noche": {
+              "valor": 4.0089,
+              "umbral": 12.0,
+              "operador": ">=",
+              "cumple": false
+            }
+          },
+          "indicadores_informativos": {
+            "rendimiento_nocturno_temporizador_l_m2_noche": 5.7857
+          },
+          "causas_no_validacion": [
+            "LIMITE_DEL_RECURSO_ATMOSFERICO"
+          ]
+        }
+      }
+    },
+    {
+      "escenario": "TORMENTA_DE_ARENA",
+      "humedad_inicial_pct": 45.0,
+      "comparativa": {
+        "modo_neuro_simbolico": {
+          "litros_totales_agua": 77.905,
+          "pulsos_termicos_ejecutados": 18,
+          "consumo_energia_wh": 304.953,
+          "integridad_membrana_final_pct": 99.955,
+          "violaciones_ecologicas": 0,
+          "recuperacion_caudal_promedio_pct": 83.917,
+          "degradacion_acumulada_pct": 0.045
+        },
+        "modo_temporizador_fijo": {
+          "litros_totales_agua": 116.775,
+          "pulsos_termicos_ejecutados": 88,
+          "consumo_energia_wh": 1065.067,
+          "integridad_membrana_final_pct": 98.5504,
+          "violaciones_ecologicas": 8,
+          "recuperacion_caudal_promedio_pct": 91.8708,
+          "degradacion_acumulada_pct": 1.4496
+        },
+        "modo_temporizador_tope_ecologico": {
+          "litros_totales_agua": 88.137,
+          "pulsos_termicos_ejecutados": 88,
+          "consumo_energia_wh": 1065.067,
+          "integridad_membrana_final_pct": 98.5504,
+          "violaciones_ecologicas": 0,
+          "recuperacion_caudal_promedio_pct": 93.268,
+          "degradacion_acumulada_pct": 1.4496
+        }
+      },
+      "conjeturas_validadas": {
+        "conjetura_1_eficiencia": false,
+        "conjetura_2_autorreparacion": false,
+        "conjetura_3_saber_territorial": false
+      },
+      "detalle_verificacion": {
+        "conjetura_1_eficiencia": {
+          "validada": false,
+          "indicadores": {
+            "recuperacion_caudal_promedio_pct": {
+              "valor": 83.917,
+              "umbral": 90.0,
+              "operador": ">=",
+              "cumple": false
+            },
+            "ahorro_energia_pulsos_pct": {
+              "valor": 81.5176,
+              "umbral": 35.0,
+              "operador": ">=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "reduccion_degradacion_pct": 96.8957
+          },
+          "causas_no_validacion": [
+            "DEPENDE_DE_PARAMETRO_SUPUESTO"
+          ]
+        },
+        "conjetura_2_autorreparacion": {
+          "validada": false,
+          "indicadores": {
+            "tiempo_regeneracion_promedio_seg": {
+              "valor": 18000.0,
+              "umbral": 120.0,
+              "operador": "<",
+              "cumple": false
+            },
+            "perdida_integridad_termica_pct": {
+              "valor": 0.0,
+              "umbral": 0.0,
+              "operador": "<=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "pulsos_regenerados": 0,
+            "pulsos_totales": 18,
+            "tiempo_desprendimiento_t95_promedio_seg": 64.4395,
+            "impedancia_promedio_tras_pulso_ohms": 1196.7851
+          },
+          "causas_no_validacion": [
+            "DEPENDE_DE_PARAMETRO_SUPUESTO"
+          ]
+        },
+        "conjetura_3_saber_territorial": {
+          "validada": false,
+          "indicadores": {
+            "violaciones_ecologicas": {
+              "valor": 0.0,
+              "umbral": 0.0,
+              "operador": "<=",
+              "cumple": true
+            },
+            "rendimiento_nocturno_l_m2_noche": {
+              "valor": 6.0134,
+              "umbral": 12.0,
+              "operador": ">=",
+              "cumple": false
+            }
+          },
+          "indicadores_informativos": {
+            "rendimiento_nocturno_temporizador_l_m2_noche": 8.877
+          },
+          "causas_no_validacion": [
+            "LIMITE_DEL_RECURSO_ATMOSFERICO"
+          ]
+        }
+      }
+    },
+    {
+      "escenario": "TORMENTA_DE_SAL_Y_CALOR_EXTREMO",
+      "humedad_inicial_pct": 45.0,
+      "comparativa": {
+        "modo_neuro_simbolico": {
+          "litros_totales_agua": 81.652,
+          "pulsos_termicos_ejecutados": 19,
+          "consumo_energia_wh": 323.155,
+          "integridad_membrana_final_pct": 99.9525,
+          "violaciones_ecologicas": 0,
+          "recuperacion_caudal_promedio_pct": 88.8126,
+          "degradacion_acumulada_pct": 0.0475
+        },
+        "modo_temporizador_fijo": {
+          "litros_totales_agua": 120.408,
+          "pulsos_termicos_ejecutados": 88,
+          "consumo_energia_wh": 1065.067,
+          "integridad_membrana_final_pct": 97.0941,
+          "violaciones_ecologicas": 8,
+          "recuperacion_caudal_promedio_pct": 91.882,
+          "degradacion_acumulada_pct": 2.9059
+        },
+        "modo_temporizador_tope_ecologico": {
+          "litros_totales_agua": 91.784,
+          "pulsos_termicos_ejecutados": 88,
+          "consumo_energia_wh": 1065.067,
+          "integridad_membrana_final_pct": 97.0941,
+          "violaciones_ecologicas": 0,
+          "recuperacion_caudal_promedio_pct": 93.9574,
+          "degradacion_acumulada_pct": 2.9059
+        }
+      },
+      "conjeturas_validadas": {
+        "conjetura_1_eficiencia": false,
+        "conjetura_2_autorreparacion": false,
+        "conjetura_3_saber_territorial": false
+      },
+      "detalle_verificacion": {
+        "conjetura_1_eficiencia": {
+          "validada": false,
+          "indicadores": {
+            "recuperacion_caudal_promedio_pct": {
+              "valor": 88.8126,
+              "umbral": 90.0,
+              "operador": ">=",
+              "cumple": false
+            },
+            "ahorro_energia_pulsos_pct": {
+              "valor": 79.7446,
+              "umbral": 35.0,
+              "operador": ">=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "reduccion_degradacion_pct": 98.3654
+          },
+          "causas_no_validacion": [
+            "DEPENDE_DE_PARAMETRO_SUPUESTO"
+          ]
+        },
+        "conjetura_2_autorreparacion": {
+          "validada": false,
+          "indicadores": {
+            "tiempo_regeneracion_promedio_seg": {
+              "valor": 22263.1579,
+              "umbral": 120.0,
+              "operador": "<",
+              "cumple": false
+            },
+            "perdida_integridad_termica_pct": {
+              "valor": 0.0,
+              "umbral": 0.0,
+              "operador": "<=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "pulsos_regenerados": 0,
+            "pulsos_totales": 19,
+            "tiempo_desprendimiento_t95_promedio_seg": 64.4395,
+            "impedancia_promedio_tras_pulso_ohms": 1125.9662
+          },
+          "causas_no_validacion": [
+            "DEPENDE_DE_PARAMETRO_SUPUESTO"
+          ]
+        },
+        "conjetura_3_saber_territorial": {
+          "validada": false,
+          "indicadores": {
+            "violaciones_ecologicas": {
+              "valor": 0.0,
+              "umbral": 0.0,
+              "operador": "<=",
+              "cumple": true
+            },
+            "rendimiento_nocturno_l_m2_noche": {
+              "valor": 5.9536,
+              "umbral": 12.0,
+              "operador": ">=",
+              "cumple": false
+            }
+          },
+          "indicadores_informativos": {
+            "rendimiento_nocturno_temporizador_l_m2_noche": 8.4169
+          },
+          "causas_no_validacion": [
+            "LIMITE_DEL_RECURSO_ATMOSFERICO"
+          ]
+        }
+      }
+    },
+    {
+      "escenario": "DIA_NORMAL",
+      "humedad_inicial_pct": 85.0,
+      "comparativa": {
+        "modo_neuro_simbolico": {
+          "litros_totales_agua": 254.603,
+          "pulsos_termicos_ejecutados": 46,
+          "consumo_energia_wh": 664.487,
+          "integridad_membrana_final_pct": 99.885,
+          "violaciones_ecologicas": 0,
+          "recuperacion_caudal_promedio_pct": 88.7829,
+          "degradacion_acumulada_pct": 0.115
+        },
+        "modo_temporizador_fijo": {
+          "litros_totales_agua": 340.399,
+          "pulsos_termicos_ejecutados": 88,
+          "consumo_energia_wh": 1065.067,
+          "integridad_membrana_final_pct": 97.5731,
+          "violaciones_ecologicas": 8,
+          "recuperacion_caudal_promedio_pct": 84.4535,
+          "degradacion_acumulada_pct": 2.4269
+        },
+        "modo_temporizador_tope_ecologico": {
+          "litros_totales_agua": 266.057,
+          "pulsos_termicos_ejecutados": 88,
+          "consumo_energia_wh": 1065.067,
+          "integridad_membrana_final_pct": 97.896,
+          "violaciones_ecologicas": 0,
+          "recuperacion_caudal_promedio_pct": 88.2671,
+          "degradacion_acumulada_pct": 2.104
+        }
+      },
+      "conjeturas_validadas": {
+        "conjetura_1_eficiencia": false,
+        "conjetura_2_autorreparacion": false,
+        "conjetura_3_saber_territorial": true
+      },
+      "detalle_verificacion": {
+        "conjetura_1_eficiencia": {
+          "validada": false,
+          "indicadores": {
+            "recuperacion_caudal_promedio_pct": {
+              "valor": 88.7829,
+              "umbral": 90.0,
+              "operador": ">=",
+              "cumple": false
+            },
+            "ahorro_energia_pulsos_pct": {
+              "valor": 46.498,
+              "umbral": 35.0,
+              "operador": ">=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "reduccion_degradacion_pct": 95.2615
+          },
+          "causas_no_validacion": [
+            "DEPENDE_DE_PARAMETRO_SUPUESTO"
+          ]
+        },
+        "conjetura_2_autorreparacion": {
+          "validada": false,
+          "indicadores": {
+            "tiempo_regeneracion_promedio_seg": {
+              "valor": 11934.7826,
+              "umbral": 120.0,
+              "operador": "<",
+              "cumple": false
+            },
+            "perdida_integridad_termica_pct": {
+              "valor": 0.0,
+              "umbral": 0.0,
+              "operador": "<=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "pulsos_regenerados": 0,
+            "pulsos_totales": 46,
+            "tiempo_desprendimiento_t95_promedio_seg": 64.4395,
+            "impedancia_promedio_tras_pulso_ohms": 1126.3443
+          },
+          "causas_no_validacion": [
+            "DEPENDE_DE_PARAMETRO_SUPUESTO"
+          ]
+        },
+        "conjetura_3_saber_territorial": {
+          "validada": true,
+          "indicadores": {
+            "violaciones_ecologicas": {
+              "valor": 0.0,
+              "umbral": 0.0,
+              "operador": "<=",
+              "cumple": true
+            },
+            "rendimiento_nocturno_l_m2_noche": {
+              "valor": 16.9708,
+              "umbral": 12.0,
+              "operador": ">=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "rendimiento_nocturno_temporizador_l_m2_noche": 21.9587
+          },
+          "causas_no_validacion": []
+        }
+      }
+    },
+    {
+      "escenario": "INCRUSTACION_SALINA_RAPIDA",
+      "humedad_inicial_pct": 85.0,
+      "comparativa": {
+        "modo_neuro_simbolico": {
+          "litros_totales_agua": 185.369,
+          "pulsos_termicos_ejecutados": 97,
+          "consumo_energia_wh": 1013.678,
+          "integridad_membrana_final_pct": 98.9273,
+          "violaciones_ecologicas": 0,
+          "recuperacion_caudal_promedio_pct": 85.9153,
+          "degradacion_acumulada_pct": 1.0727
+        },
+        "modo_temporizador_fijo": {
+          "litros_totales_agua": 240.94,
+          "pulsos_termicos_ejecutados": 88,
+          "consumo_energia_wh": 1065.067,
+          "integridad_membrana_final_pct": 95.8835,
+          "violaciones_ecologicas": 8,
+          "recuperacion_caudal_promedio_pct": 63.2106,
+          "degradacion_acumulada_pct": 4.1165
+        },
+        "modo_temporizador_tope_ecologico": {
+          "litros_totales_agua": 198.619,
+          "pulsos_termicos_ejecutados": 88,
+          "consumo_energia_wh": 1065.067,
+          "integridad_membrana_final_pct": 96.272,
+          "violaciones_ecologicas": 0,
+          "recuperacion_caudal_promedio_pct": 70.3653,
+          "degradacion_acumulada_pct": 3.728
+        }
+      },
+      "conjeturas_validadas": {
+        "conjetura_1_eficiencia": false,
+        "conjetura_2_autorreparacion": false,
+        "conjetura_3_saber_territorial": false
+      },
+      "detalle_verificacion": {
+        "conjetura_1_eficiencia": {
+          "validada": false,
+          "indicadores": {
+            "recuperacion_caudal_promedio_pct": {
+              "valor": 85.9153,
+              "umbral": 90.0,
+              "operador": ">=",
+              "cumple": false
+            },
+            "ahorro_energia_pulsos_pct": {
+              "valor": 12.4859,
+              "umbral": 35.0,
+              "operador": ">=",
+              "cumple": false
+            }
+          },
+          "indicadores_informativos": {
+            "reduccion_degradacion_pct": 73.9413
+          },
+          "causas_no_validacion": [
+            "DEPENDE_DE_PARAMETRO_SUPUESTO",
+            "DESEMPENO_DEL_CONTROL"
+          ]
+        },
+        "conjetura_2_autorreparacion": {
+          "validada": false,
+          "indicadores": {
+            "tiempo_regeneracion_promedio_seg": {
+              "valor": 6593.8144,
+              "umbral": 120.0,
+              "operador": "<",
+              "cumple": false
+            },
+            "perdida_integridad_termica_pct": {
+              "valor": 0.0,
+              "umbral": 0.0,
+              "operador": "<=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "pulsos_regenerados": 0,
+            "pulsos_totales": 97,
+            "tiempo_desprendimiento_t95_promedio_seg": 64.4395,
+            "impedancia_promedio_tras_pulso_ohms": 1174.7146
+          },
+          "causas_no_validacion": [
+            "DEPENDE_DE_PARAMETRO_SUPUESTO"
+          ]
+        },
+        "conjetura_3_saber_territorial": {
+          "validada": false,
+          "indicadores": {
+            "violaciones_ecologicas": {
+              "valor": 0.0,
+              "umbral": 0.0,
+              "operador": "<=",
+              "cumple": true
+            },
+            "rendimiento_nocturno_l_m2_noche": {
+              "valor": 11.4489,
+              "umbral": 12.0,
+              "operador": ">=",
+              "cumple": false
+            }
+          },
+          "indicadores_informativos": {
+            "rendimiento_nocturno_temporizador_l_m2_noche": 15.8094
+          },
+          "causas_no_validacion": [
+            "DESEMPENO_DEL_CONTROL"
+          ]
+        }
+      }
+    },
+    {
+      "escenario": "SEQUIA",
+      "humedad_inicial_pct": 85.0,
+      "comparativa": {
+        "modo_neuro_simbolico": {
+          "litros_totales_agua": 149.354,
+          "pulsos_termicos_ejecutados": 24,
+          "consumo_energia_wh": 491.862,
+          "integridad_membrana_final_pct": 99.84,
+          "violaciones_ecologicas": 0,
+          "recuperacion_caudal_promedio_pct": 88.778,
+          "degradacion_acumulada_pct": 0.16
+        },
+        "modo_temporizador_fijo": {
+          "litros_totales_agua": 204.399,
+          "pulsos_termicos_ejecutados": 88,
+          "consumo_energia_wh": 1065.067,
+          "integridad_membrana_final_pct": 97.7763,
+          "violaciones_ecologicas": 8,
+          "recuperacion_caudal_promedio_pct": 88.6059,
+          "degradacion_acumulada_pct": 2.2237
+        },
+        "modo_temporizador_tope_ecologico": {
+          "litros_totales_agua": 158.67,
+          "pulsos_termicos_ejecutados": 88,
+          "consumo_energia_wh": 1065.067,
+          "integridad_membrana_final_pct": 97.9231,
+          "violaciones_ecologicas": 8,
+          "recuperacion_caudal_promedio_pct": 91.3232,
+          "degradacion_acumulada_pct": 2.0769
+        }
+      },
+      "conjeturas_validadas": {
+        "conjetura_1_eficiencia": false,
+        "conjetura_2_autorreparacion": false,
+        "conjetura_3_saber_territorial": true
+      },
+      "detalle_verificacion": {
+        "conjetura_1_eficiencia": {
+          "validada": false,
+          "indicadores": {
+            "recuperacion_caudal_promedio_pct": {
+              "valor": 88.778,
+              "umbral": 90.0,
+              "operador": ">=",
+              "cumple": false
+            },
+            "ahorro_energia_pulsos_pct": {
+              "valor": 63.3121,
+              "umbral": 35.0,
+              "operador": ">=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "reduccion_degradacion_pct": 92.8049
+          },
+          "causas_no_validacion": [
+            "DEPENDE_DE_PARAMETRO_SUPUESTO"
+          ]
+        },
+        "conjetura_2_autorreparacion": {
+          "validada": false,
+          "indicadores": {
+            "tiempo_regeneracion_promedio_seg": {
+              "valor": 21575.0,
+              "umbral": 120.0,
+              "operador": "<",
+              "cumple": false
+            },
+            "perdida_integridad_termica_pct": {
+              "valor": 0.0,
+              "umbral": 0.0,
+              "operador": "<=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "pulsos_regenerados": 0,
+            "pulsos_totales": 24,
+            "tiempo_desprendimiento_t95_promedio_seg": 64.4395,
+            "impedancia_promedio_tras_pulso_ohms": 1126.4062
+          },
+          "causas_no_validacion": [
+            "DEPENDE_DE_PARAMETRO_SUPUESTO"
+          ]
+        },
+        "conjetura_3_saber_territorial": {
+          "validada": true,
+          "indicadores": {
+            "violaciones_ecologicas": {
+              "valor": 0.0,
+              "umbral": 0.0,
+              "operador": "<=",
+              "cumple": true
+            },
+            "rendimiento_nocturno_l_m2_noche": {
+              "valor": 14.1932,
+              "umbral": 12.0,
+              "operador": ">=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "rendimiento_nocturno_temporizador_l_m2_noche": 18.9549
+          },
+          "causas_no_validacion": []
+        }
+      }
+    },
+    {
+      "escenario": "TORMENTA_DE_ARENA",
+      "humedad_inicial_pct": 85.0,
+      "comparativa": {
+        "modo_neuro_simbolico": {
+          "litros_totales_agua": 232.432,
+          "pulsos_termicos_ejecutados": 53,
+          "consumo_energia_wh": 752.066,
+          "integridad_membrana_final_pct": 99.8675,
+          "violaciones_ecologicas": 0,
+          "recuperacion_caudal_promedio_pct": 85.7827,
+          "degradacion_acumulada_pct": 0.1325
+        },
+        "modo_temporizador_fijo": {
+          "litros_totales_agua": 306.406,
+          "pulsos_termicos_ejecutados": 88,
+          "consumo_energia_wh": 1065.067,
+          "integridad_membrana_final_pct": 98.1827,
+          "violaciones_ecologicas": 8,
+          "recuperacion_caudal_promedio_pct": 82.4288,
+          "degradacion_acumulada_pct": 1.8173
+        },
+        "modo_temporizador_tope_ecologico": {
+          "litros_totales_agua": 239.269,
+          "pulsos_termicos_ejecutados": 88,
+          "consumo_energia_wh": 1065.067,
+          "integridad_membrana_final_pct": 98.5171,
+          "violaciones_ecologicas": 0,
+          "recuperacion_caudal_promedio_pct": 86.014,
+          "degradacion_acumulada_pct": 1.4829
+        }
+      },
+      "conjeturas_validadas": {
+        "conjetura_1_eficiencia": false,
+        "conjetura_2_autorreparacion": false,
+        "conjetura_3_saber_territorial": true
+      },
+      "detalle_verificacion": {
+        "conjetura_1_eficiencia": {
+          "validada": false,
+          "indicadores": {
+            "recuperacion_caudal_promedio_pct": {
+              "valor": 85.7827,
+              "umbral": 90.0,
+              "operador": ">=",
+              "cumple": false
+            },
+            "ahorro_energia_pulsos_pct": {
+              "valor": 37.9676,
+              "umbral": 35.0,
+              "operador": ">=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "reduccion_degradacion_pct": 92.709
+          },
+          "causas_no_validacion": [
+            "DEPENDE_DE_PARAMETRO_SUPUESTO"
+          ]
+        },
+        "conjetura_2_autorreparacion": {
+          "validada": false,
+          "indicadores": {
+            "tiempo_regeneracion_promedio_seg": {
+              "valor": 10358.4906,
+              "umbral": 120.0,
+              "operador": "<",
+              "cumple": false
+            },
+            "perdida_integridad_termica_pct": {
+              "valor": 0.0,
+              "umbral": 0.0,
+              "operador": "<=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "pulsos_regenerados": 0,
+            "pulsos_totales": 53,
+            "tiempo_desprendimiento_t95_promedio_seg": 64.4395,
+            "impedancia_promedio_tras_pulso_ohms": 1170.1202
+          },
+          "causas_no_validacion": [
+            "DEPENDE_DE_PARAMETRO_SUPUESTO"
+          ]
+        },
+        "conjetura_3_saber_territorial": {
+          "validada": true,
+          "indicadores": {
+            "violaciones_ecologicas": {
+              "valor": 0.0,
+              "umbral": 0.0,
+              "operador": "<=",
+              "cumple": true
+            },
+            "rendimiento_nocturno_l_m2_noche": {
+              "valor": 16.9708,
+              "umbral": 12.0,
+              "operador": ">=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "rendimiento_nocturno_temporizador_l_m2_noche": 21.9587
+          },
+          "causas_no_validacion": []
+        }
+      }
+    },
+    {
+      "escenario": "TORMENTA_DE_SAL_Y_CALOR_EXTREMO",
+      "humedad_inicial_pct": 85.0,
+      "comparativa": {
+        "modo_neuro_simbolico": {
+          "litros_totales_agua": 234.977,
+          "pulsos_termicos_ejecutados": 64,
+          "consumo_energia_wh": 780.795,
+          "integridad_membrana_final_pct": 99.5921,
+          "violaciones_ecologicas": 0,
+          "recuperacion_caudal_promedio_pct": 88.0213,
+          "degradacion_acumulada_pct": 0.4079
+        },
+        "modo_temporizador_fijo": {
+          "litros_totales_agua": 305.832,
+          "pulsos_termicos_ejecutados": 88,
+          "consumo_energia_wh": 1065.067,
+          "integridad_membrana_final_pct": 96.0972,
+          "violaciones_ecologicas": 8,
+          "recuperacion_caudal_promedio_pct": 78.0337,
+          "degradacion_acumulada_pct": 3.9028
+        },
+        "modo_temporizador_tope_ecologico": {
+          "litros_totales_agua": 243.661,
+          "pulsos_termicos_ejecutados": 88,
+          "consumo_energia_wh": 1065.067,
+          "integridad_membrana_final_pct": 96.6003,
+          "violaciones_ecologicas": 0,
+          "recuperacion_caudal_promedio_pct": 83.1065,
+          "degradacion_acumulada_pct": 3.3997
+        }
+      },
+      "conjeturas_validadas": {
+        "conjetura_1_eficiencia": false,
+        "conjetura_2_autorreparacion": false,
+        "conjetura_3_saber_territorial": true
+      },
+      "detalle_verificacion": {
+        "conjetura_1_eficiencia": {
+          "validada": false,
+          "indicadores": {
+            "recuperacion_caudal_promedio_pct": {
+              "valor": 88.0213,
+              "umbral": 90.0,
+              "operador": ">=",
+              "cumple": false
+            },
+            "ahorro_energia_pulsos_pct": {
+              "valor": 35.1693,
+              "umbral": 35.0,
+              "operador": ">=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "reduccion_degradacion_pct": 89.5481
+          },
+          "causas_no_validacion": [
+            "DEPENDE_DE_PARAMETRO_SUPUESTO"
+          ]
+        },
+        "conjetura_2_autorreparacion": {
+          "validada": false,
+          "indicadores": {
+            "tiempo_regeneracion_promedio_seg": {
+              "valor": 9257.8125,
+              "umbral": 120.0,
+              "operador": "<",
+              "cumple": false
+            },
+            "perdida_integridad_termica_pct": {
+              "valor": 0.0,
+              "umbral": 0.0,
+              "operador": "<=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "pulsos_regenerados": 0,
+            "pulsos_totales": 64,
+            "tiempo_desprendimiento_t95_promedio_seg": 64.4395,
+            "impedancia_promedio_tras_pulso_ohms": 1136.6857
+          },
+          "causas_no_validacion": [
+            "DEPENDE_DE_PARAMETRO_SUPUESTO"
+          ]
+        },
+        "conjetura_3_saber_territorial": {
+          "validada": true,
+          "indicadores": {
+            "violaciones_ecologicas": {
+              "valor": 0.0,
+              "umbral": 0.0,
+              "operador": "<=",
+              "cumple": true
+            },
+            "rendimiento_nocturno_l_m2_noche": {
+              "valor": 16.6165,
+              "umbral": 12.0,
+              "operador": ">=",
+              "cumple": true
+            }
+          },
+          "indicadores_informativos": {
+            "rendimiento_nocturno_temporizador_l_m2_noche": 19.8044
+          },
+          "causas_no_validacion": []
+        }
+      }
+    }
+  ],
+  "barrido_salinidad": {
+    "puntos": [
+      {
+        "escenario": "DIA_NORMAL",
+        "tasa_salinizacion": "BAJA",
+        "carga_salina_ohm_l_m2": 20.0,
+        "n_semillas": 5,
+        "recuperacion_neuro_media": 88.8579,
+        "recuperacion_neuro_desv": 0.0053,
+        "recuperacion_temporizador_media": 95.9227,
+        "recuperacion_temporizador_desv": 0.1352,
+        "degradacion_neuro_media": 0.02,
+        "degradacion_neuro_desv": 0.0,
+        "degradacion_temporizador_media": 2.151,
+        "degradacion_temporizador_desv": 0.0208,
+        "reduccion_desgaste_pct": 99.0702
+      },
+      {
+        "escenario": "DIA_NORMAL",
+        "tasa_salinizacion": "MEDIA",
+        "carga_salina_ohm_l_m2": 40.0,
+        "n_semillas": 5,
+        "recuperacion_neuro_media": 88.8318,
+        "recuperacion_neuro_desv": 0.0096,
+        "recuperacion_temporizador_media": 91.9484,
+        "recuperacion_temporizador_desv": 0.2406,
+        "degradacion_neuro_media": 0.052,
+        "degradacion_neuro_desv": 0.0045,
+        "degradacion_temporizador_media": 2.151,
+        "degradacion_temporizador_desv": 0.0208,
+        "reduccion_desgaste_pct": 97.5825
+      },
+      {
+        "escenario": "INCRUSTACION_SALINA_RAPIDA",
+        "tasa_salinizacion": "BAJA",
+        "carga_salina_ohm_l_m2": 60.0,
+        "n_semillas": 5,
+        "recuperacion_neuro_media": 88.8012,
+        "recuperacion_neuro_desv": 0.0118,
+        "recuperacion_temporizador_media": 88.1542,
+        "recuperacion_temporizador_desv": 0.3227,
+        "degradacion_neuro_media": 0.0855,
+        "degradacion_neuro_desv": 0.0021,
+        "degradacion_temporizador_media": 2.1827,
+        "degradacion_temporizador_desv": 0.0159,
+        "reduccion_desgaste_pct": 96.0828
+      },
+      {
+        "escenario": "DIA_NORMAL",
+        "tasa_salinizacion": "ALTA",
+        "carga_salina_ohm_l_m2": 80.0,
+        "n_semillas": 5,
+        "recuperacion_neuro_media": 88.7682,
+        "recuperacion_neuro_desv": 0.0053,
+        "recuperacion_temporizador_media": 84.5856,
+        "recuperacion_temporizador_desv": 0.3861,
+        "degradacion_neuro_media": 0.117,
+        "degradacion_neuro_desv": 0.0021,
+        "degradacion_temporizador_media": 2.4952,
+        "degradacion_temporizador_desv": 0.022,
+        "reduccion_desgaste_pct": 95.311
+      },
+      {
+        "escenario": "INCRUSTACION_SALINA_RAPIDA",
+        "tasa_salinizacion": "MEDIA",
+        "carga_salina_ohm_l_m2": 120.0,
+        "n_semillas": 5,
+        "recuperacion_neuro_media": 88.0053,
+        "recuperacion_neuro_desv": 0.0778,
+        "recuperacion_temporizador_media": 78.1276,
+        "recuperacion_temporizador_desv": 0.4762,
+        "degradacion_neuro_media": 0.4189,
+        "degradacion_neuro_desv": 0.0211,
+        "degradacion_temporizador_media": 3.1589,
+        "degradacion_temporizador_desv": 0.024,
+        "reduccion_desgaste_pct": 86.7391
+      },
+      {
+        "escenario": "INCRUSTACION_SALINA_RAPIDA",
+        "tasa_salinizacion": "ALTA",
+        "carga_salina_ohm_l_m2": 240.0,
+        "n_semillas": 5,
+        "recuperacion_neuro_media": 85.8943,
+        "recuperacion_neuro_desv": 0.0721,
+        "recuperacion_temporizador_media": 63.2423,
+        "recuperacion_temporizador_desv": 0.5848,
+        "degradacion_neuro_media": 1.0816,
+        "degradacion_neuro_desv": 0.0125,
+        "degradacion_temporizador_media": 4.2095,
+        "degradacion_temporizador_desv": 0.0136,
+        "reduccion_desgaste_pct": 74.3057
+      }
+    ]
+  }
+}

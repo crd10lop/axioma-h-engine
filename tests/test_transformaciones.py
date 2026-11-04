@@ -478,3 +478,60 @@ def test_sensibilidad_a_dataframe_vacio():
 def test_etiquetas_cubren_parametros_y_columnas():
     assert set(tr.NOMBRES_PARAMETRO) == set(tr.VALORES_SENSIBILIDAD)
     assert set(tr.ETIQUETAS_SENSIBILIDAD) == set(tr.COLUMNAS_SENSIBILIDAD)
+
+
+# ---------------------------------------------------------------------------
+# Resumen ejecutivo
+# ---------------------------------------------------------------------------
+@pytest.fixture(scope="module")
+def resultado_prd():
+    """Payload de ejemplo del PRD: tormenta de sal y calor extremo con humedad inicial de 45 %."""
+    cfg = SimulationConfig(
+        duracion_horas=24,
+        escenario=Escenario.TORMENTA_DE_SAL_Y_CALOR_EXTREMO,
+        humedad_ambiente_inicial_pct=45.0,
+        tasa_salinizacion=TasaSalinizacion.ALTA,
+    )
+    return ejecutar_simulacion(cfg).model_dump(mode="json")
+
+
+def test_resumen_ejecutivo_tiene_entre_3_y_5_frases(resultado_prd):
+    frases = tr.resumen_ejecutivo(resultado_prd)
+    assert len(frases) >= 3
+    assert len(frases) <= 5
+    for frase in frases:
+        assert frase.strip()
+
+
+def test_resumen_ejecutivo_con_la_corrida_del_prd(resultado_prd):
+    agua, desgaste, energia, violaciones, conjeturas = tr.resumen_ejecutivo(resultado_prd)
+    assert agua.startswith("Agua: el neuro-simbólico captó 81.7 L, 32.2 % menos que el temporizador (120.4 L).")
+    assert "28.6 L (73.9 %) se deben al tope ecológico de 33 %" in agua
+    assert desgaste == (
+        "Desgaste: la degradación de la membrana fue 0.048 % con el neuro-simbólico y "
+        "2.906 % con el temporizador (98.4 % menos)."
+    )
+    assert energia == "Energía: el neuro-simbólico consumió 323.2 Wh, 69.7 % menos que el temporizador (1065.1 Wh)."
+    assert violaciones == "Límite ecológico: 0 violaciones del neuro-simbólico y 8 del temporizador."
+    assert conjeturas == "Conjeturas validadas: 0 de 3."
+
+
+def test_resumen_ejecutivo_nombra_las_conjeturas_validadas(resultado_prd):
+    modificado = copy.deepcopy(resultado_prd)
+    modificado["conjeturas_validadas"]["conjetura_3_saber_territorial"] = True
+    assert tr.resumen_ejecutivo(modificado)[-1] == "Conjeturas validadas: 1 de 3 (C3)."
+
+
+def test_resumen_ejecutivo_sin_modo_de_referencia(resultado_prd):
+    antiguo = copy.deepcopy(resultado_prd)
+    antiguo["comparativa"].pop(tr.MODO_REFERENCIA)
+    agua = tr.resumen_ejecutivo(antiguo)[0]
+    assert agua == "Agua: el neuro-simbólico captó 81.7 L, 32.2 % menos que el temporizador (120.4 L)."
+
+
+@pytest.mark.parametrize(
+    ("valor", "referencia", "esperado"),
+    [(110.0, 100.0, "10.0 % más"), (90.0, 100.0, "10.0 % menos"), (100.0, 100.0, "lo mismo"), (5.0, 0.0, "lo mismo")],
+)
+def test_variacion(valor, referencia, esperado):
+    assert tr._variacion(valor, referencia) == esperado

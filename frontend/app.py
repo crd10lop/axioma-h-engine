@@ -149,6 +149,26 @@ def inicializar_estado() -> None:
         st.session_state.setdefault(clave, valor)
 
 
+# Las respuestas se guardan una hora por configuración: repetir una simulación o un análisis
+# con los mismos parámetros no vuelve a llamar a la API. Los errores no se guardan.
+@st.cache_data(ttl=3600, show_spinner=False)
+def simulacion_en_cache(carga: dict) -> dict:
+    """Ejecuta la simulación comparativa, o devuelve la respuesta guardada para la misma carga."""
+    return cliente_api.ejecutar_simulacion(carga)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def barrido_en_cache(carga: dict) -> dict:
+    """Ejecuta el barrido de salinidad, o devuelve la respuesta guardada para la misma carga."""
+    return cliente_api.ejecutar_barrido(carga)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def sensibilidad_en_cache(carga: dict) -> dict:
+    """Ejecuta el análisis de sensibilidad, o devuelve la respuesta guardada para la misma carga."""
+    return cliente_api.ejecutar_sensibilidad(carga)
+
+
 def formatear_duracion(segundos: float) -> str:
     """Convierte segundos en un texto 'H h MM min SS s'."""
     total = int(segundos)
@@ -553,21 +573,21 @@ def seccion_graficos(df: pd.DataFrame, resultado: dict) -> None:
         width="stretch",
     )
 
-    st.subheader("Condiciones del entorno")
-    fila_3 = st.columns(2)
-    fila_3[0].altair_chart(
-        grafico_entorno(df, "humedad_relativa_pct", "Humedad relativa promedio (referencia 30 %)", "%",
-                        config.UMBRAL_HUMEDAD_ECOLOGICA_PCT, "Límite ecológico"),
-        width="stretch",
-    )
-    fila_3[1].altair_chart(
-        grafico_entorno(df, "temperatura_c", "Temperatura ambiente (referencia 45 °C)", "°C",
-                        config.UMBRAL_TEMPERATURA_CORTE_C, "Corte térmico de la matriz"),
-        width="stretch",
-    )
-    st.caption(
-        "El umbral de 45 °C aplica a la matriz, que se calienta por encima del ambiente con la radiación solar."
-    )
+    with st.expander("Condiciones del entorno"):
+        fila_3 = st.columns(2)
+        fila_3[0].altair_chart(
+            grafico_entorno(df, "humedad_relativa_pct", "Humedad relativa promedio (referencia 30 %)", "%",
+                            config.UMBRAL_HUMEDAD_ECOLOGICA_PCT, "Límite ecológico"),
+            width="stretch",
+        )
+        fila_3[1].altair_chart(
+            grafico_entorno(df, "temperatura_c", "Temperatura ambiente (referencia 45 °C)", "°C",
+                            config.UMBRAL_TEMPERATURA_CORTE_C, "Corte térmico de la matriz"),
+            width="stretch",
+        )
+        st.caption(
+            "El umbral de 45 °C aplica a la matriz, que se calienta por encima del ambiente con la radiación solar."
+        )
 
     st.subheader("Totales finales")
     totales = tr.totales_a_dataframe(resultado)
@@ -589,18 +609,18 @@ def seccion_graficos(df: pd.DataFrame, resultado: dict) -> None:
 
 def seccion_bitacora(resultado: dict) -> None:
     """Consola de decisiones del modo neuro-simbólico con filtros."""
-    st.subheader("Consola de decisiones (modo neuro-simbólico)")
-    bitacora = resultado["bitacora"]
-    columnas = st.columns(2)
-    nodos = sorted({e["nodo_id"] for e in bitacora})
-    reglas = sorted({e["regla_activada"] for e in bitacora})
-    nodo = columnas[0].selectbox("Filtrar por nodo", ["Todos"] + nodos, key="filtro_nodo")
-    regla = columnas[1].selectbox("Filtrar por regla", ["Todas"] + reglas, key="filtro_regla")
-    filtro_nodo = None if nodo == "Todos" else nodo
-    filtro_regla = None if regla == "Todas" else regla
-    cantidad = len(tr.filtrar_bitacora(bitacora, filtro_nodo, filtro_regla))
-    st.caption(f"{cantidad} eventos. Se registran solo los cambios de regla de cada nodo; hora local.")
-    st.code(tr.bitacora_a_texto(bitacora, filtro_nodo, filtro_regla), language=None, height=360)
+    with st.expander("Consola de decisiones (modo neuro-simbólico)"):
+        bitacora = resultado["bitacora"]
+        columnas = st.columns(2)
+        nodos = sorted({e["nodo_id"] for e in bitacora})
+        reglas = sorted({e["regla_activada"] for e in bitacora})
+        nodo = columnas[0].selectbox("Filtrar por nodo", ["Todos"] + nodos, key="filtro_nodo")
+        regla = columnas[1].selectbox("Filtrar por regla", ["Todas"] + reglas, key="filtro_regla")
+        filtro_nodo = None if nodo == "Todos" else nodo
+        filtro_regla = None if regla == "Todas" else regla
+        cantidad = len(tr.filtrar_bitacora(bitacora, filtro_nodo, filtro_regla))
+        st.caption(f"{cantidad} eventos. Se registran solo los cambios de regla de cada nodo; hora local.")
+        st.code(tr.bitacora_a_texto(bitacora, filtro_nodo, filtro_regla), language=None, height=360)
 
 
 def seccion_descargas(resultado: dict, df: pd.DataFrame) -> None:
@@ -659,7 +679,12 @@ def seccion_reproduccion(resultado: dict) -> None:
     Se ubica al final de la página porque el bucle de reproducción bloquea la
     ejecución del script hasta terminar o hasta que se pulse Detener.
     """
-    st.subheader("Reproducción paso a paso")
+    with st.expander("Reproducción paso a paso"):
+        _contenido_reproduccion(resultado)
+
+
+def _contenido_reproduccion(resultado: dict) -> None:
+    """Controles y bucle de la reproducción; se dibuja dentro del desplegable de seccion_reproduccion."""
     series = resultado["series_temporales"]
     paso = series[1]["minuto"] - series[0]["minuto"] if len(series) > 1 else 1
     ultimo_minuto = series[-1]["minuto"]
@@ -699,7 +724,7 @@ def ejecutar_escenario(escenario: str, parametros: dict) -> None:
     carga = {"escenario": escenario, **parametros}
     with st.spinner(f"Ejecutando la simulación '{ESCENARIOS[escenario]}'..."):
         try:
-            resultado = cliente_api.ejecutar_simulacion(carga)
+            resultado = simulacion_en_cache(carga)
         except cliente_api.ErrorApiAxioma as error:
             st.session_state.error_simulacion = error
             return
@@ -765,6 +790,8 @@ def vista_simulacion(api_disponible: bool) -> None:
         f"salinización {carga['tasa_salinizacion']}, semilla {carga['semilla']}."
     )
     df = tr.series_a_dataframe(resultado)
+    st.subheader("Resumen ejecutivo")
+    st.markdown(contenido.lista_markdown(tr.resumen_ejecutivo(resultado)))
     seccion_comparativa(resultado)
     seccion_conjeturas(resultado)
     seccion_graficos(df, resultado)
@@ -818,7 +845,7 @@ def seccion_barrido(api_disponible: bool) -> None:
     columnas[2].write("")
     if columnas[2].button("Ejecutar barrido", disabled=not api_disponible, type="primary", width="stretch"):
         ejecutar_analisis(
-            cliente_api.ejecutar_barrido, tr.configuracion_barrido(humedad, semillas), "barrido",
+            barrido_en_cache, tr.configuracion_barrido(humedad, semillas), "barrido",
             "Ejecutando el barrido de salinidad...",
         )
     if st.session_state.error_barrido is not None:
@@ -853,7 +880,7 @@ def seccion_sensibilidad(api_disponible: bool) -> None:
     columnas[2].write("")
     if columnas[2].button("Ejecutar sensibilidad", disabled=not api_disponible, width="stretch"):
         carga = tr.configuracion_sensibilidad(parametro, escenario, st.session_state.resp_humedad)
-        ejecutar_analisis(cliente_api.ejecutar_sensibilidad, carga, "sensibilidad", "Ejecutando la sensibilidad...")
+        ejecutar_analisis(sensibilidad_en_cache, carga, "sensibilidad", "Ejecutando la sensibilidad...")
     valores = ", ".join(f"{valor:g}" for valor in tr.VALORES_SENSIBILIDAD[parametro])
     st.caption(f"Valores evaluados: {valores}. Humedad inicial del barrido y tasa de salinización ALTA.")
     if st.session_state.error_sensibilidad is not None:

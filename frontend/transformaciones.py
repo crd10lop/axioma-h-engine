@@ -484,3 +484,94 @@ def lectura_barrido(resultado: dict) -> list[str]:
         f"Cada punto es la media de {semillas} semilla(s); la banda muestra +/- una desviación estándar."
     )
     return [frase_recuperacion, frase_desgaste, frase_semillas]
+
+
+# ---------------------------------------------------------------------------
+# Resumen ejecutivo de una simulación
+# ---------------------------------------------------------------------------
+_ETIQUETA_CONJETURA_CORTA = {
+    "conjetura_1_eficiencia": "C1",
+    "conjetura_2_autorreparacion": "C2",
+    "conjetura_3_saber_territorial": "C3",
+}
+
+
+def _variacion(valor: float, referencia: float) -> str:
+    """Describe la variación relativa de un valor frente a la referencia: "X % menos", "X % más" o "lo mismo"."""
+    diferencia = diferencia_porcentual(valor, referencia)
+    if diferencia is None or math.isclose(diferencia, 0.0, abs_tol=0.05):
+        return "lo mismo"
+    sentido = "menos" if diferencia < 0 else "más"
+    return f"{abs(diferencia):.1f} % {sentido}"
+
+
+def _frase_agua(resultado: dict) -> str:
+    """Agua captada por ambos modos y, si hay modo de referencia, la descomposición de la brecha."""
+    comparativa = resultado["comparativa"]
+    neuro = comparativa[MODO_NEURO][CLAVE_LITROS]
+    temporizador = comparativa[MODO_TEMPORIZADOR][CLAVE_LITROS]
+    frase = (
+        f"Agua: el neuro-simbólico captó {neuro:.1f} L, {_variacion(neuro, temporizador)} "
+        f"que el temporizador ({temporizador:.1f} L)."
+    )
+    brecha = texto_brecha_agua(resultado)
+    return frase if brecha is None else f"{frase} {brecha}"
+
+
+def _frase_degradacion(comparativa: dict) -> str:
+    """Degradación acumulada de la membrana en ambos modos."""
+    clave = "degradacion_acumulada_pct"
+    neuro = comparativa[MODO_NEURO][clave]
+    temporizador = comparativa[MODO_TEMPORIZADOR][clave]
+    return (
+        f"Desgaste: la degradación de la membrana fue {neuro:.3f} % con el neuro-simbólico y "
+        f"{temporizador:.3f} % con el temporizador ({_variacion(neuro, temporizador)})."
+    )
+
+
+def _frase_energia(comparativa: dict) -> str:
+    """Energía consumida por ambos modos."""
+    clave = "consumo_energia_wh"
+    neuro = comparativa[MODO_NEURO][clave]
+    temporizador = comparativa[MODO_TEMPORIZADOR][clave]
+    return (
+        f"Energía: el neuro-simbólico consumió {neuro:.1f} Wh, {_variacion(neuro, temporizador)} "
+        f"que el temporizador ({temporizador:.1f} Wh)."
+    )
+
+
+def _frase_violaciones(comparativa: dict) -> str:
+    """Episodios de violación ecológica de ambos modos."""
+    clave = "violaciones_ecologicas"
+    return (
+        f"Límite ecológico: {comparativa[MODO_NEURO][clave]} violaciones del neuro-simbólico y "
+        f"{comparativa[MODO_TEMPORIZADOR][clave]} del temporizador."
+    )
+
+
+def _frase_conjeturas(resultado: dict) -> str:
+    """Número de conjeturas validadas y cuáles son."""
+    validadas = [
+        _ETIQUETA_CONJETURA_CORTA[clave]
+        for clave in _ETIQUETA_CONJETURA_CORTA
+        if resultado["conjeturas_validadas"].get(clave)
+    ]
+    detalle = f" ({', '.join(validadas)})" if validadas else ""
+    return f"Conjeturas validadas: {len(validadas)} de {len(_ETIQUETA_CONJETURA_CORTA)}{detalle}."
+
+
+def resumen_ejecutivo(resultado: dict) -> list[str]:
+    """Cinco frases con lo esencial de una simulación, calculadas desde la respuesta de la API.
+
+    Cubren el agua captada (con la descomposición de la brecha si la respuesta
+    incluye el temporizador con tope ecológico), la degradación, la energía,
+    las violaciones ecológicas y el número de conjeturas validadas.
+    """
+    comparativa = resultado["comparativa"]
+    return [
+        _frase_agua(resultado),
+        _frase_degradacion(comparativa),
+        _frase_energia(comparativa),
+        _frase_violaciones(comparativa),
+        _frase_conjeturas(resultado),
+    ]

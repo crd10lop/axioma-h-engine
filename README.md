@@ -11,7 +11,7 @@ El proyecto incluye una API REST y un dashboard simulador. El simulador compara 
 
 Lo desarrolla el equipo AXIOMA en el curso Fundamentos de Investigación de la Universidad de Antioquia (UdeA), Ciclo 2.
 
-Para una explicación general de qué hace la aplicación y cómo funciona, ver [docs/funcionamiento.md](docs/funcionamiento.md).
+Para una explicación general de qué hace la aplicación y cómo funciona, ver [docs/funcionamiento.md](docs/funcionamiento.md). Hay un resumen en inglés en [README_EN.md](README_EN.md).
 
 ## Enlaces
 
@@ -22,6 +22,8 @@ Para una explicación general de qué hace la aplicación y cómo funciona, ver 
 | API desplegada (documentación interactiva) | [Abrir API](https://axioma-h-api.onrender.com/docs) |
 | Salud de la API | [Verificar estado](https://axioma-h-api.onrender.com/api/v1/health) |
 | Calidad del código (SonarQube Cloud) | [Abrir tablero](https://sonarcloud.io/summary/new_code?id=crd10lop_axioma-h-engine) |
+| Datos de referencia abiertos (CSV y JSON) | [docs/datos/](docs/datos/README.md) |
+| Resumen en inglés | [README_EN.md](README_EN.md) |
 
 ## Pregunta de investigación
 
@@ -77,7 +79,12 @@ axioma-h-engine/
 │   ├── modelo_simulacion.md
 │   ├── despliegue.md
 │   ├── funcionamiento.md
-│   └── referencias.md      Software de terceros, fuentes y trazabilidad de parámetros
+│   ├── referencias.md      Software de terceros, fuentes y trazabilidad de parámetros
+│   └── datos/              Resultados de referencia en CSV y JSON, con su diccionario de campos
+├── scripts/
+│   ├── verificar_despliegue.py         Comprobaciones contra el despliegue publicado
+│   └── generar_resultados_referencia.py Datos de referencia sin red ni API
+├── README_EN.md            Resumen en inglés
 ├── pytest.ini
 ├── render.yaml             Blueprint de despliegue en Render
 └── requirements.txt
@@ -131,6 +138,16 @@ La barra lateral ofrece un recorrido de cuatro vistas, con un botón "Siguiente"
 4. **Respuesta a la pregunta:** barrido de salinidad con 1 a 5 semillas (media y banda de +/- una desviación) y sensibilidad a la eficacia del pulso o al flujo de niebla. Usa los endpoints de `/api/v1/analisis` y no modifica la configuración del modelo.
 
 El detalle de cada vista está en [docs/funcionamiento.md](docs/funcionamiento.md), sección 5.
+
+### Uso local sin conexión
+
+El proyecto no depende del despliegue en Render. Con las dependencias instaladas, todo funciona en el equipo sin conexión a internet:
+
+- **Aplicación completa:** iniciar el backend y el dashboard como se indica arriba. El dashboard se conecta por defecto a la API local (`http://127.0.0.1:8000`).
+- **Resultados de referencia:** `python scripts/generar_resultados_referencia.py` importa el backend directamente, sin la API, y regenera en [docs/datos/](docs/datos/README.md) los cinco escenarios con 45 % y 85 % de humedad inicial y el barrido de salinidad con semillas 1 a 5. Los archivos ya generados están en el repositorio y se pueden abrir con cualquier hoja de cálculo.
+- **Pruebas:** `pytest` no usa la red; el cliente HTTP del dashboard se prueba con `requests` simulado.
+
+El dashboard guarda durante una hora la respuesta de cada simulación y de cada análisis: repetir la misma configuración no vuelve a llamar a la API.
 
 ### Variable AXIOMA_API_URL
 
