@@ -526,6 +526,19 @@ def seccion_comparativa(resultado: dict) -> None:
         st.info(brecha)
 
 
+def seccion_impacto(resultado: dict) -> None:
+    """Personas abastecidas y rendimiento frente a la literatura; se omite si la API no lo entrega."""
+    frases = tr.resumen_impacto(resultado)
+    if frases is None:
+        return
+    st.subheader("Impacto comunitario estimado")
+    st.caption(
+        "Indicador informativo: no interviene en la validación de las conjeturas. Estándares de la OMS "
+        "(Howard et al., 2020), Sphere (2018) y rango de Klemm et al. (2012)."
+    )
+    st.markdown(contenido.lista_markdown(frases))
+
+
 def seccion_conjeturas(resultado: dict) -> None:
     """Estado de las tres conjeturas con su tabla de indicadores."""
     st.subheader("Verificación de conjeturas")
@@ -793,6 +806,7 @@ def vista_simulacion(api_disponible: bool) -> None:
     st.subheader("Resumen ejecutivo")
     st.markdown(contenido.lista_markdown(tr.resumen_ejecutivo(resultado)))
     seccion_comparativa(resultado)
+    seccion_impacto(resultado)
     seccion_conjeturas(resultado)
     seccion_graficos(df, resultado)
     seccion_bitacora(resultado)

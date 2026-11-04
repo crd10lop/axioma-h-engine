@@ -214,7 +214,10 @@ PERSPECTIVAS: dict[str, str] = {
         "El proyecto se orienta a Cabo de la Vela, en la Alta Guajira, un territorio árido con "
         "escasez hídrica. El control es descentralizado: cada uno de los 8 nodos decide con su "
         "propia telemetría. Respetar el tope ecológico tiene un costo: con humedad inicial de 85 %, "
-        "el modo neuro-simbólico capta entre 23 % y 27 % menos agua que el temporizador."
+        "el modo neuro-simbólico capta entre 23 % y 27 % menos agua que el temporizador. Cada "
+        "simulación estima además el impacto comunitario: con humedad inicial de 85 %, la red de 8 m² "
+        "abastecería entre 7.5 y 12.7 personas al nivel de acceso básico de la OMS (20 L por persona "
+        "al día), según el escenario. Es un indicador informativo que no interviene en la validación."
     ),
     "etica": (
         f"El sistema nunca extrae más del {FRACCION_MAXIMA_EXTRACCION_PCT:g} % de la niebla disponible "
@@ -226,8 +229,15 @@ PERSPECTIVAS: dict[str, str] = {
     ),
     "cultural": (
         "La Conjetura 3 se denomina \"saber territorial\" y busca preservar la humedad disponible "
-        "para la vegetación de trupillo y cardón. No resuelto: la interfaz está solo en español y no "
-        "tiene versión en wayuunaiki, y la orientación del colector a 20° al norte no se modela."
+        "para la vegetación de trupillo y cardón. El tope del "
+        f"{FRACCION_MAXIMA_EXTRACCION_PCT:g} % proviene de la formulación de la Conjetura 3 en la "
+        "Matriz del equipo (narrativa del Ciclo 1, \"El Axioma del Silencio\"): no es un saber wayuu "
+        "documentado ni un criterio de la literatura ecológica, y debe validarse con las comunidades. "
+        "Para el Ciclo 3 se propone un protocolo de co-creación en cuatro pasos: consulta previa; "
+        "validación comunitaria del tope y de la pausa ecológica; traducción de la interfaz con "
+        "traductores wayuu; y reglas de gobernanza del dispositivo y de los datos. No resuelto: la "
+        "interfaz está solo en español y no tiene versión en wayuunaiki, y la orientación del colector "
+        "a 20° al norte no se modela."
     ),
     "humana": (
         "Cada decisión del motor incluye un motivo legible, y la vista de evaluación manual permite "
@@ -256,6 +266,18 @@ MADUREZ = (
 # Glosario y referencias
 # ---------------------------------------------------------------------------
 GLOSARIO: dict[str, str] = {
+    "acceso básico al agua": (
+        f"Nivel de servicio de la OMS de unos {config.CONSUMO_ACCESO_BASICO_L_PERSONA_DIA:g} L por "
+        "persona al día, suficiente para bebida e higiene básica. El mínimo humanitario de Sphere es "
+        f"{config.CONSUMO_SUPERVIVENCIA_L_PERSONA_DIA:g} L. El impacto comunitario estimado divide el "
+        "agua captada por día entre estos consumos."
+    ),
+    "rendimiento por m²": (
+        "Litros captados por día y por m² de colector. Proyectos reales de captación de niebla "
+        f"reportan de {config.RENDIMIENTO_LITERATURA_MIN_L_M2_DIA:g} a "
+        f"{config.RENDIMIENTO_LITERATURA_MAX_L_M2_DIA:g} L/m² al día (Klemm et al., 2012); el modelo "
+        "supera ese rango con humedad alta porque su flujo de niebla es un supuesto optimista."
+    ),
     "impedancia": (
         "Resistencia eléctrica de la membrana, en Ω. La membrana limpia tiene 1000 Ω; la sal "
         f"cristalizada la eleva, y sobre {config.UMBRAL_IMPEDANCIA_OHMS:g} Ω el motor detecta "
@@ -301,6 +323,15 @@ REFERENCIAS: list[str] = [
     f"Repositorio del proyecto: {URL_REPOSITORIO}",
     "Software de terceros, fuente científica y trazabilidad de parámetros: "
     f"{URL_REPOSITORIO}/blob/main/docs/06_Referencias_y_Trazabilidad_AxiomaH.md",
+    (
+        "Howard, G., Bartram, J., Williams, A., Overbo, A., Fuente, D. y Geere, J.-A. (2020). Domestic "
+        "water quantity, service level and health (2.ª ed.). Organización Mundial de la Salud. "
+        "https://www.who.int/publications/i/item/9789240015241"
+    ),
+    (
+        "Sphere Association (2018). The Sphere Handbook: Humanitarian Charter and Minimum Standards in "
+        "Humanitarian Response (4.ª ed.), estándar 2.1 de abastecimiento de agua. https://spherestandards.org"
+    ),
 ]
 
 # ---------------------------------------------------------------------------

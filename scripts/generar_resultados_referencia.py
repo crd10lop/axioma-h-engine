@@ -71,6 +71,9 @@ CAMPOS_MODO = {
     "violaciones_ecologicas": "violaciones",
     "recuperacion_caudal_promedio_pct": "recuperacion_pct",
 }
+CLAVE_IMPACTO = "impacto_comunitario"
+# Campos de ImpactoComunitario que se agregan al final de cada fila, por modo.
+CAMPOS_IMPACTO = ("personas_acceso_basico", "rendimiento_l_m2_dia")
 CONJETURAS = {
     "c1": "conjetura_1_eficiencia",
     "c2": "conjetura_2_autorreparacion",
@@ -117,6 +120,9 @@ def fila_escenario(escenario: str, humedad: float, resultado: dict) -> dict:
         fila[columna] = _vacio_si_nulo(detalle[CONJETURAS[corta]]["indicadores_informativos"].get(indicador))
     for corta, clave in CONJETURAS.items():
         fila[f"{corta}_causas"] = ";".join(detalle[clave]["causas_no_validacion"])
+    for prefijo, clave_modo in MODOS.items():
+        for campo in CAMPOS_IMPACTO:
+            fila[f"{prefijo}_{campo}"] = resultado[CLAVE_IMPACTO][clave_modo][campo]
     return fila
 
 
@@ -191,6 +197,7 @@ def generar(carpeta: Path = CARPETA_POR_DEFECTO) -> list[Path]:
                 "comparativa": resultado["comparativa"],
                 "conjeturas_validadas": resultado["conjeturas_validadas"],
                 "detalle_verificacion": resultado["detalle_verificacion"],
+                CLAVE_IMPACTO: resultado[CLAVE_IMPACTO],
             }
             for escenario, humedad, resultado in corridas
         ],

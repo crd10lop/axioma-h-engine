@@ -1,6 +1,6 @@
 # Referencias, créditos y trazabilidad de parámetros
 
-Este documento reúne el software de terceros que usa Axioma-H Engine, la fuente científica que respalda la comparación del modelo con la literatura y el origen de cada parámetro de `backend/config.py`. El proyecto se distribuye con licencia MIT (archivo `LICENSE`).
+Este documento reúne el software de terceros que usa Axioma-H Engine, las fuentes científicas que respaldan la comparación del modelo con la literatura y la estimación del impacto comunitario, y el origen de cada parámetro de `backend/config.py`. El proyecto se distribuye con licencia MIT (archivo `LICENSE`).
 
 ## 1. Software de terceros
 
@@ -23,7 +23,9 @@ Las licencias se obtuvieron de los metadatos de cada paquete instalado en el ent
 
 | Referencia | Uso en el proyecto |
 |---|---|
-| Klemm, O., Schemenauer, R. S., Lummerich, A., et al. (2012). Fog as a fresh-water resource: overview and perspectives. *Ambio*, 41, 221-234. https://doi.org/10.1007/s13280-012-0247-8 | Los proyectos operativos de captación de niebla reportan promedios anuales típicos de 3 a 10 L por m² de malla al día. Se usa para contrastar el flujo de niebla supuesto por el modelo y el umbral de rendimiento de la Conjetura 3 (sección 4). |
+| Klemm, O., Schemenauer, R. S., Lummerich, A., et al. (2012). Fog as a fresh-water resource: overview and perspectives. *Ambio*, 41, 221-234. https://doi.org/10.1007/s13280-012-0247-8 | Los proyectos operativos de captación de niebla reportan promedios anuales típicos de 3 a 10 L por m² de malla al día. Se usa para contrastar el flujo de niebla supuesto por el modelo y el umbral de rendimiento de la Conjetura 3 (sección 4), y como rango de rendimiento real en el impacto comunitario (`RENDIMIENTO_LITERATURA_MIN_L_M2_DIA` y `RENDIMIENTO_LITERATURA_MAX_L_M2_DIA`). |
+| Howard, G., Bartram, J., Williams, A., Overbo, A., Fuente, D. y Geere, J.-A. (2020). *Domestic water quantity, service level and health* (2.ª ed.). Organización Mundial de la Salud. https://www.who.int/publications/i/item/9789240015241 | Acceso básico de unos 20 L por persona al día. Se usa para estimar las personas abastecidas en el impacto comunitario (`CONSUMO_ACCESO_BASICO_L_PERSONA_DIA`; documento 04, sección 7.6). |
+| Sphere Association (2018). *The Sphere Handbook: Humanitarian Charter and Minimum Standards in Humanitarian Response* (4.ª ed.), estándar 2.1 de abastecimiento de agua. https://spherestandards.org | Mínimo de 15 L por persona al día. Se usa para estimar las personas abastecidas con el mínimo humanitario en el impacto comunitario (`CONSUMO_SUPERVIVENCIA_L_PERSONA_DIA`; documento 04, sección 7.6). |
 
 ## 3. Trazabilidad de parámetros
 
@@ -33,6 +35,7 @@ La tabla recorre todas las constantes de `backend/config.py` en el orden del arc
 - **Matriz:** [01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 3.
 - **Criterio del equipo:** decisión documentada en [04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md).
 - **Supuesto:** estimación de orden de magnitud del modelo, pendiente de calibración con datos de campo.
+- **Referencia:** valor tomado de una de las fuentes de la sección 2.
 
 | Constante | Valor | Origen | Fuente |
 |---|---|---|---|
@@ -105,6 +108,10 @@ La tabla recorre todas las constantes de `backend/config.py` en el orden del arc
 | `TORMENTA_ARENA_ENSUCIAMIENTO_OHM_H` | 60.0 Ohm/h | Supuesto | Sin fuente: supuesto de orden de magnitud |
 | `CONSTANTE_LIMPIEZA_POLVO_H` | 4.0 h | Supuesto | Sin fuente: supuesto de orden de magnitud |
 | `CALOR_EXTREMO_INCREMENTO_C` | 3.0 °C | Supuesto | Sin fuente: supuesto de orden de magnitud |
+| `CONSUMO_SUPERVIVENCIA_L_PERSONA_DIA` | 15.0 L/persona/día | Referencia | Sphere (2018), estándar 2.1 de abastecimiento de agua. Indicador informativo de impacto comunitario |
+| `CONSUMO_ACCESO_BASICO_L_PERSONA_DIA` | 20.0 L/persona/día | Referencia | OMS, Howard et al. (2020), acceso básico. Indicador informativo de impacto comunitario |
+| `RENDIMIENTO_LITERATURA_MIN_L_M2_DIA` | 3.0 L/m²/día | Referencia | Klemm et al. (2012). Indicador informativo de impacto comunitario |
+| `RENDIMIENTO_LITERATURA_MAX_L_M2_DIA` | 10.0 L/m²/día | Referencia | Klemm et al. (2012). Indicador informativo de impacto comunitario |
 
 `FRACCION_EXTRACCION_TEMPORIZADOR`, `INTERVALO_PULSO_TEMPORIZADOR_MIN` e `INCREMENTO_TERMICO_TEMPORIZADOR_C` se describen en config.py como "Especificación del simulador": definen el control tradicional de comparación y no provienen de una fuente externa.
 

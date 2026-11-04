@@ -268,6 +268,40 @@ class EventoBitacora(BaseModel):
     motivo: str = Field(..., description="Explicación emitida por el motor de reglas.")
 
 
+class ImpactoComunitario(BaseModel):
+    """Estimación del abastecimiento que permitiría el agua captada por un modo de control.
+
+    Es un indicador informativo: no interviene en la validación de las conjeturas.
+    """
+
+    litros_dia_red: float = Field(..., ge=0, description="Agua captada por la red, normalizada a litros por día.")
+    rendimiento_l_m2_dia: float = Field(
+        ..., ge=0, description="Litros por día y por m² de colector de la red simulada."
+    )
+    personas_supervivencia: float = Field(
+        ..., ge=0, description="Personas abastecidas con 15 L/persona/día (Sphere, estándar 2.1)."
+    )
+    personas_acceso_basico: float = Field(
+        ..., ge=0, description="Personas abastecidas con 20 L/persona/día (acceso básico, OMS)."
+    )
+    area_m2_por_persona_basico_literatura_min: float = Field(
+        ...,
+        gt=0,
+        description=(
+            "m² de colector por persona para el acceso básico con el rendimiento máximo de la literatura "
+            "(10 L/m²/día, Klemm et al., 2012)."
+        ),
+    )
+    area_m2_por_persona_basico_literatura_max: float = Field(
+        ...,
+        gt=0,
+        description=(
+            "m² de colector por persona para el acceso básico con el rendimiento mínimo de la literatura "
+            "(3 L/m²/día, Klemm et al., 2012)."
+        ),
+    )
+
+
 class SimulationResult(BaseModel):
     """Resultado completo de una simulación comparativa."""
 
@@ -276,6 +310,14 @@ class SimulationResult(BaseModel):
     detalle_verificacion: DetalleVerificacion
     series_temporales: List[PuntoSerieTemporal]
     bitacora: List[EventoBitacora]
+    impacto_comunitario: dict[str, ImpactoComunitario] = Field(
+        default_factory=dict,
+        description=(
+            "Impacto comunitario estimado por modo, con las claves modo_neuro_simbolico, "
+            "modo_temporizador_fijo y modo_temporizador_tope_ecologico. Informativo; no interviene "
+            "en la validación."
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------

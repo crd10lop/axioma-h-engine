@@ -46,8 +46,10 @@ Una fila por escenario y humedad inicial (10 filas). Una celda vacía indica que
 | `c2_impedancia_tras_pulso_ohm` | Informativo: impedancia promedio al terminar cada pulso (Ohm). |
 | `c3_rendimiento_temporizador_l_m2_noche` | Informativo: rendimiento nocturno del temporizador fijo. |
 | `c1_causas`, `c2_causas`, `c3_causas` | Causas de no validación separadas por `;`; vacío si la conjetura se valida. |
+| `<modo>_personas_acceso_basico` | Informativo: personas abastecidas con 20 L por persona al día (acceso básico de la OMS), con el agua del modo normalizada a un día. |
+| `<modo>_rendimiento_l_m2_dia` | Informativo: litros por día y por m² de colector de la red (8 m²). La literatura reporta de 3 a 10 L/m² al día. |
 
-`<modo>` es `neuro` (control neuro-simbólico), `temporizador` (temporizador fijo, fracción 0.45) o `temporizador_tope` (temporizador con tope ecológico, fracción 0.33). Las definiciones de los indicadores y de las causas están en [../04_Modelo_de_Control_y_Simulacion_AxiomaH.md](../04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 4.
+`<modo>` es `neuro` (control neuro-simbólico), `temporizador` (temporizador fijo, fracción 0.45) o `temporizador_tope` (temporizador con tope ecológico, fracción 0.33). Las definiciones de los indicadores y de las causas están en [../04_Modelo_de_Control_y_Simulacion_AxiomaH.md](../04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 4, y las del impacto comunitario en la sección 7.6.
 
 ## 4. barrido_salinidad.csv
 
@@ -70,7 +72,7 @@ Una fila por combinación de escenario y tasa (6 filas), ordenadas por carga sal
 | Clave | Contenido |
 |---|---|
 | `condiciones` | Versión del servicio y condiciones de ejecución de ambos conjuntos. |
-| `escenarios` | Lista de 10 corridas con `escenario`, `humedad_inicial_pct`, `comparativa` (los tres modos), `conjeturas_validadas` y `detalle_verificacion` (indicadores, informativos y causas), con el mismo formato que la respuesta de `POST /api/v1/simulacion/ejecutar`. |
+| `escenarios` | Lista de 10 corridas con `escenario`, `humedad_inicial_pct`, `comparativa` (los tres modos), `conjeturas_validadas`, `detalle_verificacion` (indicadores, informativos y causas) e `impacto_comunitario` (los tres modos: litros por día, rendimiento por m², personas con 15 y 20 L y área de colector por persona con los rendimientos de la literatura), con el mismo formato que la respuesta de `POST /api/v1/simulacion/ejecutar`. |
 | `barrido_salinidad` | Respuesta completa del barrido, con el formato de `POST /api/v1/analisis/barrido-salinidad`. |
 
 El JSON omite `series_temporales` y `bitacora` para mantener un tamaño manejable (288 puntos y entre 24 y 210 eventos por corrida). Se reproducen con `POST /api/v1/simulacion/ejecutar` y la misma configuración, o importando `backend.simulador.ejecutar_simulacion`.

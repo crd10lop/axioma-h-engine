@@ -54,7 +54,7 @@ Se recomienda recorrer el proyecto en este orden:
 3. **Conjeturas.** La verificación de las tres conjeturas en [Resultados](#resultados) y su detalle en [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), secciones 5 y 6.
 4. **Lectura crítica.** El conflicto entre los indicadores de la Conjetura 1, el contraste del umbral de la Conjetura 3 con la literatura y las preguntas para el Ciclo 3, en [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 8.
 5. **Limitaciones.** Las [Limitaciones conocidas](#limitaciones-conocidas) y el [Alcance y madurez](#alcance-y-madurez) del artefacto.
-6. **Referencias.** El software de terceros, la fuente científica y la trazabilidad de cada parámetro en [docs/06_Referencias_y_Trazabilidad_AxiomaH.md](docs/06_Referencias_y_Trazabilidad_AxiomaH.md).
+6. **Referencias.** El software de terceros, las fuentes científicas y la trazabilidad de cada parámetro en [docs/06_Referencias_y_Trazabilidad_AxiomaH.md](docs/06_Referencias_y_Trazabilidad_AxiomaH.md).
 
 ## Naturaleza del control
 
@@ -77,6 +77,7 @@ axioma-h-engine/
 │   ├── motor_reglas.py     Reglas neuro-simbólicas en orden de prioridad
 │   ├── simulador.py        Simulación comparativa y verificación de conjeturas
 │   ├── analisis.py         Barrido de salinidad y sensibilidad con parámetros inmutables
+│   ├── impacto.py          Impacto comunitario estimado con estándares de la OMS y Sphere
 │   └── routers/
 │       ├── nodo.py         POST /api/v1/nodo/evaluar
 │       ├── simulacion.py   POST /api/v1/simulacion/ejecutar
@@ -148,7 +149,7 @@ La barra lateral ofrece un recorrido de cuatro vistas, con un botón "Siguiente"
 
 1. **Investigación y guía:** pregunta, hipótesis, conjeturas, reglas, perspectivas y alcance. No requiere la API.
 2. **Evaluación manual de nodo:** decisión del motor para una telemetría ajustable.
-3. **Simulación comparativa:** ambos modos sobre un escenario, con gráficos, conjeturas y bitácora.
+3. **Simulación comparativa:** ambos modos sobre un escenario, con impacto comunitario estimado, gráficos, conjeturas y bitácora.
 4. **Respuesta a la pregunta:** barrido de salinidad con 1 a 5 semillas (media y banda de +/- una desviación) y sensibilidad a la eficacia del pulso o al flujo de niebla. Usa los endpoints de `/api/v1/analisis` y no modifica la configuración del modelo.
 
 El detalle de cada vista está en [docs/03_Funcionamiento_General_AxiomaH.md](docs/03_Funcionamiento_General_AxiomaH.md), sección 5.
@@ -321,9 +322,22 @@ Respuesta calculada por el modelo (abreviada). Los valores de la respuesta de ej
     "...": "conjetura_1_eficiencia y conjetura_3_saber_territorial con la misma estructura"
   },
   "series_temporales": [ { "minuto": 0, "humedad_relativa_pct": 84.85, "...": "..." } ],
-  "bitacora": [ { "minuto": 0, "nodo_id": "NODO_01", "regla_activada": "REGLA_05_OPERACION_NOMINAL", "motivo": "..." } ]
+  "bitacora": [ { "minuto": 0, "nodo_id": "NODO_01", "regla_activada": "REGLA_05_OPERACION_NOMINAL", "motivo": "..." } ],
+  "impacto_comunitario": {
+    "modo_neuro_simbolico": {
+      "litros_dia_red": 81.652,
+      "rendimiento_l_m2_dia": 10.2065,
+      "personas_supervivencia": 5.4435,
+      "personas_acceso_basico": 4.0826,
+      "area_m2_por_persona_basico_literatura_min": 2.0,
+      "area_m2_por_persona_basico_literatura_max": 6.6667
+    },
+    "...": "modo_temporizador_fijo y modo_temporizador_tope_ecologico con la misma estructura"
+  }
 }
 ```
+
+`impacto_comunitario` es informativo y no interviene en la validación: traduce el agua de cada modo en personas abastecidas (ver [Impacto comunitario estimado](#impacto-comunitario-estimado)).
 
 Los escenarios disponibles son `DIA_NORMAL`, `INCRUSTACION_SALINA_RAPIDA`, `SEQUIA`, `TORMENTA_DE_ARENA` y `TORMENTA_DE_SAL_Y_CALOR_EXTREMO`. Las tasas de salinización son `BAJA`, `MEDIA` y `ALTA`.
 
@@ -347,7 +361,7 @@ El caudal se expresa como porcentaje del tope ecológico: el sistema nunca extra
 pytest -v
 ```
 
-La suite cubre el motor de reglas (cada regla, casos límite y prioridad), el simulador (reproducibilidad, límites térmico y ecológico, criterio de regeneración, modo de referencia, indicadores informativos y causas de no validación), el análisis de robustez (barrido, sensibilidad, validaciones y ausencia de efectos sobre la configuración global, también con solicitudes simultáneas), la API, el cliente HTTP del dashboard (con `requests` simulado), las transformaciones de datos y el contenido de la vista de investigación. Ninguna prueba usa la red.
+La suite cubre el motor de reglas (cada regla, casos límite y prioridad), el simulador (reproducibilidad, límites térmico y ecológico, criterio de regeneración, modo de referencia, indicadores informativos y causas de no validación), el impacto comunitario, el análisis de robustez (barrido, sensibilidad, validaciones y ausencia de efectos sobre la configuración global, también con solicitudes simultáneas), la API, el cliente HTTP del dashboard (con `requests` simulado), las transformaciones de datos y el contenido de la vista de investigación. Ninguna prueba usa la red.
 
 ### Integración continua y calidad
 
@@ -434,6 +448,21 @@ Cada simulación ejecuta además un temporizador con tope ecológico: la misma p
 
 En los cinco escenarios, el tope explica entre 69.8 % y 89.8 % de la brecha con humedad inicial de 45 %, y entre 76.2 % y 90.8 % con 85 %. El menor rendimiento del neuro-simbólico es, sobre todo, el costo del límite ecológico, no de la lógica de control. El tope por sí solo tampoco evita las violaciones: en Sequía, el temporizador con tope registra 8, porque no tiene pausa ecológica.
 
+### Impacto comunitario estimado
+
+Cada simulación traduce el agua captada en personas abastecidas (`impacto_comunitario`), con el acceso básico de la OMS (20 L por persona al día, Howard et al., 2020) y el mínimo humanitario de Sphere (15 L por persona al día, estándar 2.1). Es un indicador informativo y no interviene en la validación.
+
+| Corrida | L por día (neuro / temporizador) | L/m² al día del neuro | Personas con 20 L (neuro / temporizador / temporizador 0.33) |
+|---|---|---|---|
+| Tormenta de sal y calor extremo, humedad 45 % | 81.7 / 120.4 | 10.21 | 4.1 / 6.0 / 4.6 |
+| Día normal, humedad 85 % | 254.6 / 340.4 | 31.83 | 12.7 / 17.0 / 13.3 |
+
+- Con el flujo de niebla supuesto y humedad inicial de 85 %, la red de 8 m² abastecería a unas 12 personas en Día normal, y entre 7.5 y 12.7 según el escenario. Con 45 %, entre 2.0 y 4.1.
+- El rendimiento simulado con 85 % (18.7 a 31.8 L/m² al día) supera el rango de 3 a 10 L/m² al día de proyectos reales (Klemm et al., 2012). Con esos rendimientos harían falta de 2 a 6.7 m² de colector por persona.
+- El tope ecológico reduce las personas abastecidas frente al temporizador: entre 2.8 y 4.3 personas menos con 85 % y entre 1.1 y 2.2 con 45 %.
+
+La tabla de los diez casos y su interpretación están en [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 7.6. El origen del tope del 33 % y el protocolo de co-creación propuesto para el Ciclo 3 están en [docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2.7.
+
 ### Indicadores informativos y causas de no validación
 
 Cada conjetura informa indicadores adicionales que no intervienen en la validación, y la causa de cada indicador que no cumple (`causas_no_validacion`):
@@ -464,4 +493,4 @@ El artefacto es una prueba de concepto analítica por simulación, equivalente d
 
 ## Referencias y créditos
 
-El software de terceros con su uso, URL y licencia, la fuente científica usada para contrastar el flujo de niebla y la trazabilidad de cada parámetro de `backend/config.py` están en [docs/06_Referencias_y_Trazabilidad_AxiomaH.md](docs/06_Referencias_y_Trazabilidad_AxiomaH.md). El proyecto se distribuye con licencia MIT (archivo `LICENSE`).
+El software de terceros con su uso, URL y licencia, las fuentes científicas usadas para contrastar el flujo de niebla (Klemm et al., 2012) y para estimar el impacto comunitario (OMS, Howard et al., 2020; Sphere, 2018), y la trazabilidad de cada parámetro de `backend/config.py` están en [docs/06_Referencias_y_Trazabilidad_AxiomaH.md](docs/06_Referencias_y_Trazabilidad_AxiomaH.md). El proyecto se distribuye con licencia MIT (archivo `LICENSE`).

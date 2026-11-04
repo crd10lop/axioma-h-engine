@@ -91,6 +91,7 @@ Esta sección se limita a lo que el repositorio implementa o documenta. Lo que n
 - El proyecto se orienta a Cabo de la Vela, en la Alta Guajira, un territorio árido con escasez hídrica.
 - El control es descentralizado por nodo: cada uno de los 8 nodos decide con su propia telemetría (sección 2.2), de modo que una condición local, como la cristalización de una membrana, se atiende sin detener los demás nodos.
 - Respetar el tope ecológico tiene un costo hídrico medible. Con humedad inicial de 85 %, el modo neuro-simbólico capta entre 23 % y 27 % menos agua que el temporizador ([04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 5.5). El estudio hace visible ese costo en lugar de ocultarlo.
+- Cada simulación estima el impacto comunitario del agua captada con estándares citados: el acceso básico de la OMS (20 L por persona al día) y el mínimo humanitario de Sphere (15 L por persona al día). Con humedad inicial de 85 %, la red de 8 m² del modo neuro-simbólico abastecería entre 7.5 y 12.7 personas al nivel de acceso básico, según el escenario. Con los rendimientos de proyectos reales (3 a 10 L/m² al día) harían falta de 2 a 6.7 m² de colector por persona ([04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 7.6). Es un indicador informativo: no interviene en la validación de las conjeturas.
 
 **Perspectiva ética.**
 
@@ -102,6 +103,14 @@ Esta sección se limita a lo que el repositorio implementa o documenta. Lo que n
 **Perspectiva cultural.**
 
 - La Conjetura 3 se denomina "saber territorial" y su motivación es preservar la humedad disponible para la vegetación local de trupillo y cardón.
+- **Origen del tope del 33 %.** El tope de extracción proviene de la formulación de la Conjetura 3 en la Matriz del equipo (sección 3), construida a partir de la narrativa prospectiva del Ciclo 1, *"El Axioma del Silencio"*. No es un saber wayuu documentado ni un criterio tomado de la literatura ecológica. Su pertinencia debe validarse con las comunidades.
+- **Protocolo propuesto de co-creación para el Ciclo 3.** Antes de cualquier piloto, se propone trabajar con las comunidades en cuatro pasos:
+  1. Consulta previa, conforme al Convenio 169 de la OIT y la Ley 21 de 1991.
+  2. Validación comunitaria del tope de extracción y de la pausa ecológica: si los valores de 33 % y de 30 % de humedad relativa corresponden a su conocimiento del territorio, o deben cambiar.
+  3. Traducción de la interfaz al wayuunaiki con traductores wayuu.
+  4. Reglas de gobernanza del dispositivo y de los datos: quién lo opera, quién decide sobre el agua captada y quién accede a la telemetría.
+
+  Este protocolo es una propuesta del equipo y no se ha ejecutado.
 - **Limitaciones no resueltas:** la interfaz está solo en español y no tiene versión en wayuunaiki; la orientación del colector a 20° al norte, que forma parte de la formulación de la Conjetura 3, no se modela en el simulador (sección 3).
 
 **Perspectiva humana.**

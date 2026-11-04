@@ -131,6 +131,16 @@ A reference timer with the same 0.33 cap separates the two causes of the water g
 
 Across the five scenarios, the cap explains 69.8 % to 89.8 % of the gap with 45 % initial humidity and 76.2 % to 90.8 % with 85 %. The lower yield of the neuro-symbolic control is mostly the cost of the ecological limit, not of the control logic.
 
+### Estimated community impact
+
+Each simulation converts the collected water into people supplied (`impacto_comunitario`), using the WHO basic access level (20 L per person per day, Howard et al., 2020) and the Sphere humanitarian minimum (15 L per person per day, standard 2.1). It is an informative indicator and does not affect validation.
+
+- With the assumed fog flux and 85 % initial humidity, the 8 m² network would supply about 12 people at the basic access level on a normal day (12.7), and 7.5 to 12.7 depending on the scenario. With 45 %, 2.0 to 4.1.
+- The simulated yield at 85 % (18.7 to 31.8 L/m² per day) exceeds the 3 to 10 L/m² per day reported for operational projects (Klemm et al., 2012). At those yields, 2 to 6.7 m² of collector per person would be needed.
+- The ecological cap reduces the number of people supplied compared with the timer: 2.8 to 4.3 fewer with 85 % and 1.1 to 2.2 fewer with 45 %.
+
+The 33 % cap comes from the team's formulation of Conjecture 3 (narrative of Cycle 1, "El Axioma del Silencio"). It is neither documented Wayuu knowledge nor a criterion taken from the ecological literature, and it must be validated with the communities. A four-step co-creation protocol is proposed for Cycle 3: prior consultation, community validation of the cap and the ecological pause, translation of the interface with Wayuu translators, and governance rules for the device and the data (docs/01, section 2.7).
+
 ## Limitations
 
 - Results come from a simulated model, not from field measurements.
@@ -155,8 +165,10 @@ The reference data and its field dictionary are in [docs/datos/](docs/datos/READ
 
 ## References
 
-- Third-party software, licenses, the scientific source and the traceability of every model parameter: [docs/06_Referencias_y_Trazabilidad_AxiomaH.md](docs/06_Referencias_y_Trazabilidad_AxiomaH.md) (in Spanish).
+- Third-party software, licenses, the scientific sources and the traceability of every model parameter: [docs/06_Referencias_y_Trazabilidad_AxiomaH.md](docs/06_Referencias_y_Trazabilidad_AxiomaH.md) (in Spanish).
 - Klemm, O., Schemenauer, R. S., Lummerich, A., et al. (2012). Fog as a fresh-water resource: overview and perspectives. *Ambio*, 41, 221-234. https://doi.org/10.1007/s13280-012-0247-8
+- Howard, G., Bartram, J., Williams, A., Overbo, A., Fuente, D. and Geere, J.-A. (2020). *Domestic water quantity, service level and health* (2nd ed.). World Health Organization. https://www.who.int/publications/i/item/9789240015241
+- Sphere Association (2018). *The Sphere Handbook: Humanitarian Charter and Minimum Standards in Humanitarian Response* (4th ed.), water supply standard 2.1. https://spherestandards.org
 - Model, equations, sensitivity analyses and critical reading of the conjectures: [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md) (in Spanish).
 
 The project is distributed under the MIT license (`LICENSE` file).

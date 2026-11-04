@@ -535,3 +535,68 @@ def test_resumen_ejecutivo_sin_modo_de_referencia(resultado_prd):
 )
 def test_variacion(valor, referencia, esperado):
     assert tr._variacion(valor, referencia) == esperado
+
+
+# ---------------------------------------------------------------------------
+# Impacto comunitario
+# ---------------------------------------------------------------------------
+CLAVE_IMPACTO = "impacto_comunitario"
+
+
+def _respuesta_impacto(rendimiento: float, con_temporizador: bool = True) -> dict:
+    """Respuesta con impacto_comunitario mínimo para el modo neuro-simbólico y, opcionalmente, el temporizador."""
+    neuro = {
+        "litros_dia_red": rendimiento * 8,
+        "rendimiento_l_m2_dia": rendimiento,
+        "personas_supervivencia": rendimiento * 8 / 15,
+        "personas_acceso_basico": rendimiento * 8 / 20,
+        "area_m2_por_persona_basico_literatura_min": 2.0,
+        "area_m2_por_persona_basico_literatura_max": 6.6667,
+    }
+    impacto = {tr.MODO_NEURO: neuro}
+    if con_temporizador:
+        impacto[tr.MODO_TEMPORIZADOR] = {**neuro, "personas_acceso_basico": 6.33}
+    return {CLAVE_IMPACTO: impacto}
+
+
+def test_resumen_impacto_con_respuesta_real(resultado_prd):
+    personas, temporizador, rendimiento, area = tr.resumen_impacto(resultado_prd)
+    assert personas == (
+        "Con el agua captada por el control neuro-simbólico, la red simulada abastecería a 4.1 personas "
+        "al nivel de acceso básico de la OMS (20 L por persona al día), o a 5.4 con el mínimo humanitario "
+        "de Sphere (15 L por persona al día)."
+    )
+    assert temporizador == (
+        "Como comparación, el temporizador fijo, que extrae por encima del tope ecológico, abastecería "
+        "a 6.0 personas al mismo nivel."
+    )
+    assert rendimiento.startswith("El rendimiento simulado, 10.2 L/m² al día, supera el rango de 3 a 10")
+    assert "equivale a 1.02 veces su extremo superior" in rendimiento
+    assert area == (
+        "Con los rendimientos reales de la literatura harían falta entre 2.0 y 6.7 m² de colector por "
+        "persona para el acceso básico."
+    )
+
+
+@pytest.mark.parametrize(
+    ("rendimiento", "esperado"),
+    [
+        (31.83, "equivale a 3.18 veces su extremo superior"),
+        (6.0, "está dentro del rango de 3 a 10 L/m² al día"),
+        (10.0, "está dentro del rango"),
+        (2.5, "queda por debajo del rango de 3 a 10 L/m² al día"),
+    ],
+)
+def test_resumen_impacto_frente_a_la_literatura(rendimiento, esperado):
+    frases = tr.resumen_impacto(_respuesta_impacto(rendimiento))
+    assert esperado in frases[2]
+
+
+def test_resumen_impacto_sin_temporizador():
+    frases = tr.resumen_impacto(_respuesta_impacto(6.0, con_temporizador=False))
+    assert len(frases) == 3
+
+
+@pytest.mark.parametrize("respuesta", [{}, {CLAVE_IMPACTO: {}}, {CLAVE_IMPACTO: None}])
+def test_resumen_impacto_sin_campo(respuesta):
+    assert tr.resumen_impacto(respuesta) is None

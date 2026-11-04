@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
 from backend import config, modelo_fisico
+from backend.impacto import impacto_comunitario
 from backend.modelo_fisico import PARAMETROS_BASE, ParametrosModelo
 from backend.motor_reglas import evaluar_telemetria, temperatura_alcanzada_pulso
 from backend.schemas import (
@@ -871,12 +872,23 @@ def ejecutar_simulacion(cfg: SimulationConfig, *, parametros: ParametrosModelo =
         for i in range(entorno.numero_pasos)
     ]
 
+    comparativa = ComparativaModos(
+        modo_neuro_simbolico=_resultado_modo(neuro),
+        modo_temporizador_fijo=_resultado_modo(temporizador),
+        modo_temporizador_tope_ecologico=_resultado_modo(referencia),
+    )
+    # Indicador informativo: parte de los litros publicados en la comparativa de cada modo.
+    impacto = {
+        clave: impacto_comunitario(resultado.litros_totales_agua, cfg.duracion_horas, entorno.numero_nodos)
+        for clave, resultado in (
+            ("modo_neuro_simbolico", comparativa.modo_neuro_simbolico),
+            ("modo_temporizador_fijo", comparativa.modo_temporizador_fijo),
+            ("modo_temporizador_tope_ecologico", comparativa.modo_temporizador_tope_ecologico),
+        )
+    }
+
     return SimulationResult(
-        comparativa=ComparativaModos(
-            modo_neuro_simbolico=_resultado_modo(neuro),
-            modo_temporizador_fijo=_resultado_modo(temporizador),
-            modo_temporizador_tope_ecologico=_resultado_modo(referencia),
-        ),
+        comparativa=comparativa,
         conjeturas_validadas=ConjeturasValidadas(
             conjetura_1_eficiencia=detalle.conjetura_1_eficiencia.validada,
             conjetura_2_autorreparacion=detalle.conjetura_2_autorreparacion.validada,
@@ -885,4 +897,5 @@ def ejecutar_simulacion(cfg: SimulationConfig, *, parametros: ParametrosModelo =
         detalle_verificacion=detalle,
         series_temporales=series,
         bitacora=neuro.bitacora,
+        impacto_comunitario=impacto,
     )

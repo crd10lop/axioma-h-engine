@@ -296,6 +296,9 @@ def probar_simulacion(cliente: httpx.Client, api: str, configuracion: dict, nomb
             ),
             "causas_no_validacion ausente o no es una lista en alguna conjetura",
         )
+        claves_impacto = {"modo_neuro_simbolico", "modo_temporizador_fijo", "modo_temporizador_tope_ecologico"}
+        impacto = resultado.get("impacto_comunitario") or {}
+        _verificar(set(impacto) == claves_impacto, f"impacto_comunitario con claves {sorted(impacto)}")
         serie = resultado["series_temporales"]
         _verificar(isinstance(serie, list) and len(serie) > 0, "series_temporales vacía")
         estado_conjeturas = "".join("V" if conjeturas[clave] else "F" for clave in claves_conjeturas)

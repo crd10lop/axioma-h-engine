@@ -122,3 +122,11 @@ TORMENTA_ARENA_FACTOR_RADIACION = 0.5  # Fracción de recarga solar durante la t
 TORMENTA_ARENA_ENSUCIAMIENTO_OHM_H = 60.0  # Ohm/h de impedancia por polvo.
 CONSTANTE_LIMPIEZA_POLVO_H = 4.0  # h; el viento retira el polvo tras la tormenta.
 CALOR_EXTREMO_INCREMENTO_C = 3.0  # °C extra con radiación máxima.
+
+# ---------------------------------------------------------------------------
+# Impacto comunitario. Indicador informativo; no interviene en la validación.
+# ---------------------------------------------------------------------------
+CONSUMO_SUPERVIVENCIA_L_PERSONA_DIA = 15.0  # Sphere (2018), estándar 2.1 de abastecimiento de agua.
+CONSUMO_ACCESO_BASICO_L_PERSONA_DIA = 20.0  # OMS, Howard et al. (2020), acceso básico.
+RENDIMIENTO_LITERATURA_MIN_L_M2_DIA = 3.0  # Klemm et al. (2012).
+RENDIMIENTO_LITERATURA_MAX_L_M2_DIA = 10.0  # Klemm et al. (2012).

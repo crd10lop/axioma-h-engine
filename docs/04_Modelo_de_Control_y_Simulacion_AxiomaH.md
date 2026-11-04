@@ -1,6 +1,6 @@
 # Modelo de control y simulación del motor Axioma-H
 
-Este documento describe el motor de reglas neuro-simbólico, el simulador comparativo y la forma en que se verifican las conjeturas del Ciclo 2. Los valores de todos los parámetros están en `backend/config.py`. Las ecuaciones compartidas por el motor y el simulador están en `backend/modelo_fisico.py`. Los dos parámetros que admiten análisis de sensibilidad, la eficacia máxima del pulso y el flujo máximo de niebla, se agrupan además en `ParametrosModelo` (`backend/modelo_fisico.py`), que toma por defecto los valores de `backend/config.py`. El barrido de salinidad con varias semillas y la sensibilidad están en `backend/analisis.py` (secciones 6.4 y 7.5).
+Este documento describe el motor de reglas neuro-simbólico, el simulador comparativo y la forma en que se verifican las conjeturas del Ciclo 2. Los valores de todos los parámetros están en `backend/config.py`. Las ecuaciones compartidas por el motor y el simulador están en `backend/modelo_fisico.py`. Los dos parámetros que admiten análisis de sensibilidad, la eficacia máxima del pulso y el flujo máximo de niebla, se agrupan además en `ParametrosModelo` (`backend/modelo_fisico.py`), que toma por defecto los valores de `backend/config.py`. El barrido de salinidad con varias semillas y la sensibilidad están en `backend/analisis.py` (secciones 6.4 y 7.5). El impacto comunitario estimado está en `backend/impacto.py` (sección 7.6).
 
 Los documentos de referencia son el PRD de la API ([02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md](02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md)) y la Matriz de Operacionalización ([01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md)). Las decisiones de la sección 1 resuelven las diferencias entre ambos.
 
@@ -395,6 +395,38 @@ Con humedad inicial de 45 % hay menos agua captada y, por tanto, menos sal. El m
 | 240 | INCRUSTACION_SALINA_RAPIDA, ALTA | 85.89 +/- 0.07 | 63.24 +/- 0.58 | 1.082 +/- 0.013 | 4.210 +/- 0.014 | 74.3 % |
 
   La reducción del desgaste se calcula con las medias. La dispersión entre semillas es pequeña frente a las diferencias entre modos, y las conclusiones de 7.4 se mantienen: el neuro-simbólico degrada menos la membrana en los seis niveles (reducción de 74.3 % a 99.1 %), y las curvas de recuperación se cruzan entre 40 y 60 Ohm por L/m². En 60 Ohm por L/m² la ventaja del neuro-simbólico (0.65 puntos) equivale a unas dos desviaciones del temporizador, por lo que el punto de cruce es el resultado menos robusto del barrido. Las semillas solo varían el clima de referencia; la incertidumbre de los parámetros supuestos no está incluida en esta dispersión.
+
+### 7.6 Impacto comunitario estimado
+
+La respuesta de `POST /api/v1/simulacion/ejecutar` incluye el campo `impacto_comunitario`, con una entrada por modo (`modo_neuro_simbolico`, `modo_temporizador_fijo` y `modo_temporizador_tope_ecologico`). Traduce el agua captada en personas abastecidas. Es un indicador informativo: no interviene en la validación de las conjeturas ni en las decisiones del motor. Se calcula en `backend/impacto.py` a partir de `litros_totales_agua` de cada modo:
+
+- `litros_dia_red = litros_totales * 24 / duracion_horas`.
+- `rendimiento_l_m2_dia = litros_dia_red / (AREA_COLECTOR_M2 * numero_nodos)`, con 1 m² por nodo.
+- `personas_supervivencia = litros_dia_red / 15`, el mínimo de 15 L por persona al día del estándar 2.1 de Sphere (2018).
+- `personas_acceso_basico = litros_dia_red / 20`, el acceso básico de unos 20 L por persona al día de la OMS (Howard et al., 2020).
+- `area_m2_por_persona_basico_literatura_min = 20 / 10 = 2.0` y `area_m2_por_persona_basico_literatura_max = 20 / 3 = 6.67`: m² de colector por persona para el acceso básico con el rendimiento máximo y mínimo de proyectos reales, de 3 a 10 L/m² al día según Klemm et al. (2012). No dependen de la simulación.
+
+Resultados con 24 h, tasa ALTA, 8 nodos (8 m² de colector) y semilla 42. Cada celda muestra neuro-simbólico / temporizador fijo / temporizador con tope ecológico.
+
+| Escenario | Humedad inicial | Litros por día | L/m² al día | Personas con 15 L | Personas con 20 L |
+|---|---|---|---|---|---|
+| DIA_NORMAL | 45 % | 82.7 / 126.6 / 95.5 | 10.34 / 15.83 / 11.94 | 5.5 / 8.4 / 6.4 | 4.1 / 6.3 / 4.8 |
+| INCRUSTACION_SALINA_RAPIDA | 45 % | 80.5 / 106.2 / 83.1 | 10.06 / 13.27 / 10.39 | 5.4 / 7.1 / 5.5 | 4.0 / 5.3 / 4.2 |
+| SEQUIA | 45 % | 40.8 / 63.6 / 47.7 | 5.10 / 7.95 / 5.96 | 2.7 / 4.2 / 3.2 | 2.0 / 3.2 / 2.4 |
+| TORMENTA_DE_ARENA | 45 % | 77.9 / 116.8 / 88.1 | 9.74 / 14.60 / 11.02 | 5.2 / 7.8 / 5.9 | 3.9 / 5.8 / 4.4 |
+| TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 45 % | 81.7 / 120.4 / 91.8 | 10.21 / 15.05 / 11.47 | 5.4 / 8.0 / 6.1 | 4.1 / 6.0 / 4.6 |
+| DIA_NORMAL | 85 % | 254.6 / 340.4 / 266.1 | 31.83 / 42.55 / 33.26 | 17.0 / 22.7 / 17.7 | 12.7 / 17.0 / 13.3 |
+| INCRUSTACION_SALINA_RAPIDA | 85 % | 185.4 / 240.9 / 198.6 | 23.17 / 30.12 / 24.83 | 12.4 / 16.1 / 13.2 | 9.3 / 12.0 / 9.9 |
+| SEQUIA | 85 % | 149.4 / 204.4 / 158.7 | 18.67 / 25.55 / 19.83 | 10.0 / 13.6 / 10.6 | 7.5 / 10.2 / 7.9 |
+| TORMENTA_DE_ARENA | 85 % | 232.4 / 306.4 / 239.3 | 29.05 / 38.30 / 29.91 | 15.5 / 20.4 / 16.0 | 11.6 / 15.3 / 12.0 |
+| TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 85 % | 235.0 / 305.8 / 243.7 | 29.37 / 38.23 / 30.46 | 15.7 / 20.4 / 16.2 | 11.7 / 15.3 / 12.2 |
+
+**Interpretación.**
+
+- **Escala.** Con el flujo de niebla supuesto y humedad inicial de 85 %, la red de 8 m² con control neuro-simbólico abastecería a unas 12 personas al nivel de acceso básico en DIA_NORMAL (12.7), y entre 7.5 y 12.7 según el escenario. Con 45 % la cifra baja a entre 2.0 y 4.1 personas. Es la escala de una vivienda o de un grupo familiar, no de una comunidad.
+- **Rendimiento frente a la literatura.** Con 85 % el rendimiento simulado del neuro-simbólico, de 18.67 a 31.83 L/m² al día, supera el rango de 3 a 10 L/m² al día de proyectos reales; en DIA_NORMAL es 3.2 veces el extremo superior. Con 45 % queda entre 5.10 y 10.34, cerca o dentro de ese rango. Las cifras de 85 % heredan el carácter optimista del flujo de niebla supuesto (sección 8.2). Con los rendimientos reales de la literatura harían falta de 2 a 6.7 m² de colector por persona para el acceso básico, frente a los 0.63 m² por persona que implica el modelo en DIA_NORMAL con 85 % (8 m² para 12.7 personas).
+- **Costo social del tope ecológico.** El tope reduce las personas abastecidas frente al temporizador. El neuro-simbólico abastece entre 2.8 y 4.3 personas menos que el temporizador fijo con 85 %, y entre 1.1 y 2.2 menos con 45 %. Comparando los dos temporizadores, que solo difieren en la fracción de extracción (0.45 frente a 0.33), el tope por sí solo resta entre 2.1 y 3.7 personas con 85 % y entre 0.8 y 1.6 con 45 %. Es la otra cara del costo hídrico de la sección 5.5: preservar la humedad para la vegetación tiene un costo en personas abastecidas que debe discutirse con las comunidades ([01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2.7).
+- **Alcance.** El cálculo supone que toda el agua captada se destina al consumo, sin pérdidas de almacenamiento ni de distribución, y no considera la variación estacional de la niebla. Los estándares de 15 y 20 L por persona al día son mínimos para bebida e higiene doméstica básica; no incluyen usos productivos.
 
 ## 8. Lectura crítica de las conjeturas
 

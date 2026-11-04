@@ -264,6 +264,54 @@ def texto_modo_referencia(resultado: dict) -> str | None:
     )
 
 
+def _frase_rendimiento_literatura(rendimiento: float) -> str:
+    """Sitúa el rendimiento simulado frente al rango de captación de niebla de la literatura."""
+    minimo = config.RENDIMIENTO_LITERATURA_MIN_L_M2_DIA
+    maximo = config.RENDIMIENTO_LITERATURA_MAX_L_M2_DIA
+    inicio = f"El rendimiento simulado, {rendimiento:.1f} L/m² al día,"
+    rango = f"rango de {minimo:g} a {maximo:g} L/m² al día que reportan proyectos reales (Klemm et al., 2012)"
+    if rendimiento > maximo:
+        return (
+            f"{inicio} supera el {rango}: equivale a {rendimiento / maximo:.2f} veces su extremo superior. "
+            "El flujo de niebla del modelo es un supuesto optimista."
+        )
+    if rendimiento < minimo:
+        return f"{inicio} queda por debajo del {rango}."
+    return f"{inicio} está dentro del {rango}."
+
+
+def resumen_impacto(resultado: dict) -> list[str] | None:
+    """Frases en lenguaje llano sobre el impacto comunitario estimado del modo neuro-simbólico.
+
+    Devuelve None si la respuesta no incluye impacto_comunitario, por ejemplo con una API anterior.
+    """
+    impacto = resultado.get("impacto_comunitario") or {}
+    neuro = impacto.get(MODO_NEURO)
+    if neuro is None:
+        return None
+    frases = [
+        f"Con el agua captada por el control neuro-simbólico, la red simulada abastecería a "
+        f"{neuro['personas_acceso_basico']:.1f} personas al nivel de acceso básico de la OMS "
+        f"({config.CONSUMO_ACCESO_BASICO_L_PERSONA_DIA:g} L por persona al día), o a "
+        f"{neuro['personas_supervivencia']:.1f} con el mínimo humanitario de Sphere "
+        f"({config.CONSUMO_SUPERVIVENCIA_L_PERSONA_DIA:g} L por persona al día).",
+    ]
+    temporizador = impacto.get(MODO_TEMPORIZADOR)
+    if temporizador is not None:
+        frases.append(
+            f"Como comparación, el temporizador fijo, que extrae por encima del tope ecológico, abastecería "
+            f"a {temporizador['personas_acceso_basico']:.1f} personas al mismo nivel."
+        )
+    frases.append(_frase_rendimiento_literatura(neuro["rendimiento_l_m2_dia"]))
+    frases.append(
+        f"Con los rendimientos reales de la literatura harían falta entre "
+        f"{neuro['area_m2_por_persona_basico_literatura_min']:.1f} y "
+        f"{neuro['area_m2_por_persona_basico_literatura_max']:.1f} m² de colector por persona para el "
+        "acceso básico."
+    )
+    return frases
+
+
 def filtrar_bitacora(
     bitacora: Iterable[dict], nodo: Optional[str] = None, regla: Optional[str] = None
 ) -> List[dict]:

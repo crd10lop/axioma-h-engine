@@ -15,6 +15,7 @@ VISTA_SIMULACION = "Simulación comparativa"
 VISTA_RESPUESTA = "Respuesta a la pregunta"
 REGLA_03 = "REGLA_03_DESPRENDIMIENTO_SAL_POR_IMPEDANCIA"
 REGLA_04 = "REGLA_04_PROTECCION_RESERVA_CRITICA"
+ACCESO_BASICO = "acceso básico al agua"
 
 
 def _constantes_app() -> dict[str, str]:
@@ -128,6 +129,48 @@ def test_referencias_incluyen_repositorio_y_documento():
     assert "docs/06_Referencias_y_Trazabilidad_AxiomaH.md" in texto
 
 
+@pytest.mark.parametrize(
+    "cita",
+    [
+        "Howard, G., Bartram, J.",
+        "https://www.who.int/publications/i/item/9789240015241",
+        "Sphere Association (2018)",
+        "estándar 2.1 de abastecimiento de agua",
+    ],
+)
+def test_referencias_incluyen_oms_y_sphere(cita):
+    assert cita in " ".join(contenido.REFERENCIAS)
+
+
+@pytest.mark.parametrize("texto", ["impacto comunitario", "entre 7.5 y 12.7 personas", "20 L por persona"])
+def test_perspectiva_social_describe_el_impacto_comunitario(texto):
+    assert texto in contenido.PERSPECTIVAS["social"]
+
+
+@pytest.mark.parametrize(
+    "fragmento",
+    [
+        "El tope del 33 %",
+        "El Axioma del Silencio",
+        "no es un saber wayuu documentado",
+        "debe validarse con las comunidades",
+        "protocolo de co-creación en cuatro pasos",
+        "traductores wayuu",
+        "gobernanza del dispositivo y de los datos",
+    ],
+)
+def test_perspectiva_cultural_documenta_origen_del_tope_y_protocolo(fragmento):
+    assert fragmento in contenido.PERSPECTIVAS["cultural"]
+
+
+@pytest.mark.parametrize(
+    ("termino", "valor"),
+    [(ACCESO_BASICO, "20 L"), (ACCESO_BASICO, "15 L"), ("rendimiento por m²", "de 3 a 10 L/m²")],
+)
+def test_glosario_usa_los_estandares_de_config(termino, valor):
+    assert valor in contenido.GLOSARIO[termino]
+
+
 # ---------------------------------------------------------------------------
 # Reglas
 # ---------------------------------------------------------------------------
@@ -223,12 +266,14 @@ def test_vista_desconocida_lanza_error(funcion):
 def test_glosario_ordenado_alfabeticamente():
     terminos = [termino for termino, _ in contenido.glosario_ordenado()]
     assert terminos == sorted(contenido.GLOSARIO, key=str.casefold)
-    assert terminos[0] == "conductancia relativa"
+    assert terminos[0] == ACCESO_BASICO
     assert terminos[-1] == "tope ecológico"
 
 
 def test_glosario_contiene_los_terminos_requeridos():
     requeridos = {
+        ACCESO_BASICO,
+        "rendimiento por m²",
         "impedancia",
         "conductancia relativa",
         "pulso resistivo",

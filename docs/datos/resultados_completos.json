@@ -136,6 +136,32 @@
             "LIMITE_DEL_RECURSO_ATMOSFERICO"
           ]
         }
+      },
+      "impacto_comunitario": {
+        "modo_neuro_simbolico": {
+          "litros_dia_red": 82.69,
+          "rendimiento_l_m2_dia": 10.3362,
+          "personas_supervivencia": 5.5127,
+          "personas_acceso_basico": 4.1345,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        },
+        "modo_temporizador_fijo": {
+          "litros_dia_red": 126.616,
+          "rendimiento_l_m2_dia": 15.827,
+          "personas_supervivencia": 8.4411,
+          "personas_acceso_basico": 6.3308,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        },
+        "modo_temporizador_tope_ecologico": {
+          "litros_dia_red": 95.488,
+          "rendimiento_l_m2_dia": 11.936,
+          "personas_supervivencia": 6.3659,
+          "personas_acceso_basico": 4.7744,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        }
       }
     },
     {
@@ -248,6 +274,32 @@
             "LIMITE_DEL_RECURSO_ATMOSFERICO"
           ]
         }
+      },
+      "impacto_comunitario": {
+        "modo_neuro_simbolico": {
+          "litros_dia_red": 80.462,
+          "rendimiento_l_m2_dia": 10.0578,
+          "personas_supervivencia": 5.3641,
+          "personas_acceso_basico": 4.0231,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        },
+        "modo_temporizador_fijo": {
+          "litros_dia_red": 106.185,
+          "rendimiento_l_m2_dia": 13.2731,
+          "personas_supervivencia": 7.079,
+          "personas_acceso_basico": 5.3093,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        },
+        "modo_temporizador_tope_ecologico": {
+          "litros_dia_red": 83.084,
+          "rendimiento_l_m2_dia": 10.3855,
+          "personas_supervivencia": 5.5389,
+          "personas_acceso_basico": 4.1542,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        }
       }
     },
     {
@@ -357,6 +409,32 @@
           "causas_no_validacion": [
             "LIMITE_DEL_RECURSO_ATMOSFERICO"
           ]
+        }
+      },
+      "impacto_comunitario": {
+        "modo_neuro_simbolico": {
+          "litros_dia_red": 40.781,
+          "rendimiento_l_m2_dia": 5.0976,
+          "personas_supervivencia": 2.7187,
+          "personas_acceso_basico": 2.0391,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        },
+        "modo_temporizador_fijo": {
+          "litros_dia_red": 63.634,
+          "rendimiento_l_m2_dia": 7.9542,
+          "personas_supervivencia": 4.2423,
+          "personas_acceso_basico": 3.1817,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        },
+        "modo_temporizador_tope_ecologico": {
+          "litros_dia_red": 47.676,
+          "rendimiento_l_m2_dia": 5.9595,
+          "personas_supervivencia": 3.1784,
+          "personas_acceso_basico": 2.3838,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
         }
       }
     },
@@ -470,6 +548,32 @@
             "LIMITE_DEL_RECURSO_ATMOSFERICO"
           ]
         }
+      },
+      "impacto_comunitario": {
+        "modo_neuro_simbolico": {
+          "litros_dia_red": 77.905,
+          "rendimiento_l_m2_dia": 9.7381,
+          "personas_supervivencia": 5.1937,
+          "personas_acceso_basico": 3.8952,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        },
+        "modo_temporizador_fijo": {
+          "litros_dia_red": 116.775,
+          "rendimiento_l_m2_dia": 14.5969,
+          "personas_supervivencia": 7.785,
+          "personas_acceso_basico": 5.8388,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        },
+        "modo_temporizador_tope_ecologico": {
+          "litros_dia_red": 88.137,
+          "rendimiento_l_m2_dia": 11.0171,
+          "personas_supervivencia": 5.8758,
+          "personas_acceso_basico": 4.4069,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        }
       }
     },
     {
@@ -582,6 +686,32 @@
             "LIMITE_DEL_RECURSO_ATMOSFERICO"
           ]
         }
+      },
+      "impacto_comunitario": {
+        "modo_neuro_simbolico": {
+          "litros_dia_red": 81.652,
+          "rendimiento_l_m2_dia": 10.2065,
+          "personas_supervivencia": 5.4435,
+          "personas_acceso_basico": 4.0826,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        },
+        "modo_temporizador_fijo": {
+          "litros_dia_red": 120.408,
+          "rendimiento_l_m2_dia": 15.051,
+          "personas_supervivencia": 8.0272,
+          "personas_acceso_basico": 6.0204,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        },
+        "modo_temporizador_tope_ecologico": {
+          "litros_dia_red": 91.784,
+          "rendimiento_l_m2_dia": 11.473,
+          "personas_supervivencia": 6.1189,
+          "personas_acceso_basico": 4.5892,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        }
       }
     },
     {
@@ -691,6 +821,32 @@
             "rendimiento_nocturno_temporizador_l_m2_noche": 21.9587
           },
           "causas_no_validacion": []
+        }
+      },
+      "impacto_comunitario": {
+        "modo_neuro_simbolico": {
+          "litros_dia_red": 254.603,
+          "rendimiento_l_m2_dia": 31.8254,
+          "personas_supervivencia": 16.9735,
+          "personas_acceso_basico": 12.7301,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        },
+        "modo_temporizador_fijo": {
+          "litros_dia_red": 340.399,
+          "rendimiento_l_m2_dia": 42.5499,
+          "personas_supervivencia": 22.6933,
+          "personas_acceso_basico": 17.02,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        },
+        "modo_temporizador_tope_ecologico": {
+          "litros_dia_red": 266.057,
+          "rendimiento_l_m2_dia": 33.2571,
+          "personas_supervivencia": 17.7371,
+          "personas_acceso_basico": 13.3029,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
         }
       }
     },
@@ -805,6 +961,32 @@
             "DESEMPENO_DEL_CONTROL"
           ]
         }
+      },
+      "impacto_comunitario": {
+        "modo_neuro_simbolico": {
+          "litros_dia_red": 185.369,
+          "rendimiento_l_m2_dia": 23.1711,
+          "personas_supervivencia": 12.3579,
+          "personas_acceso_basico": 9.2684,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        },
+        "modo_temporizador_fijo": {
+          "litros_dia_red": 240.94,
+          "rendimiento_l_m2_dia": 30.1175,
+          "personas_supervivencia": 16.0627,
+          "personas_acceso_basico": 12.047,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        },
+        "modo_temporizador_tope_ecologico": {
+          "litros_dia_red": 198.619,
+          "rendimiento_l_m2_dia": 24.8274,
+          "personas_supervivencia": 13.2413,
+          "personas_acceso_basico": 9.9309,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        }
       }
     },
     {
@@ -914,6 +1096,32 @@
             "rendimiento_nocturno_temporizador_l_m2_noche": 18.9549
           },
           "causas_no_validacion": []
+        }
+      },
+      "impacto_comunitario": {
+        "modo_neuro_simbolico": {
+          "litros_dia_red": 149.354,
+          "rendimiento_l_m2_dia": 18.6693,
+          "personas_supervivencia": 9.9569,
+          "personas_acceso_basico": 7.4677,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        },
+        "modo_temporizador_fijo": {
+          "litros_dia_red": 204.399,
+          "rendimiento_l_m2_dia": 25.5499,
+          "personas_supervivencia": 13.6266,
+          "personas_acceso_basico": 10.22,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        },
+        "modo_temporizador_tope_ecologico": {
+          "litros_dia_red": 158.67,
+          "rendimiento_l_m2_dia": 19.8337,
+          "personas_supervivencia": 10.578,
+          "personas_acceso_basico": 7.9335,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
         }
       }
     },
@@ -1025,6 +1233,32 @@
           },
           "causas_no_validacion": []
         }
+      },
+      "impacto_comunitario": {
+        "modo_neuro_simbolico": {
+          "litros_dia_red": 232.432,
+          "rendimiento_l_m2_dia": 29.054,
+          "personas_supervivencia": 15.4955,
+          "personas_acceso_basico": 11.6216,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        },
+        "modo_temporizador_fijo": {
+          "litros_dia_red": 306.406,
+          "rendimiento_l_m2_dia": 38.3008,
+          "personas_supervivencia": 20.4271,
+          "personas_acceso_basico": 15.3203,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        },
+        "modo_temporizador_tope_ecologico": {
+          "litros_dia_red": 239.269,
+          "rendimiento_l_m2_dia": 29.9086,
+          "personas_supervivencia": 15.9513,
+          "personas_acceso_basico": 11.9634,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        }
       }
     },
     {
@@ -1134,6 +1368,32 @@
             "rendimiento_nocturno_temporizador_l_m2_noche": 19.8044
           },
           "causas_no_validacion": []
+        }
+      },
+      "impacto_comunitario": {
+        "modo_neuro_simbolico": {
+          "litros_dia_red": 234.977,
+          "rendimiento_l_m2_dia": 29.3721,
+          "personas_supervivencia": 15.6651,
+          "personas_acceso_basico": 11.7489,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        },
+        "modo_temporizador_fijo": {
+          "litros_dia_red": 305.832,
+          "rendimiento_l_m2_dia": 38.229,
+          "personas_supervivencia": 20.3888,
+          "personas_acceso_basico": 15.2916,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
+        },
+        "modo_temporizador_tope_ecologico": {
+          "litros_dia_red": 243.661,
+          "rendimiento_l_m2_dia": 30.4576,
+          "personas_supervivencia": 16.2441,
+          "personas_acceso_basico": 12.183,
+          "area_m2_por_persona_basico_literatura_min": 2.0,
+          "area_m2_por_persona_basico_literatura_max": 6.6667
         }
       }
     }

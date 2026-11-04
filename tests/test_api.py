@@ -94,6 +94,22 @@ def test_ejecutar_simulacion_payload_prd():
     assert datos["bitacora"]
 
 
+def test_simulacion_incluye_impacto_comunitario():
+    respuesta = cliente.post("/api/v1/simulacion/ejecutar", json=PAYLOAD_SIMULACION_PRD)
+    impacto = respuesta.json()["impacto_comunitario"]
+    neuro = impacto["modo_neuro_simbolico"]
+    assert set(impacto) == MODOS_COMPARATIVA
+    assert set(neuro) == {
+        "litros_dia_red",
+        "rendimiento_l_m2_dia",
+        "personas_supervivencia",
+        "personas_acceso_basico",
+        "area_m2_por_persona_basico_literatura_min",
+        "area_m2_por_persona_basico_literatura_max",
+    }
+    assert neuro["litros_dia_red"] == pytest.approx(81.65, abs=0.01)
+
+
 def test_simulacion_payload_prd_estructura_completa():
     """Ejecuta el payload exacto del PRD y valida la estructura, no los valores ilustrativos."""
     respuesta = cliente.post("/api/v1/simulacion/ejecutar", json=PAYLOAD_SIMULACION_PRD)
@@ -105,6 +121,7 @@ def test_simulacion_payload_prd_estructura_completa():
         "detalle_verificacion",
         "series_temporales",
         "bitacora",
+        "impacto_comunitario",
     }
 
     for modo in MODOS_COMPARATIVA:
