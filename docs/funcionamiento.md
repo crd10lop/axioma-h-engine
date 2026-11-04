@@ -3,9 +3,7 @@
 **Proyecto:** Axioma-H — Captación Pasiva de Agua Atmosférica  
 **Equipo:** AXIOMA — Curso Fundamentos de Investigación (UdeA), Ciclo 2  
 **Repositorio:** https://github.com/crd10lop/axioma-h-engine  
-**Aplicación desplegada:** [Dashboard](PENDIENTE_URL_DASHBOARD) | [API](PENDIENTE_URL_API/docs)
-
-<!-- Tras el despliegue, reemplazar PENDIENTE_URL_DASHBOARD y PENDIENTE_URL_API por las URL públicas (ver docs/despliegue.md, sección 8). -->
+**Aplicación desplegada:** [Dashboard](https://axioma-h-dashboard.onrender.com) | [API](https://axioma-h-api.onrender.com/docs)
 
 Este documento explica en lenguaje general qué hace la aplicación y cómo funciona. El detalle técnico está en los documentos listados en la sección 9.
 

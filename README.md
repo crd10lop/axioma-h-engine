@@ -10,14 +10,12 @@ Para una explicación general de qué hace la aplicación y cómo funciona, ver 
 
 ## Enlaces
 
-<!-- Tras el despliegue, reemplazar PENDIENTE_URL_DASHBOARD y PENDIENTE_URL_API por las URL públicas (ver docs/despliegue.md, sección 8). -->
-
 | Recurso | Enlace |
 |---|---|
 | Código fuente | https://github.com/crd10lop/axioma-h-engine |
-| Dashboard desplegado | [Abrir dashboard](PENDIENTE_URL_DASHBOARD) |
-| API desplegada (documentación interactiva) | [Abrir API](PENDIENTE_URL_API/docs) |
-| Salud de la API | [Verificar estado](PENDIENTE_URL_API/api/v1/health) |
+| Dashboard desplegado | [Abrir dashboard](https://axioma-h-dashboard.onrender.com) |
+| API desplegada (documentación interactiva) | [Abrir API](https://axioma-h-api.onrender.com/docs) |
+| Salud de la API | [Verificar estado](https://axioma-h-api.onrender.com/api/v1/health) |
 
 ## Pregunta de investigación
 

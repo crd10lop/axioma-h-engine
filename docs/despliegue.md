@@ -26,6 +26,8 @@ Ambas opciones son gratuitas y se despliegan desde el repositorio de GitHub. Cad
 4. Render solicita el valor de `AXIOMA_API_URL` para el dashboard. Ingresar la URL pública de la API, por ejemplo `https://axioma-h-api.onrender.com`. Si Render asigna otro nombre a la API (porque el nombre ya está en uso), corregir el valor en **axioma-h-dashboard > Environment** y volver a desplegar.
 5. Confirmar con **Apply**. La primera construcción tarda entre 3 y 6 minutos.
 
+`render.yaml` fija `branch: main` y `autoDeployTrigger: commit` en ambos servicios, por lo que cada push a `main` vuelve a desplegar la API y el dashboard sin intervención manual en el panel de Render.
+
 ## 4. Opción B: dashboard en Streamlit Community Cloud
 
 1. Desplegar solo la API en Render: **New > Web Service**, seleccionar el repositorio y configurar:
@@ -67,22 +69,47 @@ Ambas opciones son gratuitas y se despliegan desde el repositorio de GitHub. Cad
 - Render ofrece 750 horas mensuales de instancia gratuita por cuenta. Con la suspensión por inactividad, dos servicios de uso académico quedan dentro de ese límite.
 - El sistema no guarda estado entre solicitudes, por lo que la suspensión no implica pérdida de datos.
 
-## 8. Registrar las URL públicas
+## 8. URL públicas del despliegue
 
-Los documentos contienen dos marcadores que deben reemplazarse por las URL reales una vez desplegada la aplicación:
+La aplicación está desplegada en Render con el Blueprint de `render.yaml` (opción A):
 
-| Marcador | Valor | Ejemplo con la opción A |
+| Servicio | URL | Verificación |
 |---|---|---|
-| `PENDIENTE_URL_DASHBOARD` | URL pública del dashboard | `https://axioma-h-dashboard.onrender.com` |
-| `PENDIENTE_URL_API` | URL pública de la API, sin barra final | `https://axioma-h-api.onrender.com` |
+| Dashboard | https://axioma-h-dashboard.onrender.com | La barra lateral muestra **Estado: SALUDABLE**. |
+| API, documentación interactiva | https://axioma-h-api.onrender.com/docs | Carga la interfaz Swagger con los endpoints `/api/v1/nodo/evaluar` y `/api/v1/simulacion/ejecutar`. |
+| API, salud | https://axioma-h-api.onrender.com/api/v1/health | Responde código 200 con `"estado": "SALUDABLE"`. |
 
-Las URL exactas aparecen en el panel de Render, en la parte superior de cada servicio.
+Si Render cambia alguna de estas URL (por ejemplo, al recrear un servicio), se debe actualizar en `README.md` (sección Enlaces), en el encabezado de `docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md`, `docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md` y `docs/funcionamiento.md`, y en la variable `AXIOMA_API_URL` del servicio `axioma-h-dashboard` (**Environment** en el panel de Render), sin barra final.
 
-Archivos que contienen los marcadores:
+## 9. Verificación automatizada del despliegue
 
-- `README.md`, sección Enlaces;
-- `docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md`, encabezado;
-- `docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md`, encabezado;
-- `docs/funcionamiento.md`, encabezado.
+El script `scripts/verificar_despliegue.py` ejecuta contra los servicios publicados las comprobaciones de la sección 6 y algunas adicionales. Solo requiere las dependencias de `requirements.txt` y no forma parte de la suite de `pytest`, porque depende de la red.
 
-En VS Code, el reemplazo se hace de una vez en todos los archivos con **Buscar y reemplazar en archivos** (Ctrl+Shift+H): buscar `PENDIENTE_URL_DASHBOARD`, escribir la URL del dashboard y elegir **Reemplazar todo**. Luego repetir con `PENDIENTE_URL_API`. Los enlaces a `/docs` y `/api/v1/health` se completan solos, porque el marcador de la API va seguido de esas rutas.
+```bash
+python scripts/verificar_despliegue.py
+```
+
+Argumentos opcionales:
+
+| Argumento | Valor por defecto | Uso |
+|---|---|---|
+| `--api` | Variable `AXIOMA_API_URL` o `https://axioma-h-api.onrender.com` | URL base de la API. |
+| `--dashboard` | `https://axioma-h-dashboard.onrender.com` | URL base del dashboard. |
+| `--timeout` | `90` | Espera máxima por solicitud, en segundos. Cubre la reactivación de los servicios suspendidos del plan gratuito. |
+
+Comprobaciones realizadas:
+
+1. `GET /api/v1/health` responde 200 con `"estado": "SALUDABLE"`.
+2. `GET /docs` y `GET /openapi.json` responden 200 y el esquema publica `/api/v1/nodo/evaluar` y `/api/v1/simulacion/ejecutar`.
+3. `POST /api/v1/nodo/evaluar` aplica cada regla del motor (REGLA_01 a REGLA_05) con la acción y el estado esperados, respetando el orden de prioridad.
+4. `POST /api/v1/nodo/evaluar` rechaza una telemetría inválida con código 422.
+5. `POST /api/v1/simulacion/ejecutar` responde para el ejemplo del esquema y para cada escenario, con comparativa entre modos, conjeturas validadas y serie temporal no vacía.
+6. `GET /_stcore/health` del dashboard responde 200 con el cuerpo `ok`.
+7. `GET /` del dashboard responde 200.
+8. Las funciones de `frontend/cliente_api.py` funcionan contra la URL pública de la API.
+
+El script imprime una tabla con el resultado, la duración y el detalle de cada comprobación, y termina con código 0 si todas pasan o 1 si alguna falla. Ejemplo contra un despliegue alternativo:
+
+```bash
+python scripts/verificar_despliegue.py --api https://otra-api.onrender.com --dashboard https://otro-dashboard.onrender.com --timeout 120
+```
