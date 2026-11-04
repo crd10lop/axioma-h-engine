@@ -29,6 +29,8 @@ CAMPOS_RESULTADO_MODO = {
     "consumo_energia_wh",
     "integridad_membrana_final_pct",
     "violaciones_ecologicas",
+    "recuperacion_caudal_promedio_pct",
+    "degradacion_acumulada_pct",
 }
 CONJETURAS = {"conjetura_1_eficiencia", "conjetura_2_autorreparacion", "conjetura_3_saber_territorial"}
 

@@ -6,6 +6,12 @@ El proyecto incluye una API REST y un dashboard simulador. El simulador compara 
 
 Lo desarrolla el equipo AXIOMA en el curso Fundamentos de Investigación de la Universidad de Antioquia (UdeA), Ciclo 2.
 
+## Pregunta de investigación
+
+> ¿En qué medida un sistema de control neuro-simbólico, evaluado mediante simulación, mejora la recuperación del caudal de agua y reduce el desgaste de las membranas de un captador de agua atmosférica, en comparación con un control convencional por temporizador, a medida que aumenta la salinidad del ambiente?
+
+Las sub-preguntas, las variables y la hipótesis de trabajo están en [docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2. La respuesta preliminar del simulador está en la sección [Resultados](#barrido-de-salinidad).
+
 ## Arquitectura
 
 El sistema se compone de dos servicios que se ejecutan por separado:
@@ -34,8 +40,10 @@ axioma-h-engine/
 ├── docs/
 │   ├── 01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md
 │   ├── 02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md
-│   └── modelo_simulacion.md
+│   ├── modelo_simulacion.md
+│   └── despliegue.md
 ├── pytest.ini
+├── render.yaml             Blueprint de despliegue en Render
 └── requirements.txt
 ```
 
@@ -43,7 +51,7 @@ axioma-h-engine/
 
 - Windows 10 u 11.
 - Python 3.11 o superior.
-- Las dependencias de `requirements.txt`: FastAPI, Uvicorn, Pydantic v2, Streamlit, Requests, pandas, pytest y httpx.
+- Las dependencias de `requirements.txt`: FastAPI, Uvicorn, Pydantic v2, Streamlit, Altair, Requests, pandas, pytest y httpx.
 
 ## Instalación en Windows
 
@@ -86,7 +94,17 @@ $env:AXIOMA_API_URL = "http://192.168.1.50:8000"
 streamlit run frontend/app.py
 ```
 
-Los tiempos de espera son de 10 s para la evaluación de nodos y de 60 s para la simulación (`frontend/config.py`).
+Los tiempos de espera son de 75 s para la verificación de salud (para tolerar la reactivación de un servicio suspendido; configurable con `AXIOMA_TIMEOUT_SALUD_SEG`), 10 s para la evaluación de nodos y 60 s para la simulación (`frontend/config.py`).
+
+## Despliegue
+
+La forma más rápida de publicar el proyecto es Render, con el Blueprint incluido en `render.yaml`:
+
+1. Subir los cambios a GitHub.
+2. En https://render.com, elegir **New > Blueprint** y seleccionar este repositorio.
+3. Cuando Render lo solicite, definir `AXIOMA_API_URL` del dashboard con la URL pública de la API, por ejemplo `https://axioma-h-api.onrender.com`.
+
+Render crea dos servicios web gratuitos: la API y el dashboard. Como alternativa, el dashboard puede publicarse en Streamlit Community Cloud. Las dos opciones, las variables de entorno, la verificación y las limitaciones del plan gratuito están en [docs/despliegue.md](docs/despliegue.md).
 
 ## Endpoints
 
@@ -172,14 +190,18 @@ Respuesta calculada por el modelo (abreviada). Los valores de la respuesta de ej
       "pulsos_termicos_ejecutados": 19,
       "consumo_energia_wh": 323.155,
       "integridad_membrana_final_pct": 99.9525,
-      "violaciones_ecologicas": 0
+      "violaciones_ecologicas": 0,
+      "recuperacion_caudal_promedio_pct": 88.8126,
+      "degradacion_acumulada_pct": 0.0475
     },
     "modo_temporizador_fijo": {
       "litros_totales_agua": 120.408,
       "pulsos_termicos_ejecutados": 88,
       "consumo_energia_wh": 1065.067,
       "integridad_membrana_final_pct": 97.0941,
-      "violaciones_ecologicas": 8
+      "violaciones_ecologicas": 8,
+      "recuperacion_caudal_promedio_pct": 91.882,
+      "degradacion_acumulada_pct": 2.9059
     }
   },
   "conjeturas_validadas": {
@@ -271,6 +293,21 @@ Todas las corridas usan las mismas condiciones:
 - **Eficacia necesaria:** según el análisis de sensibilidad, validar la C1 requiere que un pulso de 90 s a 44 °C remueva al menos el 78 % de la costra salina (`eta_max` >= 0.94). Validar la C2 requiere al menos el 81 % (`eta_max` >= 0.97). Esa es la medición experimental prioritaria para el siguiente ciclo.
 - **Criterio de regeneración:** se endureció de 1500 Ω a 1100 Ω porque el anterior se cumplía trivialmente, y se mantuvo fijo después de ese cambio.
 
+### Barrido de salinidad
+
+Responde la pregunta de investigación. Usa `DIA_NORMAL` e `INCRUSTACION_SALINA_RAPIDA` con tasas BAJA, MEDIA y ALTA y humedad inicial de 85 %, lo que forma un gradiente de carga salina de 20 a 240 Ohm por L/m².
+
+| Carga salina (Ohm por L/m²) | Recuperación neuro / temporizador (%) | Degradación neuro / temporizador (%) |
+|---|---|---|
+| 20 | 88.85 / 95.84 | 0.020 / 2.071 |
+| 40 | 88.83 / 91.83 | 0.052 / 2.071 |
+| 60 | 88.80 / 88.02 | 0.082 / 2.117 |
+| 80 | 88.78 / 84.45 | 0.115 / 2.427 |
+| 120 | 88.02 / 78.02 | 0.408 / 3.070 |
+| 240 | 85.92 / 63.21 | 1.073 / 4.117 |
+
+El control neuro-simbólico reduce la degradación acumulada entre 74 % y 99 % en todos los niveles. Su recuperación se mantiene estable, mientras que la del temporizador cae con la salinidad: el temporizador recupera más con salinidad baja, porque limpia membranas casi limpias, y el neuro-simbólico lo supera desde 60 Ohm por L/m². El método y las limitaciones están en [docs/modelo_simulacion.md](docs/modelo_simulacion.md), sección 7.
+
 El análisis completo, las ecuaciones, los parámetros y las tablas de sensibilidad están en [docs/modelo_simulacion.md](docs/modelo_simulacion.md).
 
 ## Limitaciones conocidas
@@ -279,4 +316,5 @@ El análisis completo, las ecuaciones, los parámetros y las tablas de sensibili
 - La eficacia del pulso resistivo (0.90) y los demás parámetros físicos (flujo de niebla, tasas de incrustación, capacidad térmica, consumo y recarga de energía, degradación de la membrana) son supuestos de orden de magnitud pendientes de validación experimental.
 - El estado de las Conjeturas 1 y 2 cambia con la eficacia del pulso, como muestran los análisis de sensibilidad. Medir esa eficacia es la prioridad experimental antes de dar por validada o refutada cualquiera de las dos.
 - El clima de referencia usa ciclos diurnos idealizados con ruido gaussiano, y los escenarios repiten sus ventanas de sequía o tormenta cada día simulado.
-- La configuración CORS admite solo orígenes locales y debe restringirse antes de cualquier despliegue en producción.
+- La configuración CORS admite por defecto solo orígenes locales. Para que una página web consuma la API desde el navegador, sus dominios deben agregarse con `AXIOMA_CORS_ORIGINS`.
+- En el plan gratuito de Render, los servicios se suspenden tras 15 minutos sin tráfico y tardan cerca de un minuto en reactivarse.

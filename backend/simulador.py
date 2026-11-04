@@ -568,13 +568,16 @@ def verificar_conjeturas(
 # Punto de entrada
 # ---------------------------------------------------------------------------
 def _resultado_modo(diag: DiagnosticoModo) -> ResultadoModo:
-    """Resume el diagnóstico de un modo en el formato del PRD."""
+    """Resume el diagnóstico de un modo en el formato del PRD, más los indicadores de la pregunta de investigación."""
+    recuperacion = _promedio(diag.recuperaciones_pct)
     return ResultadoModo(
         litros_totales_agua=round(diag.litros_totales, 3),
         pulsos_termicos_ejecutados=diag.pulsos,
         consumo_energia_wh=round(diag.energia_total_wh, 3),
         integridad_membrana_final_pct=round(diag.integridad_final_promedio, 4),
         violaciones_ecologicas=diag.violaciones_ecologicas,
+        recuperacion_caudal_promedio_pct=None if recuperacion is None else round(recuperacion, 4),
+        degradacion_acumulada_pct=round(100.0 - diag.integridad_final_promedio, 4),
     )
 
 

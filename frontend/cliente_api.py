@@ -42,10 +42,12 @@ def _solicitar(metodo: str, ruta: str, timeout: float, cuerpo: Optional[dict] = 
             f"La API no respondió en {timeout} s ({url}). Intente de nuevo o reduzca la duración simulada."
         ) from error
     except requests.exceptions.ConnectionError as error:
-        raise ErrorApiAxioma(
-            f"No fue posible conectar con la API en {config.API_URL}. "
+        sugerencia = (
             f"Verifique que el backend esté en ejecución: {config.COMANDO_BACKEND}"
-        ) from error
+            if config.API_LOCAL
+            else "Verifique que el servicio desplegado esté activo y que AXIOMA_API_URL sea correcta."
+        )
+        raise ErrorApiAxioma(f"No fue posible conectar con la API en {config.API_URL}. {sugerencia}") from error
     except requests.exceptions.RequestException as error:
         raise ErrorApiAxioma(f"Error de comunicación con la API: {error}") from error
 
@@ -75,7 +77,7 @@ def _solicitar(metodo: str, ruta: str, timeout: float, cuerpo: Optional[dict] = 
 
 def verificar_salud() -> dict:
     """Consulta GET /api/v1/health."""
-    return _solicitar("GET", "/api/v1/health", config.TIMEOUT_EVALUACION_SEG)
+    return _solicitar("GET", "/api/v1/health", config.TIMEOUT_SALUD_SEG)
 
 
 def evaluar_nodo(telemetria: dict) -> dict:

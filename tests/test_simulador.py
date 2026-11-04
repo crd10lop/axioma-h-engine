@@ -141,3 +141,27 @@ def test_simulacion_corta_reporta_indicadores_sin_datos():
     indicador = resultado.detalle_verificacion.conjetura_1_eficiencia.indicadores["ahorro_energia_pulsos_pct"]
     assert indicador.valor is None
     assert indicador.cumple is False
+
+
+def test_degradacion_acumulada_complementa_integridad():
+    resultado = ejecutar_simulacion(configuracion())
+    for modo in (resultado.comparativa.modo_neuro_simbolico, resultado.comparativa.modo_temporizador_fijo):
+        assert modo.degradacion_acumulada_pct == pytest.approx(100.0 - modo.integridad_membrana_final_pct, abs=1e-3)
+
+
+@pytest.mark.parametrize("tasa", list(TasaSalinizacion))
+def test_neuro_simbolico_degrada_menos_que_temporizador(tasa):
+    resultado = ejecutar_simulacion(configuracion(Escenario.INCRUSTACION_SALINA_RAPIDA, tasa_salinizacion=tasa))
+    neuro = resultado.comparativa.modo_neuro_simbolico
+    temporizador = resultado.comparativa.modo_temporizador_fijo
+    assert neuro.degradacion_acumulada_pct < temporizador.degradacion_acumulada_pct
+
+
+def test_recuperacion_nula_sin_pulsos():
+    resultado = ejecutar_simulacion(
+        configuracion(humedad_ambiente_inicial_pct=45.0, tasa_salinizacion=TasaSalinizacion.BAJA)
+    )
+    neuro = resultado.comparativa.modo_neuro_simbolico
+    assert neuro.pulsos_termicos_ejecutados == 0
+    assert neuro.recuperacion_caudal_promedio_pct is None
+    assert resultado.comparativa.modo_temporizador_fijo.recuperacion_caudal_promedio_pct is not None

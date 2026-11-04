@@ -1,11 +1,11 @@
 """Punto de entrada de la API del motor Axioma-H.
 
-Expone el servidor FastAPI base con los endpoints de estado general y de
-monitoreo de salud del servicio. Las reglas neuro-simbólicas y los endpoints
-de evaluación y simulación se incorporarán en iteraciones posteriores.
+Expone el servidor FastAPI con los endpoints de estado general y de salud,
+y registra los routers de evaluación de nodos y de simulación comparativa.
 """
 
 import logging
+import os
 from datetime import datetime, timezone
 
 from fastapi import FastAPI
@@ -27,12 +27,18 @@ DESCRIPCION_SERVICIO = (
 )
 
 # Orígenes permitidos para desarrollo local (Streamlit y la propia API).
-# En producción esta lista debe restringirse a los dominios autorizados.
+# En un despliegue se agregan los dominios autorizados mediante la variable
+# AXIOMA_CORS_ORIGINS, separados por comas. El dashboard Streamlit consulta la
+# API desde el servidor, por lo que no depende de esta lista.
 ORIGENES_PERMITIDOS = [
     "http://localhost:8501",
     "http://127.0.0.1:8501",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
+] + [
+    origen.strip().rstrip("/")
+    for origen in os.environ.get("AXIOMA_CORS_ORIGINS", "").split(",")
+    if origen.strip()
 ]
 
 HORA_ARRANQUE = datetime.now(timezone.utc)

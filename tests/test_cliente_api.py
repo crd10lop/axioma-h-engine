@@ -41,7 +41,7 @@ def test_verificar_salud_exitosa(request_simulado):
     request_simulado.return_value = respuesta_simulada(200, {"estado": "SALUDABLE"})
     assert cliente_api.verificar_salud() == {"estado": "SALUDABLE"}
     request_simulado.assert_called_once_with(
-        "GET", f"{config.API_URL}/api/v1/health", json=None, timeout=config.TIMEOUT_EVALUACION_SEG
+        "GET", f"{config.API_URL}/api/v1/health", json=None, timeout=config.TIMEOUT_SALUD_SEG
     )
 
 

@@ -169,3 +169,12 @@ def test_zonas_telemetria(campo, valor, fuera_de_zona):
     }
     telemetria[campo] = valor
     assert tr.zonas_telemetria(telemetria)[campo] is fuera_de_zona
+
+
+def test_comparativa_tolera_recuperacion_sin_datos(resultado):
+    copia = {"comparativa": {modo: dict(valores) for modo, valores in resultado["comparativa"].items()}}
+    copia["comparativa"]["modo_neuro_simbolico"]["recuperacion_caudal_promedio_pct"] = None
+    df = tr.comparativa_a_dataframe(copia)
+    fila = df[df["clave"] == "recuperacion_caudal_promedio_pct"].iloc[0]
+    assert pd.isna(fila["Neuro-simbólico"])
+    assert pd.isna(fila["Diferencia (%)"])

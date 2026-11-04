@@ -164,6 +164,15 @@ class ResultadoModo(BaseModel):
         ..., ge=0, le=100, description="Integridad promedio de las membranas al final."
     )
     violaciones_ecologicas: int = Field(..., ge=0, description="Episodios de extracción fuera del límite ecológico.")
+    recuperacion_caudal_promedio_pct: Optional[float] = Field(
+        None,
+        ge=0,
+        le=100,
+        description="Conductancia relativa promedio tras cada pulso; nulo si el modo no ejecutó pulsos.",
+    )
+    degradacion_acumulada_pct: float = Field(
+        0.0, ge=0, le=100, description="Pérdida promedio de integridad de las membranas durante la corrida."
+    )
 
 
 class ComparativaModos(BaseModel):

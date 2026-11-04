@@ -22,6 +22,8 @@ METRICAS_COMPARATIVA = [
     ("consumo_energia_wh", "Energía consumida (Wh)", False),
     ("integridad_membrana_final_pct", "Integridad final (%)", True),
     ("violaciones_ecologicas", "Violaciones ecológicas", False),
+    ("recuperacion_caudal_promedio_pct", "Recuperación tras pulso (%)", True),
+    ("degradacion_acumulada_pct", "Degradación acumulada (%)", False),
 ]
 
 NOMBRES_CONJETURA = {
@@ -61,9 +63,9 @@ def etiqueta_tiempo(minuto: int, hora_inicio: int = config.HORA_INICIO_SIMULACIO
     return f"Día {dia_simulacion(minuto, hora_inicio)} {minuto_a_hora_local(minuto, hora_inicio)}"
 
 
-def diferencia_porcentual(valor: float, referencia: float) -> Optional[float]:
-    """Diferencia relativa (valor - referencia) / referencia * 100, o None si la referencia es 0."""
-    if referencia == 0:
+def diferencia_porcentual(valor: Optional[float], referencia: Optional[float]) -> Optional[float]:
+    """Diferencia relativa (valor - referencia) / referencia * 100, o None si no es calculable."""
+    if valor is None or referencia is None or referencia == 0:
         return None
     return (valor - referencia) / referencia * 100.0
 
@@ -102,9 +104,9 @@ def comparativa_a_dataframe(resultado: dict) -> pd.DataFrame:
             {
                 "Métrica": etiqueta,
                 "clave": clave,
-                NOMBRES_MODO["neuro"]: neuro[clave],
-                NOMBRES_MODO["temporizador"]: temporizador[clave],
-                "Diferencia (%)": diferencia_porcentual(neuro[clave], temporizador[clave]),
+                NOMBRES_MODO["neuro"]: neuro.get(clave),
+                NOMBRES_MODO["temporizador"]: temporizador.get(clave),
+                "Diferencia (%)": diferencia_porcentual(neuro.get(clave), temporizador.get(clave)),
                 "mayor_es_mejor": mayor_es_mejor,
             }
         )

@@ -313,3 +313,49 @@ Como mediciones secundarias, conviene registrar:
 El tiempo de regeneración se medía al principio hasta que la impedancia volvía bajo el umbral de 1500 Ohm. Ese criterio se cumplía de forma trivial. Como el pulso se dispara apenas la impedancia cruza 1500 Ohm, bastaba remover unos pocos ohmios, y el indicador daba entre 0.2 y 1.8 s sin informar sobre la limpieza real de la membrana.
 
 Por esa razón, el criterio se endureció a 1100 Ohm (`FACTOR_IMPEDANCIA_REGENERADA = 1.10`, al menos 91 % de la conductancia nominal). Después de ese cambio, el criterio, la eficacia del pulso (0.90) y los demás parámetros se mantuvieron fijos. Ningún valor se ajustó para cambiar el resultado de una conjetura (decisión D5). Los análisis de sensibilidad de 5.6, 5.7 y 6.2 varían `eta_max` solo en memoria, con fines exploratorios, y no modifican la configuración del modelo.
+
+## 7. Barrido de salinidad: respuesta a la pregunta de investigación
+
+La pregunta de investigación está en [01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2. Compara los dos modos de control en dos variables de respuesta a medida que aumenta la salinidad.
+
+### 7.1 Indicadores
+
+La respuesta de `POST /api/v1/simulacion/ejecutar` incluye dos campos en cada modo de `comparativa`:
+
+- **`recuperacion_caudal_promedio_pct`:** promedio de `min(100, Z_nom / Z_tras_pulso * 100)` sobre todos los pulsos del modo. Es el mismo cálculo del indicador de la Conjetura 1 (sección 4), pero se reporta también para el temporizador. Vale `null` si el modo no ejecutó pulsos.
+- **`degradacion_acumulada_pct`:** `100 - integridad_membrana_final_pct`. Suma la fatiga por pulso, la degradación térmica y la degradación por cristalización (sección 3.2), promediada entre nodos.
+
+### 7.2 Método
+
+- Escenarios `DIA_NORMAL` e `INCRUSTACION_SALINA_RAPIDA`, cada uno con tasas BAJA, MEDIA y ALTA.
+- 24 h, inicio a las 18:00, paso de 5 min, 8 nodos, semilla 42, humedad inicial 85 %.
+- Parámetros de `backend/config.py` sin modificar.
+
+La carga salina efectiva es la tasa de incrustación por litro captado: 20, 40 y 80 Ohm por L/m² para BAJA, MEDIA y ALTA, multiplicada por 3 en `INCRUSTACION_SALINA_RAPIDA`. Las seis combinaciones forman un gradiente de 20 a 240 Ohm por L/m².
+
+### 7.3 Resultados (humedad inicial 85 %)
+
+| Carga salina (Ohm por L/m²) | Escenario y tasa | Recuperación neuro (%) | Recuperación temporizador (%) | Diferencia (puntos) | Degradación neuro (%) | Degradación temporizador (%) | Reducción del desgaste | Pulsos neuro / temporizador |
+|---|---|---|---|---|---|---|---|---|
+| 20 | DIA_NORMAL, BAJA | 88.85 | 95.84 | -7.0 | 0.020 | 2.071 | 99.0 % | 8 / 88 |
+| 40 | DIA_NORMAL, MEDIA | 88.83 | 91.83 | -3.0 | 0.052 | 2.071 | 97.5 % | 21 / 88 |
+| 60 | INCRUSTACION_SALINA_RAPIDA, BAJA | 88.80 | 88.02 | +0.8 | 0.082 | 2.117 | 96.1 % | 33 / 88 |
+| 80 | DIA_NORMAL, ALTA | 88.78 | 84.45 | +4.3 | 0.115 | 2.427 | 95.3 % | 46 / 88 |
+| 120 | INCRUSTACION_SALINA_RAPIDA, MEDIA | 88.02 | 78.02 | +10.0 | 0.408 | 3.070 | 86.7 % | 64 / 88 |
+| 240 | INCRUSTACION_SALINA_RAPIDA, ALTA | 85.92 | 63.21 | +22.7 | 1.073 | 4.117 | 73.9 % | 97 / 88 |
+
+La reducción del desgaste es `(D_temp - D_neuro) / D_temp * 100`.
+
+Con humedad inicial de 45 % hay menos agua captada y, por tanto, menos sal. El modo neuro-simbólico no ejecuta pulsos en `DIA_NORMAL` con tasas BAJA y MEDIA, de modo que su recuperación no tiene datos, y su degradación es 0.000 %. En las combinaciones restantes, el patrón coincide con el de la tabla: la degradación neuro-simbólica queda entre 0.020 % y 0.110 %, frente a 2.071 % a 2.518 % del temporizador.
+
+### 7.4 Interpretación
+
+- **Desgaste.** El control neuro-simbólico degrada menos la membrana en los seis niveles de salinidad. El temporizador aplica 88 pulsos en 24 h sin importar el estado de la membrana. Cada pulso causa fatiga y, de día, eleva la matriz por encima de 45 °C (hasta 55.9 °C), lo que añade degradación térmica. El neuro-simbólico pulsa solo cuando la impedancia supera 1500 Ohm y nunca cruza 45 °C. La reducción del desgaste disminuye con la salinidad, de 99 % a 74 %, porque el neuro-simbólico necesita cada vez más pulsos y la membrana pasa más tiempo con impedancia alta.
+- **Recuperación.** El neuro-simbólico mantiene una recuperación casi constante (85.9 % a 88.9 %), porque siempre pulsa con una carga salina parecida, unos 500 Ohm sobre la impedancia nominal. La recuperación del temporizador depende de cuánta sal se acumuló en las 2 h entre pulsos: con salinidad baja limpia una membrana casi limpia y recupera más, y con salinidad alta la sal se acumula más rápido de lo que un pulso cada 2 h puede retirar. Las curvas se cruzan entre 40 y 60 Ohm por L/m².
+- **Respuesta a la pregunta.** En el modelo, el control neuro-simbólico reduce el desgaste de las membranas frente al temporizador en todo el rango de salinidad estudiado, y mejora la recuperación del caudal a partir de una carga salina moderada. Esta ventaja crece con la salinidad, lo que es coherente con la hipótesis de trabajo.
+
+### 7.5 Limitaciones
+
+- La recuperación tras pulso compara momentos distintos en cada modo: el neuro-simbólico mide justo después de un pulso disparado por impedancia alta, y el temporizador mide después de pulsos a intervalos fijos. Por eso, con salinidad baja, un valor alto del temporizador no indica una membrana mejor mantenida, sino una membrana que no necesitaba limpieza.
+- Los valores absolutos dependen de parámetros supuestos, en especial la eficacia máxima del pulso (0.90), la fatiga por pulso y la degradación térmica (sección 3.4). La dirección de los resultados se explica por la lógica de control (pulsar por demanda frente a pulsar por horario, y el límite de 45 °C), pero su magnitud debe calibrarse con mediciones.
+- Las cifras corresponden a una semilla. Para el informe final se recomienda repetir el barrido con varias semillas y reportar media y dispersión.

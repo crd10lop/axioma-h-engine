@@ -9,6 +9,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 import altair as alt
 import pandas as pd
@@ -166,12 +167,16 @@ def panel_conexion() -> bool:
     st.sidebar.header("Conexión con la API")
     st.sidebar.caption(config.API_URL)
     try:
-        salud = cliente_api.verificar_salud()
+        with st.spinner("Conectando con la API; si está suspendida puede tardar cerca de un minuto..."):
+            salud = cliente_api.verificar_salud()
     except cliente_api.ErrorApiAxioma as error:
         st.sidebar.error("API no disponible. Las acciones están deshabilitadas.")
         st.sidebar.write(error.mensaje)
-        st.sidebar.write("Para levantarla, ejecute desde la raíz del proyecto:")
-        st.sidebar.code(config.COMANDO_BACKEND, language="bash")
+        if config.API_LOCAL:
+            st.sidebar.write("Para levantarla, ejecute desde la raíz del proyecto:")
+            st.sidebar.code(config.COMANDO_BACKEND, language="bash")
+        else:
+            st.sidebar.write("Verifique que el servicio de la API esté activo en la plataforma de despliegue.")
         st.sidebar.button("Reintentar conexión", width="stretch")
         return False
     st.sidebar.success(f"Estado: {salud['estado']}")
@@ -380,8 +385,10 @@ def _con_referencia(grafico, referencia, etiqueta: str = "Umbral"):
     return alt.layer(grafico, regla)
 
 
-def formatear_valor(clave: str, valor: float) -> str:
+def formatear_valor(clave: str, valor: Optional[float]) -> str:
     """Formato de las métricas comparativas según su naturaleza."""
+    if valor is None or pd.isna(valor):
+        return "Sin datos"
     if clave in ("pulsos_termicos_ejecutados", "violaciones_ecologicas"):
         return f"{int(valor)}"
     return f"{valor:,.2f}"
@@ -392,7 +399,10 @@ def seccion_comparativa(resultado: dict) -> None:
     st.subheader("Comparativa de modos")
     st.caption("Valor principal: modo neuro-simbólico. La variación se calcula frente al temporizador fijo.")
     filas = tr.comparativa_a_dataframe(resultado).to_dict("records")
-    columnas = st.columns(len(filas))
+    tarjetas_por_fila = 4
+    columnas = []
+    for inicio in range(0, len(filas), tarjetas_por_fila):
+        columnas.extend(st.columns(tarjetas_por_fila))
     for columna, fila in zip(columnas, filas):
         diferencia = fila["Diferencia (%)"]
         delta = None if pd.isna(diferencia) else f"{diferencia:+.1f} % frente al temporizador"

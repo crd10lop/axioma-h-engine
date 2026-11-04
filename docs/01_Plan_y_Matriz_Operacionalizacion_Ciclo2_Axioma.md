@@ -22,7 +22,65 @@ La solución constará de dos componentes integrados:
 
 ---
 
-## 2. Matriz de Operacionalización de Conjeturas
+## 2. Pregunta de Investigación
+
+### 2.1 Formulación
+
+**Pregunta principal:**
+
+> ¿En qué medida un sistema de control neuro-simbólico, evaluado mediante simulación, mejora la recuperación del caudal de agua y reduce el desgaste de las membranas de un captador de agua atmosférica, en comparación con un control convencional por temporizador, a medida que aumenta la salinidad del ambiente?
+
+**Versión divulgativa** (para presentaciones y público no especializado):
+
+> ¿Puede un control inteligente basado en reglas hacer que un captador de agua atmosférica rinda mejor y dure más en ambientes salinos que un control por temporizador?
+
+**Formulación técnica de partida:**
+
+> ¿En qué medida un sistema simulado de control neuro-simbólico descentralizado mejora la tasa de recuperación del caudal hídrico y reduce la degradación acumulada de membranas biomiméticas de captación de agua atmosférica, frente a un control convencional por temporizador, bajo distintos niveles de salinidad extrema?
+
+### 2.2 Ajustes respecto de la formulación técnica
+
+La pregunta principal conserva las dos variables de respuesta y el contraste entre tipos de control, y simplifica los términos que dificultaban su lectura:
+
+| Formulación técnica | Pregunta principal | Motivo |
+| :--- | :--- | :--- |
+| "sistema simulado ... descentralizado" | "evaluado mediante simulación" | La descentralización (cada uno de los 8 nodos decide con su propia telemetría) se mantiene como característica del sistema, descrita en el alcance, sin cargar la pregunta. |
+| "tasa de recuperación del caudal hídrico" | "recuperación del caudal de agua" | Mismo indicador: conductancia relativa de la membrana tras cada pulso de limpieza. |
+| "degradación acumulada de membranas biomiméticas" | "desgaste de las membranas" | Mismo indicador: pérdida de integridad de la membrana al final de la corrida. El tipo de membrana se describe en el alcance. |
+| "distintos niveles de salinidad extrema" | "a medida que aumenta la salinidad del ambiente" | El simulador evalúa un gradiente de salinidad (tasas BAJA, MEDIA y ALTA, y el escenario de incrustación rápida), no solo condiciones extremas. Así la pregunta admite una respuesta en función del nivel de salinidad. |
+
+### 2.3 Sub-preguntas
+
+1. **Recuperación (Conjetura 1).** ¿Cómo cambia la recuperación del caudal tras cada pulso de limpieza en cada tipo de control a medida que aumenta la carga salina?
+2. **Desgaste (Conjetura 2).** ¿Cuánta degradación acumulan las membranas con cada tipo de control, y qué parte de ella se debe a sobrecalentamiento?
+3. **Costo ecológico (Conjetura 3).** ¿Cuánta agua y energía se dejan de obtener al respetar los límites ecológicos (tope de extracción del 33 % y pausa con humedad menor que 30 %)?
+
+### 2.4 Variables
+
+| Tipo | Variable | Valores o unidad | Campo en la API |
+| :--- | :--- | :--- | :--- |
+| Independiente | Tipo de control | Neuro-simbólico / temporizador fijo | `comparativa.modo_*` |
+| Moderadora | Nivel de salinidad | Tasa BAJA, MEDIA, ALTA; escenario `INCRUSTACION_SALINA_RAPIDA` (x3) | `tasa_salinizacion`, `escenario` |
+| Dependiente | Recuperación de caudal tras pulso | % de la conductancia de la membrana limpia | `recuperacion_caudal_promedio_pct` |
+| Dependiente | Degradación acumulada de la membrana | % de integridad perdida en la corrida | `degradacion_acumulada_pct` |
+| Controlada | Humedad inicial, duración, número de nodos, semilla | 85 %, 24 h, 8 nodos, semilla 42 | `SimulationConfig` |
+
+### 2.5 Hipótesis de trabajo
+
+El control neuro-simbólico mantiene una recuperación de caudal estable y una degradación acumulada menor que el temporizador, y su ventaja crece con el nivel de salinidad.
+
+### 2.6 Respuesta preliminar del simulador
+
+El barrido de salinidad, con su método y su análisis, está en [modelo_simulacion.md](modelo_simulacion.md), sección 7. En síntesis, con humedad inicial de 85 %:
+
+- **Desgaste.** El control neuro-simbólico reduce la degradación acumulada entre 74 % y 99 % frente al temporizador en los seis niveles de salinidad. La reducción es mayor con salinidad baja, donde el temporizador aplica pulsos que no hacen falta.
+- **Recuperación.** El control neuro-simbólico mantiene la recuperación entre 85.9 % y 88.9 % en todos los niveles. La del temporizador cae de 95.8 % a 63.2 % a medida que aumenta la salinidad. Con salinidad baja el temporizador recupera más, porque limpia una membrana casi limpia. Desde una carga de 60 Ohm por L/m² el neuro-simbólico lo supera, y la diferencia llega a 22.7 puntos con la carga más alta.
+
+La respuesta a la pregunta es, por tanto, condicional: la ventaja en recuperación aparece y crece con la salinidad, mientras que la reducción del desgaste se observa en todos los niveles. Estos resultados dependen de parámetros físicos supuestos, en particular la eficacia del pulso, que deben medirse en laboratorio.
+
+---
+
+## 3. Matriz de Operacionalización de Conjeturas
 
 Para el Ciclo 2, la investigación pasa de la conceptualización narrativa a la verificación empírica/simulada de tres conjeturas clave formuladas al cierre del Ciclo 1:
 
@@ -42,7 +100,7 @@ Los indicadores de la matriz se calculan en el simulador del Ciclo 2. La definic
 
 ---
 
-## 3. Arquitectura del Sistema (API + Frontend)
+## 4. Arquitectura del Sistema (API + Frontend)
 
 ```
 [ SENSORES SIMULADOS ] 
@@ -91,12 +149,13 @@ Las decisiones que justifican estas diferencias están en [modelo_simulacion.md]
 
 ---
 
-## 4. Plan de Trabajo e Hitos para la Entrega Final del Ciclo 2
+## 5. Plan de Trabajo e Hitos para la Entrega Final del Ciclo 2
 
 - **Hito 1 (Completado):** Definición del alcance, conjeturas y matriz de operacionalización de variables.
 - **Hito 2 (Completado):** Implementación de la API de control neuro-simbólico en FastAPI (`backend/`), con motor de reglas, simulador comparativo y pruebas automatizadas.
 - **Hito 3 (Completado):** Desarrollo del Frontend Interactivo en Streamlit (`frontend/app.py`): panel de telemetría, simulación comparativa, consola de decisiones y gráficos.
-- **Hito 4 (En desarrollo):** Las pruebas de simulación de los cinco escenarios están ejecutadas y documentadas en [modelo_simulacion.md](modelo_simulacion.md). Queda pendiente la redacción del Informe de Avance del Ciclo 2.
+- **Hito 4 (En desarrollo):** Las pruebas de simulación de los cinco escenarios y el barrido de salinidad que responde la pregunta de investigación están ejecutados y documentados en [modelo_simulacion.md](modelo_simulacion.md). Queda pendiente la redacción del Informe de Avance del Ciclo 2.
+- **Hito 5 (En desarrollo):** Despliegue público de la API y del dashboard para la demostración del Ciclo 2. El procedimiento está en [despliegue.md](despliegue.md).
 
 ---
 *Documento preparado por el Equipo AXIOMA para el seguimiento del Ciclo 2 — Universidad de Antioquia.*

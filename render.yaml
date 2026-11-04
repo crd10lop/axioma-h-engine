@@ -1,0 +1,26 @@
+# Blueprint de Render: despliega la API y el dashboard como dos servicios web.
+# Uso: en Render, New > Blueprint, seleccionar este repositorio y confirmar.
+services:
+  - type: web
+    name: axioma-h-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+
+  - type: web
+    name: axioma-h-dashboard
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run frontend/app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      # URL pública de la API, por ejemplo https://axioma-h-api.onrender.com
+      - key: AXIOMA_API_URL
+        sync: false

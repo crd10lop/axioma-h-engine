@@ -152,12 +152,14 @@ La API y el dashboard están implementados en `backend/` (FastAPI) y `frontend/`
 - **Nombres de campos.** Los nombres de `TelemetryInput`, `ControlDecision`, `SimulationConfig` y `SimulationResult` coinciden con los de este documento.
 - **Campos adicionales en las respuestas.**
   - `ControlDecision` incluye `motivo`, la explicación de la decisión que se muestra en la consola del dashboard.
+  - Cada modo de `comparativa` incluye `recuperacion_caudal_promedio_pct` (nulo si el modo no ejecutó pulsos) y `degradacion_acumulada_pct`. Son las variables dependientes de la pregunta de investigación (`01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md`, sección 2) y se muestran en el dashboard.
   - `SimulationResult` incluye `detalle_verificacion`, con los indicadores de cada conjetura, su umbral y si cumplen, y los indicadores informativos `pulsos_regenerados` y `pulsos_totales` de la Conjetura 2. También incluye `series_temporales`, para las gráficas, y `bitacora`, con los cambios de regla del modo neuro-simbólico.
 - **Campos opcionales en la solicitud.** `SimulationConfig` admite `numero_nodos` (por defecto 8), `paso_minutos` (por defecto 5) y `semilla` (por defecto 42). El payload de la sección 3.2 sigue siendo válido sin cambios.
 - **Temperatura objetivo del pulso.** Es 44.0 °C. Con 45.0 °C el pulso activaría el corte térmico de la REGLA_01 (`>= 45.0`). El ejemplo de la sección 3.1 se actualizó en consecuencia.
 - **Orden de evaluación.** La REGLA_04 se evalúa antes que la REGLA_03, porque ambas comparten la condición de impedancia alta. El caudal se expresa como porcentaje del tope ecológico del 33 %.
 - **Escenarios y endpoints adicionales.** El simulador incluye el escenario `TORMENTA_DE_SAL_Y_CALOR_EXTREMO`, además de los cuatro de la sección 5. La API expone también `GET /` y `GET /api/v1/health`.
 - **Valores de ejemplo.** Los valores numéricos de la respuesta de ejemplo de la sección 3.2 son ilustrativos. Los resultados calculados por el modelo para ese payload están en `docs/modelo_simulacion.md`, sección 5.1.
+- **Despliegue.** `render.yaml` define la API y el dashboard como servicios web de Render. La URL de la API se configura en el dashboard con `AXIOMA_API_URL`, y los orígenes CORS adicionales con `AXIOMA_CORS_ORIGINS`. El procedimiento está en `docs/despliegue.md`.
 
 ---
 
