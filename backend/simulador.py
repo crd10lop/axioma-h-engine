@@ -97,6 +97,51 @@ def _tasa_incrustacion_base(escenario: Escenario, tasa: TasaSalinizacion) -> flo
     return base
 
 
+def _humedad_base(cfg: SimulationConfig, hora: float, referencia_humedad: float) -> float:
+    """Humedad del ciclo diurno a la hora dada, con la reducción del escenario de sequía."""
+    humedad_base = cfg.humedad_ambiente_inicial_pct + config.AMPLITUD_HUMEDAD_PCT * (
+        _ciclo_humedad(hora) - referencia_humedad
+    )
+    if cfg.escenario == Escenario.SEQUIA:
+        humedad_base -= config.SEQUIA_REDUCCION_HUMEDAD_PCT
+    return humedad_base
+
+
+def _temperatura_ambiente(escenario: Escenario, hora: float, sol: float) -> float:
+    """Temperatura ambiente a la hora dada, con el calor adicional del escenario extremo."""
+    temperatura = config.TEMPERATURA_MEDIA_C + config.AMPLITUD_TEMPERATURA_C * math.cos(
+        2.0 * math.pi * (hora - config.HORA_MAXIMA_TEMPERATURA) / 24.0
+    )
+    if escenario == Escenario.TORMENTA_DE_SAL_Y_CALOR_EXTREMO:
+        temperatura += config.CALOR_EXTREMO_INCREMENTO_C * sol
+    return temperatura
+
+
+def _condiciones_nodos(
+    rng: random.Random,
+    humedad_base: float,
+    temperatura: float,
+    sol_efectivo: float,
+    sequia_severa: bool,
+    desfase_humedad: List[float],
+    desfase_temperatura: List[float],
+) -> Tuple[List[float], List[float]]:
+    """Humedad y temperatura de la matriz de cada nodo en un paso, con su desfase y ruido gaussiano."""
+    humedad_paso, matriz_paso = [], []
+    for n in range(len(desfase_humedad)):
+        hr = humedad_base + desfase_humedad[n] + rng.gauss(0.0, config.RUIDO_HUMEDAD_PASO_PCT)
+        if sequia_severa:
+            hr = min(hr, config.SEQUIA_HUMEDAD_MAXIMA_PCT + rng.gauss(0.0, config.RUIDO_HUMEDAD_PASO_PCT))
+        humedad_paso.append(max(0.0, min(100.0, hr)))
+        matriz_paso.append(
+            temperatura
+            + config.CALENTAMIENTO_SOLAR_MATRIZ_C * sol_efectivo
+            + desfase_temperatura[n]
+            + rng.gauss(0.0, config.RUIDO_TEMPERATURA_PASO_C)
+        )
+    return humedad_paso, matriz_paso
+
+
 def generar_entorno(cfg: SimulationConfig) -> Entorno:
     """Genera las condiciones ambientales de la simulación.
 
@@ -135,32 +180,14 @@ def generar_entorno(cfg: SimulationConfig) -> Entorno:
             hora, config.SEQUIA_HORA_INICIO, config.SEQUIA_HORA_FIN
         )
 
-        humedad_base = cfg.humedad_ambiente_inicial_pct + config.AMPLITUD_HUMEDAD_PCT * (
-            _ciclo_humedad(hora) - referencia_humedad
-        )
-        if escenario == Escenario.SEQUIA:
-            humedad_base -= config.SEQUIA_REDUCCION_HUMEDAD_PCT
-
-        temperatura = config.TEMPERATURA_MEDIA_C + config.AMPLITUD_TEMPERATURA_C * math.cos(
-            2.0 * math.pi * (hora - config.HORA_MAXIMA_TEMPERATURA) / 24.0
-        )
-        if escenario == Escenario.TORMENTA_DE_SAL_Y_CALOR_EXTREMO:
-            temperatura += config.CALOR_EXTREMO_INCREMENTO_C * sol
+        humedad_base = _humedad_base(cfg, hora, referencia_humedad)
+        temperatura = _temperatura_ambiente(escenario, hora, sol)
 
         sol_efectivo = sol * (config.TORMENTA_ARENA_FACTOR_RADIACION if tormenta_arena else 1.0)
 
-        humedad_paso, matriz_paso = [], []
-        for n in range(cfg.numero_nodos):
-            hr = humedad_base + desfase_humedad[n] + rng.gauss(0.0, config.RUIDO_HUMEDAD_PASO_PCT)
-            if sequia_severa:
-                hr = min(hr, config.SEQUIA_HUMEDAD_MAXIMA_PCT + rng.gauss(0.0, config.RUIDO_HUMEDAD_PASO_PCT))
-            humedad_paso.append(max(0.0, min(100.0, hr)))
-            matriz_paso.append(
-                temperatura
-                + config.CALENTAMIENTO_SOLAR_MATRIZ_C * sol_efectivo
-                + desfase_temperatura[n]
-                + rng.gauss(0.0, config.RUIDO_TEMPERATURA_PASO_C)
-            )
+        humedad_paso, matriz_paso = _condiciones_nodos(
+            rng, humedad_base, temperatura, sol_efectivo, sequia_severa, desfase_humedad, desfase_temperatura
+        )
 
         minutos.append(minuto)
         horas.append(hora)
@@ -251,6 +278,181 @@ def _descontar_integridad(estado: _EstadoNodo, perdida: float) -> float:
     return efectiva
 
 
+def _decidir_accion(
+    neuro: bool,
+    estado: _EstadoNodo,
+    diag: DiagnosticoModo,
+    nodo_id: str,
+    minuto: int,
+    humedad: float,
+    t_matriz: float,
+    impedancia_inicial: float,
+) -> Tuple[float, bool, float]:
+    """Decide la fracción de extracción, si se ordena un pulso y su temperatura objetivo.
+
+    En modo neuro-simbólico consulta el motor de reglas y registra en la
+    bitácora cada cambio de regla; en modo temporizador aplica la
+    programación fija.
+    """
+    if neuro:
+        telemetria = TelemetryInput(
+            nodo_id=nodo_id,
+            impedancia_ohms=impedancia_inicial,
+            temperatura_celsius=t_matriz,
+            reserva_calor_pct=estado.reserva_wh / config.CAPACIDAD_RESERVA_WH * 100.0,
+            humedad_relativa_pct=humedad,
+            flujo_actual_ml_min=estado.flujo_ml_min,
+            modo_operacion=ModoOperacion.NEURO_SIMBOLICO,
+        )
+        decision = evaluar_telemetria(telemetria, _INSTANTE_REFERENCIA + timedelta(minutes=minuto))
+        if decision.regla_activada != estado.regla_previa:
+            diag.bitacora.append(
+                EventoBitacora(
+                    minuto=minuto,
+                    nodo_id=nodo_id,
+                    regla_activada=decision.regla_activada,
+                    motivo=decision.motivo,
+                )
+            )
+            estado.regla_previa = decision.regla_activada
+        fraccion = config.FRACCION_MAXIMA_EXTRACCION * decision.ajuste_caudal_pct / 100.0
+        ordena_pulso = decision.pulso_termico_activo
+        t_pulso = temperatura_alcanzada_pulso(t_matriz) if ordena_pulso else t_matriz
+    else:
+        fraccion = config.FRACCION_EXTRACCION_TEMPORIZADOR
+        ordena_pulso = minuto - estado.ultimo_pulso_min >= config.INTERVALO_PULSO_TEMPORIZADOR_MIN
+        if ordena_pulso:
+            estado.ultimo_pulso_min = minuto
+        t_pulso = t_matriz + config.INCREMENTO_TERMICO_TEMPORIZADOR_C
+    return fraccion, ordena_pulso, t_pulso
+
+
+def _registrar_regeneracion(
+    estado: _EstadoNodo,
+    diag: DiagnosticoModo,
+    t_pulso: float,
+    sal_antes: float,
+    impedancia_inicial: float,
+    minuto: int,
+) -> None:
+    """Registra el tiempo de regeneración de un pulso aplicado (ver `simular_modo`)."""
+    # Un pulso previo no regenerado se cierra al iniciar el siguiente.
+    if estado.pulso_no_regenerado_min is not None:
+        diag.tiempos_regeneracion_seg.append((minuto - estado.pulso_no_regenerado_min) * 60.0)
+        estado.pulso_no_regenerado_min = None
+    if impedancia_inicial > config.UMBRAL_IMPEDANCIA_OHMS:
+        objetivo_sal = (
+            config.FACTOR_IMPEDANCIA_REGENERADA * config.IMPEDANCIA_NOMINAL_OHMS
+            - config.IMPEDANCIA_NOMINAL_OHMS
+            - estado.impedancia_polvo
+        )
+        segundos = modelo_fisico.tiempo_hasta_impedancia(t_pulso, sal_antes, objetivo_sal)
+        if segundos is not None:
+            diag.tiempos_regeneracion_seg.append(segundos)
+            diag.pulsos_regenerados += 1
+        else:
+            estado.pulso_no_regenerado_min = minuto
+            diag.pulsos_no_regenerados += 1
+
+
+def _ejecutar_pulso(
+    estado: _EstadoNodo,
+    diag: DiagnosticoModo,
+    t_pulso: float,
+    t_matriz: float,
+    impedancia_inicial: float,
+    minuto: int,
+    duracion_pulso_min: float,
+) -> Tuple[float, float]:
+    """Aplica el pulso resistivo si la reserva alcanza.
+
+    Devuelve la energía consumida por el pulso y la pérdida de integridad por
+    sobretemperatura; ambas son cero si el pulso se omite por falta de energía.
+    """
+    energia = modelo_fisico.energia_pulso_wh(t_pulso - t_matriz)
+    if energia <= estado.reserva_wh:
+        sal_antes = estado.impedancia_sal
+        estado.impedancia_sal = modelo_fisico.impedancia_sal_tras_pulso(t_pulso, sal_antes)
+        estado.reserva_wh -= energia
+        diag.energia_pulsos_wh += energia
+        diag.pulsos += 1
+        diag.temperaturas_pulso_c.append(t_pulso)
+        _descontar_integridad(estado, config.FATIGA_POR_PULSO_PCT)
+        perdida_pulso = 0.0
+        if t_pulso > config.UMBRAL_TEMPERATURA_CORTE_C:
+            perdida_pulso = _descontar_integridad(
+                estado,
+                (t_pulso - config.UMBRAL_TEMPERATURA_CORTE_C)
+                * duracion_pulso_min
+                * config.DEGRADACION_TERMICA_PCT_POR_C_MIN,
+            )
+        diag.recuperaciones_pct.append(
+            min(100.0, modelo_fisico.conductancia_relativa(estado.impedancia) * 100.0)
+        )
+        _registrar_regeneracion(estado, diag, t_pulso, sal_antes, impedancia_inicial, minuto)
+        return energia, perdida_pulso
+    diag.pulsos_omitidos_por_energia += 1
+    return 0.0, 0.0
+
+
+def _registrar_violacion(
+    estado: _EstadoNodo, diag: DiagnosticoModo, litros: float, humedad: float, fraccion: float
+) -> None:
+    """Cuenta un nuevo episodio de violación ecológica cuando comienza."""
+    extrae = litros > 0
+    if extrae:
+        diag.fraccion_maxima_extraida = max(diag.fraccion_maxima_extraida, fraccion)
+    humedad_baja = humedad < config.UMBRAL_HUMEDAD_ECOLOGICA_PCT
+    if extrae and humedad_baja:
+        diag.pasos_extraccion_humedad_baja += 1
+    violacion = extrae and (
+        humedad_baja or fraccion > config.FRACCION_MAXIMA_EXTRACCION + _TOLERANCIA
+    )
+    if violacion and not estado.en_violacion:
+        diag.violaciones_ecologicas += 1
+    estado.en_violacion = violacion
+
+
+def _actualizar_impedancia(
+    estado: _EstadoNodo, entorno: Entorno, i: int, n: int, litros: float, dt_h: float
+) -> None:
+    """Suma la incrustación salina del agua captada y acumula o limpia el polvo."""
+    estado.impedancia_sal += entorno.incrustacion_ohm_por_l_m2[n] * litros / config.AREA_COLECTOR_M2
+    if entorno.ensuciamiento_ohm_h[i] > 0:
+        estado.impedancia_polvo += entorno.ensuciamiento_ohm_h[i] * dt_h
+    else:
+        estado.impedancia_polvo *= math.exp(-dt_h / config.CONSTANTE_LIMPIEZA_POLVO_H)
+
+
+def _degradar_membrana(
+    estado: _EstadoNodo, t_matriz: float, impedancia_operacion: float, paso_min: int, dt_h: float
+) -> float:
+    """Descuenta la degradación por calor ambiental y por cristalización.
+
+    Devuelve la pérdida de integridad atribuible al calor ambiental.
+    """
+    perdida_ambiental = 0.0
+    if t_matriz > config.UMBRAL_TEMPERATURA_CORTE_C:
+        perdida_ambiental = _descontar_integridad(
+            estado,
+            (t_matriz - config.UMBRAL_TEMPERATURA_CORTE_C)
+            * paso_min
+            * config.DEGRADACION_TERMICA_PCT_POR_C_MIN,
+        )
+    if impedancia_operacion > config.UMBRAL_IMPEDANCIA_OHMS:
+        _descontar_integridad(estado, config.DEGRADACION_CRISTALIZACION_PCT_H * dt_h)
+    return perdida_ambiental
+
+
+def _cerrar_regeneraciones_pendientes(nodos: List[_EstadoNodo], diag: DiagnosticoModo, fin_min: int) -> None:
+    """Mide hasta el fin de la simulación los pulsos no regenerados sin pulso posterior."""
+    for estado in nodos:
+        if estado.pulso_no_regenerado_min is not None:
+            diag.tiempos_regeneracion_seg.append(
+                max(float(config.DURACION_PULSO_SEG), (fin_min - estado.pulso_no_regenerado_min) * 60.0)
+            )
+
+
 def simular_modo(entorno: Entorno, modo: ModoOperacion) -> DiagnosticoModo:
     """Simula la red completa bajo una estrategia de control.
 
@@ -291,79 +493,18 @@ def simular_modo(entorno: Entorno, modo: ModoOperacion) -> DiagnosticoModo:
             impedancia_inicial = estado.impedancia
 
             # Decisión de control.
-            if neuro:
-                telemetria = TelemetryInput(
-                    nodo_id=nodo_id,
-                    impedancia_ohms=impedancia_inicial,
-                    temperatura_celsius=t_matriz,
-                    reserva_calor_pct=estado.reserva_wh / config.CAPACIDAD_RESERVA_WH * 100.0,
-                    humedad_relativa_pct=humedad,
-                    flujo_actual_ml_min=estado.flujo_ml_min,
-                    modo_operacion=ModoOperacion.NEURO_SIMBOLICO,
-                )
-                decision = evaluar_telemetria(telemetria, _INSTANTE_REFERENCIA + timedelta(minutes=minuto))
-                if decision.regla_activada != estado.regla_previa:
-                    diag.bitacora.append(
-                        EventoBitacora(
-                            minuto=minuto,
-                            nodo_id=nodo_id,
-                            regla_activada=decision.regla_activada,
-                            motivo=decision.motivo,
-                        )
-                    )
-                    estado.regla_previa = decision.regla_activada
-                fraccion = config.FRACCION_MAXIMA_EXTRACCION * decision.ajuste_caudal_pct / 100.0
-                ordena_pulso = decision.pulso_termico_activo
-                t_pulso = temperatura_alcanzada_pulso(t_matriz) if ordena_pulso else t_matriz
-            else:
-                fraccion = config.FRACCION_EXTRACCION_TEMPORIZADOR
-                ordena_pulso = minuto - estado.ultimo_pulso_min >= config.INTERVALO_PULSO_TEMPORIZADOR_MIN
-                if ordena_pulso:
-                    estado.ultimo_pulso_min = minuto
-                t_pulso = t_matriz + config.INCREMENTO_TERMICO_TEMPORIZADOR_C
+            fraccion, ordena_pulso, t_pulso = _decidir_accion(
+                neuro, estado, diag, nodo_id, minuto, humedad, t_matriz, impedancia_inicial
+            )
 
             # Ejecución del pulso resistivo.
             energia_paso = consumo_base_w * dt_h
             if ordena_pulso:
-                energia = modelo_fisico.energia_pulso_wh(t_pulso - t_matriz)
-                if energia <= estado.reserva_wh:
-                    sal_antes = estado.impedancia_sal
-                    estado.impedancia_sal = modelo_fisico.impedancia_sal_tras_pulso(t_pulso, sal_antes)
-                    estado.reserva_wh -= energia
-                    energia_paso += energia
-                    diag.energia_pulsos_wh += energia
-                    diag.pulsos += 1
-                    diag.temperaturas_pulso_c.append(t_pulso)
-                    _descontar_integridad(estado, config.FATIGA_POR_PULSO_PCT)
-                    if t_pulso > config.UMBRAL_TEMPERATURA_CORTE_C:
-                        perdida_pulso_total += _descontar_integridad(
-                            estado,
-                            (t_pulso - config.UMBRAL_TEMPERATURA_CORTE_C)
-                            * duracion_pulso_min
-                            * config.DEGRADACION_TERMICA_PCT_POR_C_MIN,
-                        )
-                    diag.recuperaciones_pct.append(
-                        min(100.0, modelo_fisico.conductancia_relativa(estado.impedancia) * 100.0)
-                    )
-                    # Un pulso previo no regenerado se cierra al iniciar el siguiente.
-                    if estado.pulso_no_regenerado_min is not None:
-                        diag.tiempos_regeneracion_seg.append((minuto - estado.pulso_no_regenerado_min) * 60.0)
-                        estado.pulso_no_regenerado_min = None
-                    if impedancia_inicial > config.UMBRAL_IMPEDANCIA_OHMS:
-                        objetivo_sal = (
-                            config.FACTOR_IMPEDANCIA_REGENERADA * config.IMPEDANCIA_NOMINAL_OHMS
-                            - config.IMPEDANCIA_NOMINAL_OHMS
-                            - estado.impedancia_polvo
-                        )
-                        segundos = modelo_fisico.tiempo_hasta_impedancia(t_pulso, sal_antes, objetivo_sal)
-                        if segundos is not None:
-                            diag.tiempos_regeneracion_seg.append(segundos)
-                            diag.pulsos_regenerados += 1
-                        else:
-                            estado.pulso_no_regenerado_min = minuto
-                            diag.pulsos_no_regenerados += 1
-                else:
-                    diag.pulsos_omitidos_por_energia += 1
+                energia_pulso, perdida_pulso = _ejecutar_pulso(
+                    estado, diag, t_pulso, t_matriz, impedancia_inicial, minuto, duracion_pulso_min
+                )
+                energia_paso += energia_pulso
+                perdida_pulso_total += perdida_pulso
 
             # Captación de agua con la impedancia posterior al pulso.
             impedancia_operacion = estado.impedancia
@@ -383,36 +524,13 @@ def simular_modo(entorno: Entorno, modo: ModoOperacion) -> DiagnosticoModo:
                 diag.litros_nocturnos += litros
 
             # Violaciones ecológicas por episodios.
-            extrae = litros > 0
-            if extrae:
-                diag.fraccion_maxima_extraida = max(diag.fraccion_maxima_extraida, fraccion)
-            humedad_baja = humedad < config.UMBRAL_HUMEDAD_ECOLOGICA_PCT
-            if extrae and humedad_baja:
-                diag.pasos_extraccion_humedad_baja += 1
-            violacion = extrae and (
-                humedad_baja or fraccion > config.FRACCION_MAXIMA_EXTRACCION + _TOLERANCIA
-            )
-            if violacion and not estado.en_violacion:
-                diag.violaciones_ecologicas += 1
-            estado.en_violacion = violacion
+            _registrar_violacion(estado, diag, litros, humedad, fraccion)
 
             # Incrustación salina y ensuciamiento por polvo.
-            estado.impedancia_sal += entorno.incrustacion_ohm_por_l_m2[n] * litros / config.AREA_COLECTOR_M2
-            if entorno.ensuciamiento_ohm_h[i] > 0:
-                estado.impedancia_polvo += entorno.ensuciamiento_ohm_h[i] * dt_h
-            else:
-                estado.impedancia_polvo *= math.exp(-dt_h / config.CONSTANTE_LIMPIEZA_POLVO_H)
+            _actualizar_impedancia(estado, entorno, i, n, litros, dt_h)
 
             # Degradación de la membrana.
-            if t_matriz > config.UMBRAL_TEMPERATURA_CORTE_C:
-                perdida_ambiental_total += _descontar_integridad(
-                    estado,
-                    (t_matriz - config.UMBRAL_TEMPERATURA_CORTE_C)
-                    * paso_min
-                    * config.DEGRADACION_TERMICA_PCT_POR_C_MIN,
-                )
-            if impedancia_operacion > config.UMBRAL_IMPEDANCIA_OHMS:
-                _descontar_integridad(estado, config.DEGRADACION_CRISTALIZACION_PCT_H * dt_h)
+            perdida_ambiental_total += _degradar_membrana(estado, t_matriz, impedancia_operacion, paso_min, dt_h)
             diag.integridad_minima = min(diag.integridad_minima, estado.integridad)
 
             # Balance de la reserva térmica.
@@ -428,12 +546,7 @@ def simular_modo(entorno: Entorno, modo: ModoOperacion) -> DiagnosticoModo:
         diag.integridad_promedio.append(sum(e.integridad for e in nodos) / len(nodos))
 
     # Los pulsos no regenerados sin pulso posterior se miden hasta el fin de la simulación.
-    fin_min = entorno.numero_pasos * paso_min
-    for estado in nodos:
-        if estado.pulso_no_regenerado_min is not None:
-            diag.tiempos_regeneracion_seg.append(
-                max(float(config.DURACION_PULSO_SEG), (fin_min - estado.pulso_no_regenerado_min) * 60.0)
-            )
+    _cerrar_regeneraciones_pendientes(nodos, diag, entorno.numero_pasos * paso_min)
 
     diag.integridad_final_promedio = sum(e.integridad for e in nodos) / len(nodos)
     diag.perdida_termica_pulso_pct = perdida_pulso_total / len(nodos)

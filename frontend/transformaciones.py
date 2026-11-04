@@ -47,6 +47,8 @@ NOMBRES_INDICADOR = {
 # Los indicadores informativos se muestran a continuación de este indicador.
 ANCLA_INDICADORES_INFORMATIVOS = "tiempo_regeneracion_promedio_seg"
 
+COLUMNA_VALOR_OBTENIDO = "Valor obtenido"
+
 
 def minuto_a_hora_local(minuto: int, hora_inicio: int = config.HORA_INICIO_SIMULACION) -> str:
     """Convierte el minuto de simulación en hora local HH:MM."""
@@ -143,7 +145,7 @@ def indicadores_a_dataframe(verificacion: dict) -> pd.DataFrame:
     informativos = [
         {
             "Indicador": NOMBRES_INDICADOR.get(clave, clave),
-            "Valor obtenido": f"{valor:g}",
+            COLUMNA_VALOR_OBTENIDO: f"{valor:g}",
             "Umbral": "No aplica",
             "Cumple": "Informativo",
         }
@@ -155,7 +157,7 @@ def indicadores_a_dataframe(verificacion: dict) -> pd.DataFrame:
         filas.append(
             {
                 "Indicador": NOMBRES_INDICADOR.get(clave, clave),
-                "Valor obtenido": "Sin datos" if valor is None else f"{valor:.2f}",
+                COLUMNA_VALOR_OBTENIDO: "Sin datos" if valor is None else f"{valor:.2f}",
                 "Umbral": f"{indicador['operador']} {indicador['umbral']:g}",
                 "Cumple": "Sí" if indicador["cumple"] else "No",
             }
@@ -164,7 +166,7 @@ def indicadores_a_dataframe(verificacion: dict) -> pd.DataFrame:
             filas.extend(informativos)
             informativos = []
     filas.extend(informativos)
-    return pd.DataFrame(filas, columns=["Indicador", "Valor obtenido", "Umbral", "Cumple"])
+    return pd.DataFrame(filas, columns=["Indicador", COLUMNA_VALOR_OBTENIDO, "Umbral", "Cumple"])
 
 
 def conjeturas_a_lista(resultado: dict) -> List[dict]:

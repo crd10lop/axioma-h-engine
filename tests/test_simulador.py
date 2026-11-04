@@ -3,9 +3,16 @@
 import pytest
 
 from backend import config
-from backend.modelo_fisico import tiempo_hasta_impedancia
-from backend.schemas import Escenario, SimulationConfig, TasaSalinizacion
-from backend.simulador import ejecutar_simulacion, ejecutar_simulacion_detallada
+from backend.modelo_fisico import energia_pulso_wh, tiempo_hasta_impedancia
+from backend.schemas import Escenario, ModoOperacion, SimulationConfig, TasaSalinizacion
+from backend.simulador import (
+    Entorno,
+    _indicador,
+    ejecutar_simulacion,
+    ejecutar_simulacion_detallada,
+    rendimiento_nocturno_l_m2,
+    simular_modo,
+)
 
 
 def configuracion(escenario=Escenario.DIA_NORMAL, **cambios):
@@ -20,6 +27,22 @@ def configuracion(escenario=Escenario.DIA_NORMAL, **cambios):
     return SimulationConfig(**datos)
 
 
+def entorno_constante(pasos, humedad=80.0, t_matriz=30.0, radiacion=0.0, hora_inicio=18.0, paso=5):
+    """Entorno de un nodo con condiciones constantes, sin incrustación ni polvo."""
+    return Entorno(
+        paso_minutos=paso,
+        minutos=[i * paso for i in range(pasos)],
+        horas_locales=[(hora_inicio + i * paso / 60.0) % 24.0 for i in range(pasos)],
+        humedad=[[humedad] for _ in range(pasos)],
+        temperatura_ambiente=[t_matriz] * pasos,
+        temperatura_matriz=[[t_matriz] for _ in range(pasos)],
+        radiacion=[radiacion] * pasos,
+        factor_captacion=[1.0] * pasos,
+        ensuciamiento_ohm_h=[0.0] * pasos,
+        incrustacion_ohm_por_l_m2=[0.0],
+    )
+
+
 @pytest.fixture(scope="module")
 def corridas():
     """Diagnósticos detallados de los cinco escenarios."""
@@ -28,7 +51,9 @@ def corridas():
 
 def test_reproducibilidad_con_misma_semilla():
     cfg = configuracion(Escenario.TORMENTA_DE_SAL_Y_CALOR_EXTREMO)
-    assert ejecutar_simulacion(cfg).model_dump() == ejecutar_simulacion(cfg).model_dump()
+    primera = ejecutar_simulacion(cfg).model_dump()
+    segunda = ejecutar_simulacion(cfg).model_dump()
+    assert primera == segunda
 
 
 def test_semilla_distinta_cambia_el_entorno():
@@ -165,3 +190,49 @@ def test_recuperacion_nula_sin_pulsos():
     assert neuro.pulsos_termicos_ejecutados == 0
     assert neuro.recuperacion_caudal_promedio_pct is None
     assert resultado.comparativa.modo_temporizador_fijo.recuperacion_caudal_promedio_pct is not None
+
+
+def test_pulsos_se_regeneran_con_eficacia_suficiente(monkeypatch):
+    # Según el análisis de sensibilidad, eta_max >= 0.97 basta para regenerar cada pulso.
+    monkeypatch.setattr(config, "EFICACIA_MAXIMA_PULSO", 0.97)
+    _, neuro, _ = ejecutar_simulacion_detallada(configuracion())
+    assert neuro.pulsos > 0
+    assert neuro.pulsos_regenerados == neuro.pulsos
+    assert neuro.pulsos_no_regenerados == 0
+    assert all(t < config.TIEMPO_REGENERACION_MAX_SEG for t in neuro.tiempos_regeneracion_seg)
+
+
+def test_temporizador_omite_pulsos_sin_reserva_de_energia():
+    entorno = entorno_constante(pasos=24 * 12)
+    diag = simular_modo(entorno, ModoOperacion.TEMPORIZADOR_FIJO)
+    fin_min = entorno.numero_pasos * entorno.paso_minutos
+    ordenes = len(range(config.INTERVALO_PULSO_TEMPORIZADOR_MIN, fin_min, config.INTERVALO_PULSO_TEMPORIZADOR_MIN))
+    assert diag.pulsos_omitidos_por_energia > 0
+    assert diag.pulsos + diag.pulsos_omitidos_por_energia == ordenes
+    # Solo los pulsos ejecutados consumen energía de pulso.
+    energia_por_pulso = energia_pulso_wh(config.INCREMENTO_TERMICO_TEMPORIZADOR_C)
+    assert diag.energia_pulsos_wh == pytest.approx(diag.pulsos * energia_por_pulso)
+
+
+def test_calor_ambiental_sobre_45_degrada_la_membrana():
+    t_matriz = config.UMBRAL_TEMPERATURA_CORTE_C + 2.0
+    entorno = entorno_constante(pasos=1, t_matriz=t_matriz)
+    diag = simular_modo(entorno, ModoOperacion.NEURO_SIMBOLICO)
+    perdida_esperada = 2.0 * entorno.paso_minutos * config.DEGRADACION_TERMICA_PCT_POR_C_MIN
+    assert diag.bitacora[0].regla_activada == "REGLA_01_LIMITE_TERMICO_ABSOLUTO"
+    assert diag.pulsos == 0
+    assert diag.perdida_termica_pulso_pct == pytest.approx(0.0)
+    assert diag.perdida_termica_ambiental_pct == pytest.approx(perdida_esperada)
+    assert diag.integridad_final_promedio == pytest.approx(100.0 - perdida_esperada)
+
+
+def test_rendimiento_nocturno_sin_horas_nocturnas():
+    entorno = entorno_constante(pasos=12, hora_inicio=8.0)
+    diag = simular_modo(entorno, ModoOperacion.NEURO_SIMBOLICO)
+    assert diag.horas_nocturnas == pytest.approx(0.0)
+    assert rendimiento_nocturno_l_m2(diag, entorno.numero_nodos) is None
+
+
+def test_indicador_rechaza_operador_no_soportado():
+    with pytest.raises(ValueError, match="Operador no soportado: >"):
+        _indicador(1.0, 0.0, ">")

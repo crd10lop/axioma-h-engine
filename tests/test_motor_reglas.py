@@ -187,4 +187,6 @@ def test_membrana_limpia_tiene_recuperacion_completa():
 def test_evaluacion_determinista_con_instante_fijo():
     instante = datetime(2026, 1, 1, tzinfo=timezone.utc)
     telemetria = TelemetryInput(**{**LECTURA_NOMINAL, "impedancia_ohms": 1700.0})
-    assert evaluar_telemetria(telemetria, instante) == evaluar_telemetria(telemetria, instante)
+    primera = evaluar_telemetria(telemetria, instante)
+    segunda = evaluar_telemetria(telemetria, instante)
+    assert primera == segunda

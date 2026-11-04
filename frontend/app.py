@@ -95,6 +95,8 @@ COLORES_MODO = alt.Scale(
     range=["#1f6f8b", "#c27c0e"],
 )
 COLOR_REFERENCIA = "#a93226"
+CAMPO_MODO = "Modo:N"
+COLUMNA_METRICA = "Métrica"
 
 
 # ---------------------------------------------------------------------------
@@ -120,8 +122,7 @@ def inicializar_estado() -> None:
     }
     widgets.update({CONTROLES[campo]: valor for campo, valor in TELEMETRIA_PRD.items()})
     for clave, valor in widgets.items():
-        st.session_state.setdefault(clave, valor)
-        st.session_state[clave] = st.session_state[clave]
+        st.session_state[clave] = st.session_state.get(clave, valor)
 
     valores = {
         "historial": [],
@@ -348,10 +349,10 @@ def grafico_comparativo(df: pd.DataFrame, col_neuro: str, col_temp: str, titulo:
         .encode(
             x=alt.X("hora_simulada:Q", title="Horas desde el inicio (18:00)"),
             y=alt.Y("valor:Q", title=eje_y, scale=alt.Scale(zero=False)),
-            color=alt.Color("Modo:N", scale=COLORES_MODO, legend=alt.Legend(orient="bottom")),
+            color=alt.Color(CAMPO_MODO, scale=COLORES_MODO, legend=alt.Legend(orient="bottom")),
             tooltip=[
                 alt.Tooltip("hora_local:N", title="Hora local"),
-                alt.Tooltip("Modo:N"),
+                alt.Tooltip(CAMPO_MODO),
                 alt.Tooltip("valor:Q", title=eje_y, format=".2f"),
             ],
         )
@@ -401,13 +402,13 @@ def seccion_comparativa(resultado: dict) -> None:
     filas = tr.comparativa_a_dataframe(resultado).to_dict("records")
     tarjetas_por_fila = 4
     columnas = []
-    for inicio in range(0, len(filas), tarjetas_por_fila):
+    for _ in range(0, len(filas), tarjetas_por_fila):
         columnas.extend(st.columns(tarjetas_por_fila))
     for columna, fila in zip(columnas, filas):
         diferencia = fila["Diferencia (%)"]
         delta = None if pd.isna(diferencia) else f"{diferencia:+.1f} % frente al temporizador"
         columna.metric(
-            fila["Métrica"],
+            fila[COLUMNA_METRICA],
             formatear_valor(fila["clave"], fila[tr.NOMBRES_MODO["neuro"]]),
             delta=delta,
             delta_color="normal" if fila["mayor_es_mejor"] else "inverse",
@@ -482,15 +483,15 @@ def seccion_graficos(df: pd.DataFrame, resultado: dict) -> None:
     st.subheader("Totales finales")
     totales = tr.totales_a_dataframe(resultado)
     columnas = st.columns(3)
-    for columna, metrica in zip(columnas, totales["Métrica"].unique()):
+    for columna, metrica in zip(columnas, totales[COLUMNA_METRICA].unique()):
         barras = (
-            alt.Chart(totales[totales["Métrica"] == metrica])
+            alt.Chart(totales[totales[COLUMNA_METRICA] == metrica])
             .mark_bar()
             .encode(
-                x=alt.X("Modo:N", title=None, axis=alt.Axis(labelAngle=0)),
+                x=alt.X(CAMPO_MODO, title=None, axis=alt.Axis(labelAngle=0)),
                 y=alt.Y("Valor:Q", title=metrica),
-                color=alt.Color("Modo:N", scale=COLORES_MODO, legend=None),
-                tooltip=["Modo:N", alt.Tooltip("Valor:Q", format=".2f")],
+                color=alt.Color(CAMPO_MODO, scale=COLORES_MODO, legend=None),
+                tooltip=[CAMPO_MODO, alt.Tooltip("Valor:Q", format=".2f")],
             )
             .properties(title=metrica, height=260)
         )

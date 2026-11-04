@@ -1,0 +1,9 @@
+[run]
+relative_files = True
+branch = True
+source = .
+omit =
+    tests/*
+    scripts/*
+    venv/*
+    .venv/*

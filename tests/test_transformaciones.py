@@ -47,6 +47,13 @@ def test_series_a_dataframe_vacio():
     assert tr.series_a_dataframe({"series_temporales": []}).empty
 
 
+def test_series_formato_largo_vacio():
+    df = tr.series_a_dataframe({"series_temporales": []})
+    largo = tr.series_formato_largo(df, "litros_acumulados_neuro", "litros_acumulados_temporizador")
+    assert largo.empty
+    assert list(largo.columns) == ["minuto", "hora_simulada", "hora_local", "Modo", "valor"]
+
+
 def test_series_formato_largo(resultado):
     df = tr.series_a_dataframe(resultado)
     largo = tr.series_formato_largo(df, "litros_acumulados_neuro", "litros_acumulados_temporizador")
@@ -129,7 +136,8 @@ def test_bitacora_a_texto_con_filtros(resultado):
     assert texto.startswith("[Día 1 18:00]")
 
     solo_nodo = tr.bitacora_a_texto(bitacora, nodo="NODO_03")
-    assert solo_nodo and all("NODO_03" in linea for linea in solo_nodo.splitlines())
+    assert solo_nodo
+    assert all("NODO_03" in linea for linea in solo_nodo.splitlines())
 
     regla = "REGLA_02_LIMITE_ECOLOGICO_TERRITORIAL"
     solo_regla = tr.bitacora_a_texto(bitacora, regla=regla)

@@ -83,7 +83,7 @@ class EstadoSalud(BaseModel):
     )
 
 
-@app.get("/", response_model=EstadoMotor, tags=["General"])
+@app.get("/", tags=["General"])
 def obtener_estado_motor() -> EstadoMotor:
     """Devuelve el estado general del motor y la ruta de su documentación."""
     return EstadoMotor(
@@ -95,7 +95,7 @@ def obtener_estado_motor() -> EstadoMotor:
     )
 
 
-@app.get("/api/v1/health", response_model=EstadoSalud, tags=["Monitoreo"])
+@app.get("/api/v1/health", tags=["Monitoreo"])
 def verificar_salud() -> EstadoSalud:
     """Informa la salud del servicio junto con su tiempo de actividad."""
     ahora = datetime.now(timezone.utc)

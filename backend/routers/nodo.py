@@ -12,7 +12,7 @@ logger = logging.getLogger("axioma_h.nodo")
 router = APIRouter(prefix="/api/v1/nodo", tags=["Control de Nodos"])
 
 
-@router.post("/evaluar", response_model=ControlDecision)
+@router.post("/evaluar")
 def evaluar_nodo(telemetria: TelemetryInput) -> ControlDecision:
     """Evalúa la telemetría de un nodo y devuelve la acción de control recomendada."""
     decision = evaluar_telemetria(telemetria)

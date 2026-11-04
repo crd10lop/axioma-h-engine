@@ -104,6 +104,39 @@ def test_respuesta_422_incluye_detalle(request_simulado):
     ]
 
 
+def test_respuesta_422_con_detalle_que_no_es_lista(request_simulado):
+    request_simulado.return_value = respuesta_simulada(422, {"detail": "Cuerpo de la solicitud inválido"})
+    with pytest.raises(cliente_api.ErrorApiAxioma) as error:
+        cliente_api.evaluar_nodo(TELEMETRIA)
+    assert error.value.codigo_estado == 422
+    assert error.value.detalle == ["Cuerpo de la solicitud inválido"]
+
+
+def test_respuesta_422_con_errores_sin_formato_de_fastapi(request_simulado):
+    cuerpo = {"detail": [{"loc": ["body"], "msg": "JSON mal formado"}, "error sin estructura"]}
+    request_simulado.return_value = respuesta_simulada(422, cuerpo)
+    with pytest.raises(cliente_api.ErrorApiAxioma) as error:
+        cliente_api.evaluar_nodo(TELEMETRIA)
+    assert error.value.detalle == ["solicitud: JSON mal formado", "error sin estructura"]
+
+
+def test_respuesta_422_sin_json_usa_el_texto(request_simulado):
+    request_simulado.return_value = respuesta_simulada(422, None, texto="Unprocessable Entity")
+    with pytest.raises(cliente_api.ErrorApiAxioma) as error:
+        cliente_api.evaluar_nodo(TELEMETRIA)
+    assert error.value.codigo_estado == 422
+    assert error.value.detalle == ["Unprocessable Entity"]
+
+
+def test_error_de_comunicacion_generico(request_simulado):
+    request_simulado.side_effect = requests.exceptions.TooManyRedirects("demasiadas redirecciones")
+    with pytest.raises(cliente_api.ErrorApiAxioma) as error:
+        cliente_api.verificar_salud()
+    assert error.value.mensaje == "Error de comunicación con la API: demasiadas redirecciones"
+    assert error.value.codigo_estado is None
+    assert isinstance(error.value.__cause__, requests.exceptions.TooManyRedirects)
+
+
 def test_error_http_generico(request_simulado):
     request_simulado.return_value = respuesta_simulada(500, texto="Internal Server Error")
     with pytest.raises(cliente_api.ErrorApiAxioma) as error:

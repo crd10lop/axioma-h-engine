@@ -13,7 +13,7 @@ logger = logging.getLogger("axioma_h.simulacion")
 router = APIRouter(prefix="/api/v1/simulacion", tags=["Simulación"])
 
 
-@router.post("/ejecutar", response_model=SimulationResult)
+@router.post("/ejecutar")
 def ejecutar(configuracion: SimulationConfig) -> SimulationResult:
     """Ejecuta la simulación comparativa entre el control neuro-simbólico y el temporizador fijo."""
     inicio = time.perf_counter()

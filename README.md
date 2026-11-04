@@ -275,7 +275,7 @@ Para medir la cobertura localmente con el mismo criterio del workflow:
 
 ```powershell
 pip install -r requirements-dev.txt
-pytest --cov=backend --cov=frontend --cov-branch --cov-report=xml --cov-report=term
+pytest --cov --cov-report=xml --cov-report=term
 ```
 
 Render despliega la API y el dashboard solo cuando el workflow CI termina en verde (`autoDeployTrigger: checksPass` en `render.yaml`).
