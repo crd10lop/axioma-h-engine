@@ -189,13 +189,16 @@ SUPUESTOS_CLAVE: list[dict[str, str]] = [
         "Eficacia máxima del pulso",
         "0.90",
         "Supuesto del modelo, sin fuente: estimación de orden de magnitud pendiente de medición en "
-        "laboratorio. Validar la Conjetura 1 requiere al menos 0.94 y la Conjetura 2 al menos 0.97.",
+        "laboratorio. Validar la Conjetura 1 requiere al menos 0.94 y la Conjetura 2 al menos 0.97. "
+        "El análisis de incertidumbre la varía entre 0.80 y 1.00.",
     ),
     _supuesto(
         "Flujo máximo de niebla",
-        "6.0 L/m²/h con humedad relativa del 100 %",
+        "6.0 L/m²/h con humedad relativa del 100 %; rango calibrado de 0.49 a 1.83 L/m²/h",
         "Supuesto del modelo, sin fuente. Contrastado con Klemm et al. (2012), que reportan de 3 a "
-        "10 L/m² al día en proyectos operativos de captación de niebla: es un supuesto optimista.",
+        "10 L/m² al día en proyectos operativos de captación de niebla: es un supuesto optimista. La "
+        "calibración inversa contra ese rango (Día normal, humedad inicial de 85 %, semilla 42) da un "
+        "flujo de 0.49 a 1.83 L/m²/h, que el análisis de incertidumbre usa en lugar de 6.0.",
     ),
 ]
 

@@ -1,4 +1,4 @@
-"""Pruebas del análisis de robustez: barrido de salinidad y sensibilidad."""
+"""Pruebas del análisis de robustez: barrido, sensibilidad, calibración e incertidumbre."""
 
 import copy
 from concurrent.futures import ThreadPoolExecutor
@@ -11,6 +11,7 @@ from backend.modelo_fisico import PARAMETROS_BASE, ParametrosModelo
 from backend.schemas import (
     BarridoConfig,
     Escenario,
+    IncertidumbreConfig,
     ParametroSensible,
     SensibilidadConfig,
     SimulationConfig,
@@ -235,3 +236,166 @@ def test_limite_superior_incluido(parametro, valor):
 def test_demasiados_valores_de_sensibilidad():
     with pytest.raises(ValidationError):
         _sensibilidad(EFICACIA, [0.5] * 12)
+
+
+# ---------------------------------------------------------------------------
+# Calibración inversa del flujo de niebla
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize(("objetivo", "flujo_esperado"), [(3.0, 0.487), (10.0, 1.826)])
+def test_calibracion_valores_de_control(objetivo, flujo_esperado):
+    assert analisis.calibrar_flujo_niebla(objetivo) == pytest.approx(flujo_esperado, abs=0.01)
+
+
+@pytest.mark.parametrize(
+    ("objetivo", "constante"),
+    [
+        (config.RENDIMIENTO_LITERATURA_MIN_L_M2_DIA, config.FLUJO_NIEBLA_CALIBRADO_MIN_L_M2_H),
+        (config.RENDIMIENTO_LITERATURA_MAX_L_M2_DIA, config.FLUJO_NIEBLA_CALIBRADO_MAX_L_M2_H),
+    ],
+)
+def test_constantes_calibradas_coinciden_con_la_calibracion(objetivo, constante):
+    assert analisis.calibrar_flujo_niebla(objetivo) == pytest.approx(constante, abs=0.01)
+
+
+def test_calibracion_respeta_la_tolerancia():
+    gruesa = analisis.calibrar_flujo_niebla(3.0, tolerancia=0.5)
+    assert gruesa == pytest.approx(0.487, abs=0.5)
+
+
+@pytest.mark.parametrize("objetivo", [0.1, 40.0])
+def test_calibracion_fuera_del_intervalo_alcanzable(objetivo):
+    with pytest.raises(ValueError, match="no está en el intervalo alcanzable"):
+        analisis.calibrar_flujo_niebla(objetivo)
+
+
+@pytest.mark.parametrize("tolerancia", [0.0, -0.1])
+def test_calibracion_con_tolerancia_no_positiva(tolerancia):
+    with pytest.raises(ValueError, match="tolerancia"):
+        analisis.calibrar_flujo_niebla(3.0, tolerancia=tolerancia)
+
+
+def test_valores_por_defecto_del_modelo_no_cambian():
+    assert config.EFICACIA_MAXIMA_PULSO == pytest.approx(0.90)
+    assert config.FLUJO_NIEBLA_MAXIMO_L_M2_H == pytest.approx(6.0)
+
+
+# ---------------------------------------------------------------------------
+# Propagación de la incertidumbre
+# ---------------------------------------------------------------------------
+def _incertidumbre(**cambios) -> IncertidumbreConfig:
+    """Configuración de incertidumbre en DIA_NORMAL con humedad inicial de 85 % y tasa ALTA."""
+    datos = {
+        "escenario": Escenario.DIA_NORMAL,
+        "humedad_ambiente_inicial_pct": 85.0,
+        "tasa_salinizacion": TasaSalinizacion.ALTA,
+    }
+    datos.update(cambios)
+    return IncertidumbreConfig(**datos)
+
+
+@pytest.fixture(scope="module")
+def incertidumbre():
+    """Incertidumbre con los rangos por defecto y 20 muestras, como en el documento 04."""
+    return analisis.ejecutar_incertidumbre(_incertidumbre())
+
+
+@pytest.fixture(scope="module")
+def incertidumbre_salina():
+    """Incertidumbre en INCRUSTACION_SALINA_RAPIDA, donde todas las muestras ejecutan pulsos."""
+    return analisis.ejecutar_incertidumbre(_incertidumbre(escenario=Escenario.INCRUSTACION_SALINA_RAPIDA))
+
+
+def test_incertidumbre_usa_los_rangos_de_config():
+    cfg = _incertidumbre()
+    assert cfg.eficacia_min == pytest.approx(config.EFICACIA_PULSO_RANGO_MIN)
+    assert cfg.eficacia_max == pytest.approx(config.EFICACIA_PULSO_RANGO_MAX)
+    assert cfg.flujo_min == pytest.approx(config.FLUJO_NIEBLA_CALIBRADO_MIN_L_M2_H)
+    assert cfg.flujo_max == pytest.approx(config.FLUJO_NIEBLA_CALIBRADO_MAX_L_M2_H)
+
+
+def test_incertidumbre_genera_el_numero_de_muestras(incertidumbre):
+    assert len(incertidumbre.muestras) == 20
+
+
+def test_muestras_dentro_de_los_rangos(incertidumbre):
+    for muestra in incertidumbre.muestras:
+        assert config.EFICACIA_PULSO_RANGO_MIN <= muestra.eficacia <= config.EFICACIA_PULSO_RANGO_MAX
+        assert config.FLUJO_NIEBLA_CALIBRADO_MIN_L_M2_H <= muestra.flujo <= config.FLUJO_NIEBLA_CALIBRADO_MAX_L_M2_H
+
+
+def test_incertidumbre_determinista_con_la_misma_semilla(incertidumbre):
+    repetida = analisis.ejecutar_incertidumbre(_incertidumbre())
+    assert repetida == incertidumbre
+
+
+def test_otra_semilla_de_muestreo_cambia_las_muestras(incertidumbre):
+    otra = analisis.ejecutar_incertidumbre(_incertidumbre(semilla_muestreo=8, n_muestras=5))
+    assert otra.muestras[0].eficacia != pytest.approx(incertidumbre.muestras[0].eficacia)
+
+
+@pytest.mark.parametrize("campo", ["probabilidad_c1", "probabilidad_c2", "probabilidad_c3"])
+def test_probabilidades_entre_cero_y_uno(incertidumbre_salina, campo):
+    assert 0.0 <= getattr(incertidumbre_salina, campo) <= 1.0
+
+
+def test_probabilidad_es_la_proporcion_de_muestras_validadas(incertidumbre_salina):
+    validadas = sum(m.conjeturas_validadas.conjetura_1_eficiencia for m in incertidumbre_salina.muestras)
+    assert incertidumbre_salina.probabilidad_c1 == pytest.approx(validadas / len(incertidumbre_salina.muestras))
+
+
+@pytest.mark.parametrize("indicador", ["recuperacion", "rendimiento", "reduccion_degradacion"])
+def test_percentiles_ordenados(incertidumbre_salina, indicador):
+    resumen = getattr(incertidumbre_salina, indicador)
+    assert resumen.p5 <= resumen.p50
+    assert resumen.p50 <= resumen.p95
+
+
+def test_percentiles_ignoran_las_muestras_sin_datos(incertidumbre):
+    con_datos = [m for m in incertidumbre.muestras if m.recuperacion_caudal_promedio_pct is not None]
+    assert incertidumbre.recuperacion.n_validos == len(con_datos)
+
+
+def test_resumen_sin_datos():
+    resumen = analisis._resumen([None, None])
+    assert resumen.n_validos == 0
+    assert resumen.p50 is None
+
+
+def test_resumen_con_un_dato():
+    resumen = analisis._resumen([None, 87.5])
+    assert resumen.p5 == pytest.approx(87.5)
+    assert resumen.p95 == pytest.approx(87.5)
+
+
+def test_resumen_con_varios_datos():
+    resumen = analisis._resumen([float(valor) for valor in range(1, 22)])
+    assert resumen.p5 == pytest.approx(2.0)
+    assert resumen.p50 == pytest.approx(11.0)
+    assert resumen.p95 == pytest.approx(20.0)
+
+
+def test_incertidumbre_no_cambia_la_configuracion_global():
+    antes = _configuracion_global()
+    analisis.ejecutar_incertidumbre(_incertidumbre(n_muestras=5, duracion_horas=2, eficacia_min=0.1, flujo_max=20.0))
+    despues = _configuracion_global()
+    assert despues == antes
+    assert PARAMETROS_BASE == ParametrosModelo()
+
+
+@pytest.mark.parametrize(
+    "cambios",
+    [
+        {"eficacia_min": 0.95, "eficacia_max": 0.90},
+        {"eficacia_min": 0.90, "eficacia_max": 0.90},
+        {"flujo_min": 2.0, "flujo_max": 1.0},
+        {"eficacia_min": 0.0},
+        {"eficacia_max": 1.01},
+        {"flujo_min": 0.0},
+        {"flujo_max": 20.5},
+        {"n_muestras": 4},
+        {"n_muestras": 31},
+    ],
+)
+def test_configuracion_de_incertidumbre_invalida(cambios):
+    with pytest.raises(ValidationError):
+        _incertidumbre(**cambios)

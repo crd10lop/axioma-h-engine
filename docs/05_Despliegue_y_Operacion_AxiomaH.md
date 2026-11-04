@@ -89,14 +89,14 @@ Argumentos opcionales:
 | `--dashboard` | `https://axioma-h-dashboard.onrender.com` | URL base del dashboard. |
 | `--timeout` | `90` | Espera máxima por solicitud, en segundos. Cubre la reactivación de los servicios suspendidos del plan gratuito. |
 
-Comprobaciones realizadas (21 en total):
+Comprobaciones realizadas (22 en total):
 
 1. `GET /api/v1/health` responde 200 con `"estado": "SALUDABLE"`.
-2. `GET /docs` y `GET /openapi.json` responden 200 y el esquema publica `/api/v1/nodo/evaluar`, `/api/v1/simulacion/ejecutar`, `/api/v1/analisis/barrido-salinidad` y `/api/v1/analisis/sensibilidad`.
+2. `GET /docs` y `GET /openapi.json` responden 200 y el esquema publica `/api/v1/nodo/evaluar`, `/api/v1/simulacion/ejecutar`, `/api/v1/analisis/barrido-salinidad`, `/api/v1/analisis/sensibilidad` y `/api/v1/analisis/incertidumbre`.
 3. `POST /api/v1/nodo/evaluar` aplica cada regla del motor (REGLA_01 a REGLA_05) con la acción y el estado esperados, respetando el orden de prioridad. Dos casos más verifican la supervisión humana: `anulacion_manual = SUSPENDER_EXTRACCION` con telemetría nominal activa la REGLA_06 con caudal 0 %, y con la matriz a 46 °C activa la REGLA_01, porque el corte térmico prevalece sobre el operador.
 4. `POST /api/v1/nodo/evaluar` rechaza una telemetría inválida con código 422.
 5. `POST /api/v1/simulacion/ejecutar` responde para el ejemplo del esquema y para cada escenario, con comparativa entre modos (incluido `modo_temporizador_tope_ecologico`), conjeturas validadas, `causas_no_validacion` como lista en cada conjetura, `impacto_comunitario` con los tres modos y serie temporal no vacía.
-6. `POST /api/v1/analisis/barrido-salinidad` responde, con una sola semilla para no exceder el tiempo de espera, seis puntos ordenados por carga salina; y `POST /api/v1/analisis/sensibilidad` responde un punto por cada valor de eficacia solicitado, con el estado de la Conjetura 1.
+6. `POST /api/v1/analisis/barrido-salinidad` responde, con una sola semilla para no exceder el tiempo de espera, seis puntos ordenados por carga salina; y `POST /api/v1/analisis/sensibilidad` responde un punto por cada valor de eficacia solicitado, con el estado de la Conjetura 1; y `POST /api/v1/analisis/incertidumbre` responde, con 5 muestras, probabilidades entre 0 y 1 y percentiles del rendimiento ordenados.
 7. `GET /_stcore/health` del dashboard responde 200 con el cuerpo `ok`.
 8. `GET /` del dashboard responde 200.
 9. Las funciones de `frontend/cliente_api.py` funcionan contra la URL pública de la API.

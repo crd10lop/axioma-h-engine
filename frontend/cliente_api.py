@@ -98,3 +98,8 @@ def ejecutar_barrido(configuracion: dict) -> dict:
 def ejecutar_sensibilidad(configuracion: dict) -> dict:
     """Ejecuta el análisis de sensibilidad en POST /api/v1/analisis/sensibilidad."""
     return _solicitar("POST", "/api/v1/analisis/sensibilidad", config.TIMEOUT_ANALISIS_SEG, configuracion)
+
+
+def ejecutar_incertidumbre(configuracion: dict) -> dict:
+    """Propaga la incertidumbre de los parámetros supuestos en POST /api/v1/analisis/incertidumbre."""
+    return _solicitar("POST", "/api/v1/analisis/incertidumbre", config.TIMEOUT_ANALISIS_SEG, configuracion)

@@ -130,3 +130,13 @@ CONSUMO_SUPERVIVENCIA_L_PERSONA_DIA = 15.0  # Sphere (2018), estándar 2.1 de ab
 CONSUMO_ACCESO_BASICO_L_PERSONA_DIA = 20.0  # OMS, Howard et al. (2020), acceso básico.
 RENDIMIENTO_LITERATURA_MIN_L_M2_DIA = 3.0  # Klemm et al. (2012).
 RENDIMIENTO_LITERATURA_MAX_L_M2_DIA = 10.0  # Klemm et al. (2012).
+
+# ---------------------------------------------------------------------------
+# Rangos del análisis de incertidumbre. No cambian los valores por defecto del
+# modelo (decisión D5): EFICACIA_MAXIMA_PULSO y FLUJO_NIEBLA_MAXIMO_L_M2_H siguen igual.
+# ---------------------------------------------------------------------------
+# L/m²/h. Calibración inversa: rendimiento de 3 a 10 L/m²/día de Klemm et al. (2012), DIA_NORMAL, 85 %, semilla 42.
+FLUJO_NIEBLA_CALIBRADO_MIN_L_M2_H = 0.49
+FLUJO_NIEBLA_CALIBRADO_MAX_L_M2_H = 1.83
+EFICACIA_PULSO_RANGO_MIN = 0.80  # Supuesto: rango plausible alrededor de 0.90, pendiente de medición.
+EFICACIA_PULSO_RANGO_MAX = 1.00  # Supuesto: rango plausible alrededor de 0.90, pendiente de medición.

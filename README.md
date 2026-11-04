@@ -76,7 +76,7 @@ axioma-h-engine/
 │   ├── modelo_fisico.py    Ecuaciones compartidas: pulso, energía y captación
 │   ├── motor_reglas.py     Reglas neuro-simbólicas en orden de prioridad
 │   ├── simulador.py        Simulación comparativa y verificación de conjeturas
-│   ├── analisis.py         Barrido de salinidad y sensibilidad con parámetros inmutables
+│   ├── analisis.py         Barrido, sensibilidad, calibración e incertidumbre con parámetros inmutables
 │   ├── impacto.py          Impacto comunitario estimado con estándares de la OMS y Sphere
 │   └── routers/
 │       ├── nodo.py         POST /api/v1/nodo/evaluar
@@ -150,7 +150,7 @@ La barra lateral ofrece un recorrido de cuatro vistas, con un botón "Siguiente"
 1. **Investigación y guía:** pregunta, hipótesis, conjeturas, reglas, perspectivas y alcance. No requiere la API.
 2. **Evaluación manual de nodo:** decisión del motor para una telemetría ajustable, con supervisión humana opcional (suspender la extracción o impedir el pulso).
 3. **Simulación comparativa:** ambos modos sobre un escenario, con impacto comunitario estimado, gráficos, conjeturas y bitácora.
-4. **Respuesta a la pregunta:** barrido de salinidad con 1 a 5 semillas (media y banda de +/- una desviación) y sensibilidad a la eficacia del pulso o al flujo de niebla. Usa los endpoints de `/api/v1/analisis` y no modifica la configuración del modelo.
+4. **Respuesta a la pregunta:** barrido de salinidad con 1 a 5 semillas (media y banda de +/- una desviación) sensibilidad a la eficacia del pulso o al flujo de niebla, e incertidumbre conjunta de ambos parámetros con la probabilidad de validar cada conjetura. Usa los endpoints de `/api/v1/analisis` y no modifica la configuración del modelo.
 
 El detalle de cada vista está en [docs/03_Funcionamiento_General_AxiomaH.md](docs/03_Funcionamiento_General_AxiomaH.md), sección 5.
 
@@ -186,7 +186,7 @@ La aplicación está desplegada en **Render**, en el plan gratuito, con el Bluep
 
 Cada push a `main` ejecuta el workflow CI (pruebas, cobertura y análisis de SonarQube Cloud), y Render despliega ambos servicios solo cuando todos los checks del commit están en verde (`autoDeployTrigger: checksPass`). El dashboard se conecta a la API publicada mediante la variable `AXIOMA_API_URL`.
 
-La verificación automatizada (`python scripts/verificar_despliegue.py`) ejecuta 21 comprobaciones contra los servicios publicados; la última ejecución registrada está en la sección 4.3 de docs/05. La configuración de cada plataforma, las variables de entorno, la verificación, la operación en el plan gratuito y el procedimiento para recrear el despliegue están en [docs/05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md).
+La verificación automatizada (`python scripts/verificar_despliegue.py`) ejecuta 22 comprobaciones contra los servicios publicados; la última ejecución registrada está en la sección 4.3 de docs/05. La configuración de cada plataforma, las variables de entorno, la verificación, la operación en el plan gratuito y el procedimiento para recrear el despliegue están en [docs/05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md).
 
 ## Endpoints
 
@@ -198,8 +198,9 @@ La verificación automatizada (`python scripts/verificar_despliegue.py`) ejecuta
 | POST | `/api/v1/simulacion/ejecutar` | Ejecuta la simulación comparativa entre ambos modos |
 | POST | `/api/v1/analisis/barrido-salinidad` | Barrido de salinidad en seis niveles de carga, con media y desviación entre 1 y 5 semillas |
 | POST | `/api/v1/analisis/sensibilidad` | Repite la simulación con varios valores de la eficacia del pulso o del flujo de niebla |
+| POST | `/api/v1/analisis/incertidumbre` | Muestrea a la vez la eficacia del pulso y el flujo de niebla (5 a 30 muestras) y estima la probabilidad de validar cada conjetura |
 
-Los dos endpoints de análisis no modifican la configuración global del modelo: cada solicitud usa su propia copia inmutable de los parámetros, de modo que solicitudes simultáneas no se afectan entre sí. Los payloads de ejemplo están en [docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md](docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md), sección 3.3.
+Los tres endpoints de análisis no modifican la configuración global del modelo: cada solicitud usa su propia copia inmutable de los parámetros, de modo que solicitudes simultáneas no se afectan entre sí. Los payloads de ejemplo están en [docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md](docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md), sección 3.3.
 
 Los datos que no cumplen la validación devuelven `422` con el detalle de cada campo, por ejemplo un `nodo_id` fuera de `NODO_01` a `NODO_08` o una humedad mayor que 100.
 
@@ -468,6 +469,22 @@ Cada simulación traduce el agua captada en personas abastecidas (`impacto_comun
 
 La tabla de los diez casos y su interpretación están en [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 7.6. El origen del tope del 33 % y el protocolo de co-creación propuesto para el Ciclo 3 están en [docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2.7.
 
+### Calibración del flujo de niebla e incertidumbre
+
+El flujo de niebla supuesto, 6.0 L/m²/h, da 31.8 L/m²/día en Día normal con 85 %, frente a 3 a 10 L/m²/día en proyectos reales (Klemm et al., 2012). Una calibración inversa por bisección (`calibrar_flujo_niebla`) encuentra los flujos que reproducen ese rango: 0.49 a 1.83 L/m²/h. El valor por defecto del modelo no cambia (decisión D5); el rango calibrado solo se usa en el análisis de incertidumbre. Con el flujo calibrado, la C3 no se valida en Día normal con 85 %: el rendimiento nocturno baja a entre 1.67 y 5.47 L/m²/noche.
+
+`POST /api/v1/analisis/incertidumbre` muestrea a la vez la eficacia del pulso (0.80 a 1.00) y el flujo calibrado. Con 20 muestras, humedad inicial de 85 % y tasa ALTA:
+
+| Escenario | P(C1) | P(C2) | P(C3) | Muestras con pulsos | Reducción de la degradación (p5 a p95) |
+|---|---|---|---|---|---|
+| Día normal | 0.05 | 0.00 | 0.00 | 8 de 20 | 99.0 % a 100 % |
+| Incrustación salina rápida | 0.15 | 0.10 | 0.00 | 20 de 20 | 95.7 % a 99.0 % |
+| Sequía | 0.00 | 0.00 | 0.00 | 0 de 20 | 100 % |
+| Tormenta de arena | 0.00 | 0.00 | 0.00 | 20 de 20 | 97.2 % a 98.6 % |
+| Tormenta de sal y calor extremo | 0.10 | 0.05 | 0.00 | 14 de 20 | 98.6 % a 100 % |
+
+Las probabilidades son proporciones del espacio de parámetros supuesto, no predicciones de campo. Con menos niebla hay menos sal y muchas corridas no aplican pulsos, de modo que C1 y C2 quedan sin datos en lugar de refutarse. La menor degradación del control neuro-simbólico se mantiene en todas las muestras. El método y la interpretación están en [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), secciones 8.6 y 8.7.
+
 ### Indicadores informativos y causas de no validación
 
 Cada conjetura informa indicadores adicionales que no intervienen en la validación, y la causa de cada indicador que no cumple (`causas_no_validacion`):
@@ -485,6 +502,7 @@ El análisis completo, las ecuaciones, los parámetros y las tablas de sensibili
 - Los resultados provienen de un modelo simulado, no de mediciones en campo.
 - La eficacia del pulso resistivo (0.90) y los demás parámetros físicos (flujo de niebla, tasas de incrustación, capacidad térmica, consumo y recarga de energía, degradación de la membrana) son supuestos de orden de magnitud pendientes de validación experimental.
 - El estado de las Conjeturas 1 y 2 cambia con la eficacia del pulso, como muestran los análisis de sensibilidad. Medir esa eficacia es la prioridad experimental antes de dar por validada o refutada cualquiera de las dos.
+- El flujo de niebla supuesto es optimista. Calibrado contra la literatura, la Conjetura 3 no se valida en ningún escenario con 85 % de humedad inicial.
 - El clima de referencia usa ciclos diurnos idealizados con ruido gaussiano, y los escenarios repiten sus ventanas de sequía o tormenta cada día simulado.
 - La configuración CORS admite por defecto solo orígenes locales. Para que una página web consuma la API desde el navegador, sus dominios deben agregarse con `AXIOMA_CORS_ORIGINS`.
 - En el plan gratuito de Render, los servicios se suspenden tras 15 minutos sin tráfico y tardan cerca de un minuto en reactivarse.

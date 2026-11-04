@@ -38,19 +38,28 @@ RUTA_EVALUAR = "/api/v1/nodo/evaluar"
 RUTA_SIMULACION = "/api/v1/simulacion/ejecutar"
 RUTA_BARRIDO = "/api/v1/analisis/barrido-salinidad"
 RUTA_SENSIBILIDAD = "/api/v1/analisis/sensibilidad"
+RUTA_INCERTIDUMBRE = "/api/v1/analisis/incertidumbre"
 
 # Una sola semilla mantiene el barrido (12 simulaciones) dentro del tiempo de espera.
 BARRIDO_EJEMPLO = {"humedad_ambiente_inicial_pct": 85.0, "semillas": [42]}
 PUNTOS_BARRIDO = 6
 
 # Ejemplo del esquema SensibilidadConfig en backend/schemas.py.
-SENSIBILIDAD_EJEMPLO = {
+# Condiciones comunes de los ejemplos de sensibilidad e incertidumbre.
+CONDICIONES_ANALISIS = {
     "escenario": "DIA_NORMAL",
     "humedad_ambiente_inicial_pct": 85.0,
     "tasa_salinizacion": "ALTA",
+}
+SENSIBILIDAD_EJEMPLO = {
+    **CONDICIONES_ANALISIS,
     "parametro": "EFICACIA_MAXIMA_PULSO",
     "valores": [0.90, 0.94],
 }
+
+# Ejemplo del esquema IncertidumbreConfig; 5 muestras, el mínimo, para no exceder el tiempo de espera.
+MUESTRAS_INCERTIDUMBRE = 5
+INCERTIDUMBRE_EJEMPLO = {**CONDICIONES_ANALISIS, "n_muestras": MUESTRAS_INCERTIDUMBRE}
 
 # Valores de backend/schemas.py (enum Escenario).
 ESCENARIOS = [
@@ -242,7 +251,9 @@ def probar_documentacion_api(cliente: httpx.Client, api: str) -> str:
     _verificar_codigo(respuesta)
     rutas = respuesta.json()["paths"]
     faltantes = [
-        ruta for ruta in (RUTA_EVALUAR, RUTA_SIMULACION, RUTA_BARRIDO, RUTA_SENSIBILIDAD) if ruta not in rutas
+        ruta
+        for ruta in (RUTA_EVALUAR, RUTA_SIMULACION, RUTA_BARRIDO, RUTA_SENSIBILIDAD, RUTA_INCERTIDUMBRE)
+        if ruta not in rutas
     ]
     _verificar(not faltantes, f"Rutas ausentes en openapi.json: {', '.join(faltantes)}")
     return f"/docs 200; openapi.json con {len(rutas)} rutas"
@@ -365,6 +376,29 @@ def probar_sensibilidad(cliente: httpx.Client, api: str) -> str:
     )
 
 
+@prueba("API: incertidumbre de los parámetros supuestos")
+def probar_incertidumbre(cliente: httpx.Client, api: str) -> str:
+    respuesta = cliente.post(f"{api}{RUTA_INCERTIDUMBRE}", json=INCERTIDUMBRE_EJEMPLO)
+    _verificar_codigo(respuesta)
+    resultado = respuesta.json()
+    muestras = resultado["muestras"]
+    _verificar(
+        len(muestras) == MUESTRAS_INCERTIDUMBRE,
+        f"Se esperaban {MUESTRAS_INCERTIDUMBRE} muestras y llegaron {len(muestras)}",
+    )
+    probabilidades = [resultado[f"probabilidad_c{indice}"] for indice in (1, 2, 3)]
+    _verificar(all(0.0 <= valor <= 1.0 for valor in probabilidades), f"Probabilidades fuera de [0, 1]: {probabilidades}")
+    rendimiento = resultado["rendimiento"]
+    _verificar(
+        rendimiento["p5"] <= rendimiento["p50"] <= rendimiento["p95"],
+        f"Percentiles del rendimiento no ordenados: {rendimiento}",
+    )
+    return (
+        f"{len(muestras)} muestras; P(C1-C3) = " + ", ".join(f"{valor:.2f}" for valor in probabilidades)
+        + f"; rendimiento p50 {rendimiento['p50']:.2f} L/m²/día"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Comprobaciones del dashboard
 # ---------------------------------------------------------------------------
@@ -430,6 +464,7 @@ def ejecutar_pruebas(api: str, dashboard: str, timeout: float) -> List[Resultado
             resultados.append(probar_simulacion(cliente, api, configuracion, f"API: simulación - {escenario}"))
         resultados.append(probar_barrido(cliente, api))
         resultados.append(probar_sensibilidad(cliente, api))
+        resultados.append(probar_incertidumbre(cliente, api))
         resultados.append(probar_salud_dashboard(cliente, dashboard))
         resultados.append(probar_inicio_dashboard(cliente, dashboard))
     resultados.append(probar_integracion_cliente(api))

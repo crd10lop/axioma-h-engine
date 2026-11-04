@@ -623,3 +623,112 @@ def resumen_ejecutivo(resultado: dict) -> list[str]:
         _frase_violaciones(comparativa),
         _frase_conjeturas(resultado),
     ]
+
+
+# ---------------------------------------------------------------------------
+# Incertidumbre de los parámetros supuestos
+# ---------------------------------------------------------------------------
+CLAVE_MUESTRAS = "muestras"
+CLAVE_VALIDADAS = "conjeturas_validadas"
+COLUMNA_ESTADO_C1 = "Estado C1"
+COLUMNAS_INCERTIDUMBRE = [
+    "eficacia",
+    "flujo",
+    "C1",
+    "C2",
+    "C3",
+    COLUMNA_ESTADO_C1,
+    COLUMNA_RECUPERACION,
+    "rendimiento_dia",
+    "reduccion_degradacion",
+]
+ESTADOS_VALIDACION = {True: "Validada", False: "No validada"}
+MUESTRAS_INCERTIDUMBRE_POR_DEFECTO = 20
+# Clave del resumen en la respuesta, etiqueta y unidad de cada indicador.
+INDICADORES_INCERTIDUMBRE = [
+    ("recuperacion", "Recuperación tras pulso", "%"),
+    ("rendimiento", "Rendimiento del neuro-simbólico", "L/m² al día"),
+    ("reduccion_degradacion", "Reducción de la degradación frente al temporizador", "%"),
+]
+
+
+def configuracion_incertidumbre(
+    escenario: str, humedad: float, n_muestras: int = MUESTRAS_INCERTIDUMBRE_POR_DEFECTO, tasa: str = "ALTA"
+) -> dict:
+    """Carga del análisis de incertidumbre con los rangos por defecto de la API."""
+    return {
+        "escenario": escenario,
+        "humedad_ambiente_inicial_pct": float(humedad),
+        "tasa_salinizacion": tasa,
+        "n_muestras": int(n_muestras),
+    }
+
+
+def incertidumbre_a_dataframe(resultado: dict) -> pd.DataFrame:
+    """Una fila por muestra con la eficacia, el flujo, el estado de las conjeturas y sus indicadores."""
+    filas = []
+    for muestra in resultado.get(CLAVE_MUESTRAS, []):
+        validadas = muestra[CLAVE_VALIDADAS]
+        c1 = validadas["conjetura_1_eficiencia"]
+        filas.append(
+            {
+                "eficacia": muestra["eficacia"],
+                "flujo": muestra["flujo"],
+                "C1": c1,
+                "C2": validadas["conjetura_2_autorreparacion"],
+                "C3": validadas["conjetura_3_saber_territorial"],
+                COLUMNA_ESTADO_C1: ESTADOS_VALIDACION[c1],
+                COLUMNA_RECUPERACION: muestra.get("recuperacion_caudal_promedio_pct"),
+                "rendimiento_dia": muestra.get("rendimiento_l_m2_dia"),
+                "reduccion_degradacion": muestra.get("reduccion_degradacion_pct"),
+            }
+        )
+    return pd.DataFrame(filas, columns=COLUMNAS_INCERTIDUMBRE)
+
+
+def probabilidades_incertidumbre(resultado: dict) -> pd.DataFrame:
+    """Tabla con la probabilidad de validar cada conjetura y el número de muestras validadas."""
+    muestras = resultado.get(CLAVE_MUESTRAS, [])
+    filas = [
+        {
+            "Conjetura": nombre,
+            "Probabilidad": resultado[f"probabilidad_c{indice}"],
+            "Muestras validadas": sum(muestra[CLAVE_VALIDADAS][clave] for muestra in muestras),
+        }
+        for indice, (clave, nombre) in enumerate(NOMBRES_CONJETURA.items(), start=1)
+    ]
+    return pd.DataFrame(filas, columns=["Conjetura", "Probabilidad", "Muestras validadas"])
+
+
+def _frase_rango(resumen: dict, etiqueta: str, unidad: str, total: int) -> str:
+    """Rango entre los percentiles 5 y 95 de un indicador, o aviso si ninguna muestra tiene datos."""
+    if not resumen.get("n_validos"):
+        return f"{etiqueta}: ninguna muestra tiene datos."
+    return (
+        f"{etiqueta}: de {resumen['p5']:.2f} a {resumen['p95']:.2f} {unidad} entre los percentiles 5 y 95 "
+        f"(mediana {resumen['p50']:.2f}; {resumen['n_validos']} de {total} muestras con datos)."
+    )
+
+
+def lectura_incertidumbre(resultado: dict) -> list[str]:
+    """Frases sobre la probabilidad de validar cada conjetura y el rango p5 a p95 de los indicadores."""
+    muestras = resultado.get(CLAVE_MUESTRAS, [])
+    if not muestras:
+        return ["El análisis no devolvió muestras."]
+    total = len(muestras)
+    frases = [
+        f"{fila['Conjetura']}: se valida en {fila['Muestras validadas']} de {total} muestras "
+        f"(probabilidad {fila['Probabilidad']:.2f})."
+        for fila in probabilidades_incertidumbre(resultado).to_dict("records")
+    ]
+    frases.extend(
+        _frase_rango(resultado[clave], etiqueta, unidad, total) for clave, etiqueta, unidad in INDICADORES_INCERTIDUMBRE
+    )
+    sin_pulsos = total - resultado["recuperacion"]["n_validos"]
+    if sin_pulsos:
+        frases.append(
+            f"En {sin_pulsos} de {total} muestras el neuro-simbólico no aplicó pulsos: sin pulsos no hay "
+            "recuperación ni tiempo de regeneración que medir, y las Conjeturas 1 y 2 no se validan por "
+            "falta de datos, no por un mal resultado."
+        )
+    return frases

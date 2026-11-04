@@ -85,7 +85,7 @@ pytest --cov --cov-report=term-missing
 
 ## Deployment
 
-The API and the dashboard are deployed on **Render** (free plan) as two web services defined in `render.yaml` and built from the `main` branch. Each push to `main` runs the CI workflow (tests, coverage and SonarQube Cloud analysis), and Render deploys both services only when all checks pass. The automated verification script (`python scripts/verificar_despliegue.py`) runs 21 checks against the published services; the latest recorded run is in section 4.3 of docs/05. Details are in [docs/05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md) (in Spanish).
+The API and the dashboard are deployed on **Render** (free plan) as two web services defined in `render.yaml` and built from the `main` branch. Each push to `main` runs the CI workflow (tests, coverage and SonarQube Cloud analysis), and Render deploys both services only when all checks pass. The automated verification script (`python scripts/verificar_despliegue.py`) runs 22 checks against the published services; the latest recorded run is in section 4.3 of docs/05. Details are in [docs/05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md) (in Spanish).
 
 ## Results
 
@@ -133,6 +133,12 @@ A reference timer with the same 0.33 cap separates the two causes of the water g
 | Normal day, humidity 85 % | 254.6 | 340.4 | 266.1 | 86.6 % |
 
 Across the five scenarios, the cap explains 69.8 % to 89.8 % of the gap with 45 % initial humidity and 76.2 % to 90.8 % with 85 %. The lower yield of the neuro-symbolic control is mostly the cost of the ecological limit, not of the control logic.
+
+### Fog flux calibration and parameter uncertainty
+
+The assumed fog flux (6.0 L/m²/h) yields 31.8 L/m² per day on a normal day with 85 % humidity, versus 3 to 10 L/m² per day in operational projects (Klemm et al., 2012). An inverse calibration by bisection finds the fluxes that reproduce that range: 0.49 to 1.83 L/m²/h. The model default does not change; the calibrated range is used only in the uncertainty analysis. With the calibrated flux, C3 is not validated on a normal day with 85 % humidity.
+
+`POST /api/v1/analisis/incertidumbre` samples pulse efficacy (0.80 to 1.00) and the calibrated flux together. With 20 samples, 85 % initial humidity and a high salinization rate, the probability of validating C1 ranges from 0.00 to 0.15, C2 from 0.00 to 0.10 and C3 is 0.00 in all five scenarios. With less fog there is less salt and many runs apply no pulse, so C1 and C2 lack data rather than being refuted. The lower membrane degradation of the neuro-symbolic control holds across all samples (95.7 % to 100 % reduction between the 5th and 95th percentiles). Details are in docs/04, sections 8.6 and 8.7.
 
 ### Estimated community impact
 

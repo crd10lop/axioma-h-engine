@@ -150,6 +150,16 @@ def _condiciones_nodos(
     return humedad_paso, matriz_paso
 
 
+def crear_generador(semilla: int) -> random.Random:
+    """Generador pseudoaleatorio determinista con la semilla dada.
+
+    Es el único punto del proyecto que instancia un generador: lo usan el
+    entorno de la simulación y el muestreo del análisis de incertidumbre. Se
+    trata de una simulación determinista con semilla, sin uso criptográfico.
+    """
+    return random.Random(semilla)
+
+
 def generar_entorno(cfg: SimulationConfig) -> Entorno:
     """Genera las condiciones ambientales de la simulación.
 
@@ -158,7 +168,7 @@ def generar_entorno(cfg: SimulationConfig) -> Entorno:
     y la matriz se calienta con la radiación solar. Cada nodo recibe un
     desfase fijo y ruido gaussiano por paso.
     """
-    rng = random.Random(cfg.semilla)
+    rng = crear_generador(cfg.semilla)
     paso = cfg.paso_minutos
     numero_pasos = (cfg.duracion_horas * 60) // paso
     escenario = cfg.escenario

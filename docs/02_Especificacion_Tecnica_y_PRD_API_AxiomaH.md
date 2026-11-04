@@ -200,7 +200,44 @@ Todos los campos son opcionales. `semillas` admite de 1 a 5 valores sin repetir;
 }
 ```
 
-Los valores de ambos ejemplos son los que calcula el modelo y coinciden con `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md`, secciones 5.6, 5.7 y 7.3. Una configuración inválida (semillas repetidas, más de 5 semillas, eficacia igual a 0 o mayor que 1) devuelve `422`.
+#### Propagación de la incertidumbre
+* **Ruta:** `POST /api/v1/analisis/incertidumbre`
+* **Descripción:** Muestrea a la vez la eficacia máxima del pulso y el flujo máximo de niebla con distribución uniforme, simula una corrida por muestra y entrega la proporción de muestras que validan cada conjetura y los percentiles 5, 50 y 95 de la recuperación tras pulso, el rendimiento del neuro-simbólico en L/m²/día y la reducción de la degradación. Los percentiles ignoran las muestras sin datos, por ejemplo las corridas sin pulsos. La regla de validación y los valores por defecto del modelo no cambian.
+
+##### Request Payload (`IncertidumbreConfig`):
+`escenario`, `humedad_ambiente_inicial_pct` y `tasa_salinizacion` son obligatorios. Son opcionales `duracion_horas` (24), `semilla` del entorno (42), `semilla_muestreo` (7), `n_muestras` (20, de 5 a 30) y los rangos `eficacia_min` y `eficacia_max` (0.80 y 1.00, en (0, 1]) y `flujo_min` y `flujo_max` (0.49 y 1.83 L/m²/h, en (0, 20]). El mínimo de cada rango debe ser menor que el máximo.
+```json
+{
+  "escenario": "INCRUSTACION_SALINA_RAPIDA",
+  "humedad_ambiente_inicial_pct": 85.0,
+  "tasa_salinizacion": "ALTA",
+  "n_muestras": 5
+}
+```
+
+##### Response Payload (`IncertidumbreResultado`), primera muestra de cinco:
+```json
+{
+  "probabilidad_c1": 0.0,
+  "probabilidad_c2": 0.0,
+  "probabilidad_c3": 0.0,
+  "recuperacion": {"p5": 85.8929, "p50": 87.7029, "p95": 89.7203, "n_validos": 5},
+  "rendimiento": {"p5": 3.3393, "p50": 5.2756, "p95": 6.1043, "n_validos": 5},
+  "reduccion_degradacion": {"p5": 96.8126, "p50": 97.7061, "p95": 98.9134, "n_validos": 5},
+  "muestras": [
+    {
+      "eficacia": 0.8648,
+      "flujo": 0.6921,
+      "conjeturas_validadas": {"conjetura_1_eficiencia": false, "conjetura_2_autorreparacion": false, "conjetura_3_saber_territorial": false},
+      "recuperacion_caudal_promedio_pct": 87.7029,
+      "rendimiento_l_m2_dia": 3.7478,
+      "reduccion_degradacion_pct": 98.4305
+    }
+  ]
+}
+```
+
+Los valores de los ejemplos son los que calcula el modelo y coinciden con `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md`, secciones 5.6, 5.7, 7.3 y 8.7. Una configuración inválida (semillas repetidas, más de 5 semillas, eficacia igual a 0 o mayor que 1, flujo fuera de (0, 20], rangos invertidos o un número de muestras fuera de 5 a 30) devuelve `422`.
 
 ---
 
@@ -263,7 +300,7 @@ La API y el dashboard están implementados en `backend/` (FastAPI) y `frontend/`
 - **Campos opcionales en la solicitud.** `SimulationConfig` admite `numero_nodos` (por defecto 8), `paso_minutos` (por defecto 5) y `semilla` (por defecto 42). El payload de la sección 3.2 sigue siendo válido sin cambios.
 - **Temperatura objetivo del pulso.** Es 44.0 °C. Con 45.0 °C el pulso activaría el corte térmico de la REGLA_01 (`>= 45.0`). El ejemplo de la sección 3.1 se actualizó en consecuencia.
 - **Orden de evaluación.** La REGLA_04 se evalúa antes que la REGLA_03, porque ambas comparten la condición de impedancia alta. El caudal se expresa como porcentaje del tope ecológico del 33 %.
-- **Escenarios y endpoints adicionales.** El simulador incluye el escenario `TORMENTA_DE_SAL_Y_CALOR_EXTREMO`, además de los cuatro de la sección 5. La API expone también `GET /` y `GET /api/v1/health`, y los endpoints de análisis de robustez de la sección 3.3 (`POST /api/v1/analisis/barrido-salinidad` y `POST /api/v1/analisis/sensibilidad`).
+- **Escenarios y endpoints adicionales.** El simulador incluye el escenario `TORMENTA_DE_SAL_Y_CALOR_EXTREMO`, además de los cuatro de la sección 5. La API expone también `GET /` y `GET /api/v1/health`, y los endpoints de análisis de robustez de la sección 3.3 (`POST /api/v1/analisis/barrido-salinidad`, `POST /api/v1/analisis/sensibilidad` y `POST /api/v1/analisis/incertidumbre`). El de incertidumbre usa por defecto un rango de flujo de niebla calibrado contra la literatura (0.49 a 1.83 L/m²/h); el valor por defecto del modelo sigue siendo 6.0 L/m²/h.
 - **Dashboard.** Los cuatro elementos de la sección 5 están implementados. El panel de telemetría, con las cuatro tarjetas y sus barras de nivel, está en la vista "Evaluación manual de nodo". El selector de escenarios, la consola de decisiones y los gráficos comparativos están en la vista "Simulación comparativa", que incluye además el escenario `TORMENTA_DE_SAL_Y_CALOR_EXTREMO`. El dashboard agrega dos vistas que la especificación no pedía: "Investigación y guía", con la pregunta, las conjeturas, las reglas y las perspectivas del estudio, y "Respuesta a la pregunta", que consume los endpoints de la sección 3.3. La descripción de cada vista está en `docs/03_Funcionamiento_General_AxiomaH.md`, sección 5.
 - **Valores de ejemplo.** Los valores numéricos de la respuesta de ejemplo de la sección 3.2 son ilustrativos. Los resultados calculados por el modelo para ese payload están en `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md`, sección 5.1.
 - **Despliegue.** La API y el dashboard están desplegados en Render, en el plan gratuito, como los servicios web `axioma-h-api` (https://axioma-h-api.onrender.com) y `axioma-h-dashboard` (https://axioma-h-dashboard.onrender.com), definidos en `render.yaml`. Render despliega desde `main` solo cuando las pruebas y la Quality Gate de SonarQube Cloud están en verde. El dashboard obtiene la URL de la API de la variable `AXIOMA_API_URL`; los orígenes CORS adicionales se configuran con `AXIOMA_CORS_ORIGINS`. La configuración, la verificación y la operación están en `docs/05_Despliegue_y_Operacion_AxiomaH.md`.

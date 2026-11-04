@@ -220,6 +220,13 @@ def test_ejecutar_simulacion_escenario_invalido_devuelve_422():
 # ---------------------------------------------------------------------------
 RUTA_BARRIDO = "/api/v1/analisis/barrido-salinidad"
 RUTA_SENSIBILIDAD = "/api/v1/analisis/sensibilidad"
+RUTA_INCERTIDUMBRE = "/api/v1/analisis/incertidumbre"
+PAYLOAD_INCERTIDUMBRE = {
+    "escenario": "INCRUSTACION_SALINA_RAPIDA",
+    "humedad_ambiente_inicial_pct": 85.0,
+    "tasa_salinizacion": "ALTA",
+    "n_muestras": 5,
+}
 PAYLOAD_SENSIBILIDAD = {
     "escenario": "DIA_NORMAL",
     "humedad_ambiente_inicial_pct": 85.0,
@@ -263,3 +270,27 @@ def test_endpoints_de_analisis_publicados_en_openapi():
     rutas = cliente.get("/openapi.json").json()["paths"]
     assert RUTA_BARRIDO in rutas
     assert RUTA_SENSIBILIDAD in rutas
+    assert RUTA_INCERTIDUMBRE in rutas
+
+
+def test_incertidumbre():
+    respuesta = cliente.post(RUTA_INCERTIDUMBRE, json=PAYLOAD_INCERTIDUMBRE)
+    assert respuesta.status_code == 200
+    datos = respuesta.json()
+    assert len(datos["muestras"]) == 5
+    assert 0.0 <= datos["probabilidad_c1"] <= 1.0
+    assert set(datos["recuperacion"]) == {"p5", "p50", "p95", "n_validos"}
+
+
+@pytest.mark.parametrize(
+    "cambios",
+    [
+        {"n_muestras": 2},
+        {"eficacia_min": 0.95, "eficacia_max": 0.90},
+        {"flujo_min": 0.0},
+        {"flujo_max": 25.0},
+        {"eficacia_max": 1.5},
+    ],
+)
+def test_incertidumbre_rechaza_configuracion_invalida(cambios):
+    assert cliente.post(RUTA_INCERTIDUMBRE, json={**PAYLOAD_INCERTIDUMBRE, **cambios}).status_code == 422

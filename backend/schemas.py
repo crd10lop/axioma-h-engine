@@ -11,6 +11,8 @@ from typing import Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from backend import config
+
 
 class ModoOperacion(str, Enum):
     """Estrategia de control aplicada al nodo."""
@@ -497,3 +499,100 @@ class SensibilidadResultado(BaseModel):
 
     parametro: ParametroSensible
     puntos: List[PuntoSensibilidad]
+
+
+# ---------------------------------------------------------------------------
+# Propagación de la incertidumbre de los parámetros supuestos
+# ---------------------------------------------------------------------------
+MINIMO_MUESTRAS = 5
+MAXIMO_MUESTRAS = 30
+_EFICACIA_ADMITIDA = "Eficacia máxima del pulso, en (0, 1]."
+_FLUJO_ADMITIDO = "Flujo máximo de niebla en L/m²/h, en (0, 20]."
+
+
+class IncertidumbreConfig(BaseModel):
+    """Parámetros de la propagación de la incertidumbre de la eficacia del pulso y del flujo de niebla.
+
+    Cada muestra toma una eficacia y un flujo con distribución uniforme en los
+    rangos indicados y simula una corrida con esos valores. Los rangos por
+    defecto son los de `backend/config.py`: eficacia de 0.80 a 1.00 (supuesto)
+    y flujo de 0.49 a 1.83 L/m²/h (calibración inversa contra la literatura).
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "escenario": "DIA_NORMAL",
+                    "humedad_ambiente_inicial_pct": 85.0,
+                    "tasa_salinizacion": "ALTA",
+                    "n_muestras": 20,
+                }
+            ]
+        }
+    )
+
+    escenario: Escenario = Field(..., description="Escenario ambiental.")
+    humedad_ambiente_inicial_pct: float = Field(
+        ..., ge=0, le=100, description="Humedad relativa al inicio de la simulación (18:00 hora local)."
+    )
+    tasa_salinizacion: TasaSalinizacion = Field(..., description="Velocidad de incrustación salina.")
+    duracion_horas: int = Field(default=24, ge=1, le=72, description="Horas simuladas en cada corrida.")
+    semilla: int = Field(default=42, description="Semilla del entorno; es la misma en todas las muestras.")
+    semilla_muestreo: int = Field(default=7, description="Semilla del muestreo de los parámetros.")
+    n_muestras: int = Field(
+        default=20, ge=MINIMO_MUESTRAS, le=MAXIMO_MUESTRAS, description="Número de muestras simuladas."
+    )
+    eficacia_min: float = Field(default=config.EFICACIA_PULSO_RANGO_MIN, gt=0, le=1, description=_EFICACIA_ADMITIDA)
+    eficacia_max: float = Field(default=config.EFICACIA_PULSO_RANGO_MAX, gt=0, le=1, description=_EFICACIA_ADMITIDA)
+    flujo_min: float = Field(default=config.FLUJO_NIEBLA_CALIBRADO_MIN_L_M2_H, gt=0, le=20, description=_FLUJO_ADMITIDO)
+    flujo_max: float = Field(default=config.FLUJO_NIEBLA_CALIBRADO_MAX_L_M2_H, gt=0, le=20, description=_FLUJO_ADMITIDO)
+
+    @model_validator(mode="after")
+    def _rangos_ordenados(self) -> "IncertidumbreConfig":
+        """Rechaza rangos vacíos o invertidos: el mínimo debe ser menor que el máximo."""
+        if self.eficacia_min >= self.eficacia_max:
+            raise ValueError("eficacia_min debe ser menor que eficacia_max.")
+        if self.flujo_min >= self.flujo_max:
+            raise ValueError("flujo_min debe ser menor que flujo_max.")
+        return self
+
+
+class MuestraIncertidumbre(BaseModel):
+    """Resultado de una corrida con una muestra de los parámetros supuestos."""
+
+    eficacia: float = Field(..., description="Eficacia máxima del pulso de la muestra.")
+    flujo: float = Field(..., description="Flujo máximo de niebla de la muestra en L/m²/h.")
+    conjeturas_validadas: ConjeturasValidadas
+    recuperacion_caudal_promedio_pct: float | None = Field(
+        default=None, description="Indicador de la Conjetura 1; nulo sin pulsos."
+    )
+    rendimiento_l_m2_dia: float | None = Field(
+        default=None, description="Agua del modo neuro-simbólico por día y por m² de colector."
+    )
+    reduccion_degradacion_pct: float | None = Field(
+        default=None, description="Reducción de la degradación frente al temporizador (%); informativo."
+    )
+
+
+class ResumenDistribucion(BaseModel):
+    """Percentiles 5, 50 y 95 de un indicador entre las muestras con datos."""
+
+    p5: float | None = Field(default=None, description="Percentil 5; nulo si ninguna muestra tiene datos.")
+    p50: float | None = Field(default=None, description="Mediana; nula si ninguna muestra tiene datos.")
+    p95: float | None = Field(default=None, description="Percentil 95; nulo si ninguna muestra tiene datos.")
+    n_validos: int = Field(..., ge=0, description="Muestras con datos para el indicador.")
+
+
+class IncertidumbreResultado(BaseModel):
+    """Probabilidad de validar cada conjetura y dispersión de los indicadores entre las muestras."""
+
+    probabilidad_c1: float = Field(..., ge=0, le=1, description="Proporción de muestras que validan la Conjetura 1.")
+    probabilidad_c2: float = Field(..., ge=0, le=1, description="Proporción de muestras que validan la Conjetura 2.")
+    probabilidad_c3: float = Field(..., ge=0, le=1, description="Proporción de muestras que validan la Conjetura 3.")
+    recuperacion: ResumenDistribucion = Field(..., description="Recuperación de caudal tras pulso (%).")
+    rendimiento: ResumenDistribucion = Field(..., description="Rendimiento del neuro-simbólico (L/m²/día).")
+    reduccion_degradacion: ResumenDistribucion = Field(
+        ..., description="Reducción de la degradación frente al temporizador (%)."
+    )
+    muestras: list[MuestraIncertidumbre] = Field(..., description="Muestras en el orden en que se generaron.")

@@ -113,10 +113,14 @@ CASOS_DEMO = {
     },
 }
 RETARDO_REPRODUCCION_SEG = {"Lenta": 0.5, "Media": 0.2, "Rápida": 0.08, "Muy rápida": 0.02}
+COLOR_NEURO = "#1f6f8b"
+COLOR_TEMPORIZADOR = "#c27c0e"
 COLORES_MODO = alt.Scale(
     domain=[tr.NOMBRES_MODO["neuro"], tr.NOMBRES_MODO["temporizador"]],
-    range=["#1f6f8b", "#c27c0e"],
+    range=[COLOR_NEURO, COLOR_TEMPORIZADOR],
 )
+ESCENARIO_INICIAL = "DIA_NORMAL"
+ETIQUETA_HUMEDAD = "Humedad inicial (%)"
 COLOR_REFERENCIA = "#a93226"
 CAMPO_MODO = "Modo:N"
 COLUMNA_METRICA = "Métrica"
@@ -146,7 +150,10 @@ def inicializar_estado() -> None:
         "resp_humedad": 85.0,
         "resp_semillas": 1,
         "sens_parametro": "EFICACIA_MAXIMA_PULSO",
-        "sens_escenario": "DIA_NORMAL",
+        "sens_escenario": ESCENARIO_INICIAL,
+        "inc_escenario": ESCENARIO_INICIAL,
+        "inc_humedad": 85.0,
+        "inc_muestras": tr.MUESTRAS_INCERTIDUMBRE_POR_DEFECTO,
     }
     widgets.update({CONTROLES[campo]: valor for campo, valor in TELEMETRIA_PRD.items()})
     for clave, valor in widgets.items():
@@ -166,6 +173,8 @@ def inicializar_estado() -> None:
         "error_barrido": None,
         "resultado_sensibilidad": None,
         "error_sensibilidad": None,
+        "resultado_incertidumbre": None,
+        "error_incertidumbre": None,
     }
     for clave, valor in valores.items():
         st.session_state.setdefault(clave, valor)
@@ -189,6 +198,12 @@ def barrido_en_cache(carga: dict) -> dict:
 def sensibilidad_en_cache(carga: dict) -> dict:
     """Ejecuta el análisis de sensibilidad, o devuelve la respuesta guardada para la misma carga."""
     return cliente_api.ejecutar_sensibilidad(carga)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def incertidumbre_en_cache(carga: dict) -> dict:
+    """Ejecuta la propagación de la incertidumbre, o devuelve la respuesta guardada para la misma carga."""
+    return cliente_api.ejecutar_incertidumbre(carga)
 
 
 def formatear_duracion(segundos: float) -> str:
@@ -806,7 +821,7 @@ def vista_simulacion(api_disponible: bool) -> None:
     with st.expander("Parámetros de simulación"):
         columnas = st.columns(5)
         duracion = columnas[0].slider("Duración (h)", 1, 72, key="sim_duracion")
-        humedad = columnas[1].slider("Humedad inicial (%)", 0.0, 100.0, step=0.5, key="sim_humedad")
+        humedad = columnas[1].slider(ETIQUETA_HUMEDAD, 0.0, 100.0, step=0.5, key="sim_humedad")
         tasa = columnas[2].selectbox("Tasa de salinización", ["BAJA", "MEDIA", "ALTA"], key="sim_tasa")
         nodos = columnas[3].slider("Número de nodos", 1, 8, key="sim_nodos")
         semilla = columnas[4].number_input("Semilla", step=1, key="sim_semilla")
@@ -890,7 +905,7 @@ def seccion_barrido(api_disponible: bool) -> None:
     """Barrido de salinidad con varias semillas: gráficos de recuperación y degradación y su lectura."""
     st.subheader("Barrido de salinidad")
     columnas = st.columns(3)
-    humedad = columnas[0].slider("Humedad inicial (%)", 0.0, 100.0, step=0.5, key="resp_humedad")
+    humedad = columnas[0].slider(ETIQUETA_HUMEDAD, 0.0, 100.0, step=0.5, key="resp_humedad")
     semillas = columnas[1].slider(
         "Número de semillas", 1, tr.MAXIMO_SEMILLAS, key="resp_semillas",
         help="Se usan semillas consecutivas desde 1. Cada semilla genera un clima de referencia distinto.",
@@ -948,7 +963,7 @@ def seccion_sensibilidad(api_disponible: bool) -> None:
     columna, etiqueta, umbral = tr.INDICADOR_SENSIBILIDAD[parametro_resultado]
     lineas = (
         alt.Chart(df)
-        .mark_line(point=True, color="#1f6f8b")
+        .mark_line(point=True, color=COLOR_NEURO)
         .encode(
             x=alt.X(f"{tr.COLUMNA_VALOR}:Q", title=tr.NOMBRES_PARAMETRO[parametro_resultado], scale=alt.Scale(zero=False)),
             y=alt.Y(f"{columna}:Q", title=etiqueta, scale=alt.Scale(zero=False)),
@@ -962,14 +977,75 @@ def seccion_sensibilidad(api_disponible: bool) -> None:
     st.dataframe(df.rename(columns=tr.ETIQUETAS_SENSIBILIDAD), hide_index=True, width="stretch")
 
 
+def grafico_incertidumbre(df: pd.DataFrame):
+    """Dispersión de las muestras: eficacia del pulso frente a flujo de niebla, coloreada por la validación de C1."""
+    return (
+        alt.Chart(df)
+        .mark_circle(size=90, opacity=0.85)
+        .encode(
+            x=alt.X("eficacia:Q", title="Eficacia máxima del pulso", scale=alt.Scale(zero=False)),
+            y=alt.Y("flujo:Q", title="Flujo máximo de niebla (L/m²/h)", scale=alt.Scale(zero=False)),
+            color=alt.Color(
+                f"{tr.COLUMNA_ESTADO_C1}:N",
+                title="Conjetura 1",
+                scale=alt.Scale(domain=list(tr.ESTADOS_VALIDACION.values())[::-1], range=[COLOR_NEURO, COLOR_TEMPORIZADOR]),
+                legend=alt.Legend(orient="bottom"),
+            ),
+            tooltip=[
+                alt.Tooltip("eficacia:Q", title="Eficacia", format=".3f"),
+                alt.Tooltip("flujo:Q", title="Flujo", format=".3f"),
+                alt.Tooltip(f"{tr.COLUMNA_RECUPERACION}:Q", title="Recuperación (%)", format=".2f"),
+                alt.Tooltip("rendimiento_dia:Q", title="Rendimiento (L/m²/día)", format=".2f"),
+            ],
+        )
+        .properties(title="Muestras de los parámetros supuestos", height=320)
+    )
+
+
+def seccion_incertidumbre(api_disponible: bool) -> None:
+    """Propagación de la incertidumbre de la eficacia del pulso y del flujo de niebla."""
+    st.subheader("Incertidumbre de los parámetros supuestos")
+    st.caption(
+        "Cada muestra toma una eficacia del pulso entre 0.80 y 1.00 y un flujo de niebla entre 0.49 y "
+        "1.83 L/m²/h (calibrado contra el rendimiento de 3 a 10 L/m² al día de la literatura), con "
+        "distribución uniforme, y simula 24 h con tasa de salinización ALTA."
+    )
+    columnas = st.columns(4)
+    escenario = columnas[0].selectbox("Escenario", list(ESCENARIOS), format_func=ESCENARIOS.get, key="inc_escenario")
+    humedad = columnas[1].slider(ETIQUETA_HUMEDAD, 0.0, 100.0, step=0.5, key="inc_humedad")
+    muestras = columnas[2].slider("Número de muestras", 5, 30, key="inc_muestras")
+    columnas[3].write("")
+    if columnas[3].button("Ejecutar incertidumbre", disabled=not api_disponible, width="stretch"):
+        carga = tr.configuracion_incertidumbre(escenario, humedad, muestras)
+        ejecutar_analisis(incertidumbre_en_cache, carga, "incertidumbre", "Propagando la incertidumbre...")
+    st.caption(contenido.AVISO_EXPLORATORIO)
+    if st.session_state.error_incertidumbre is not None:
+        mostrar_error(st.session_state.error_incertidumbre)
+    resultado = st.session_state.resultado_incertidumbre
+    if resultado is None:
+        st.info("Ejecute el análisis para estimar la probabilidad de validar cada conjetura.")
+        return
+
+    graficos = st.columns([3, 2])
+    graficos[0].altair_chart(grafico_incertidumbre(tr.incertidumbre_a_dataframe(resultado)), width="stretch")
+    graficos[1].dataframe(
+        tr.probabilidades_incertidumbre(resultado),
+        hide_index=True,
+        width="stretch",
+        column_config={"Probabilidad": st.column_config.NumberColumn(format="%.2f")},
+    )
+    st.markdown(contenido.lista_markdown(tr.lectura_incertidumbre(resultado)))
+
+
 def vista_respuesta(api_disponible: bool) -> None:
-    """Respuesta a la pregunta de investigación con el barrido de salinidad y la sensibilidad."""
+    """Respuesta a la pregunta de investigación con el barrido, la sensibilidad y la incertidumbre."""
     st.header(VISTA_RESPUESTA)
     st.info(contenido.PREGUNTA_INVESTIGACION)
     st.markdown(f"**Hipótesis de trabajo.** {contenido.HIPOTESIS}")
     st.warning(contenido.AVISO_EXPLORATORIO)
     seccion_barrido(api_disponible)
     seccion_sensibilidad(api_disponible)
+    seccion_incertidumbre(api_disponible)
 
 
 # ---------------------------------------------------------------------------

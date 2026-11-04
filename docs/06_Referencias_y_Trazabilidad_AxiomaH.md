@@ -23,7 +23,7 @@ Las licencias se obtuvieron de los metadatos de cada paquete instalado en el ent
 
 | Referencia | Uso en el proyecto |
 |---|---|
-| Klemm, O., Schemenauer, R. S., Lummerich, A., et al. (2012). Fog as a fresh-water resource: overview and perspectives. *Ambio*, 41, 221-234. https://doi.org/10.1007/s13280-012-0247-8 | Los proyectos operativos de captación de niebla reportan promedios anuales típicos de 3 a 10 L por m² de malla al día. Se usa para contrastar el flujo de niebla supuesto por el modelo y el umbral de rendimiento de la Conjetura 3 (sección 4), y como rango de rendimiento real en el impacto comunitario (`RENDIMIENTO_LITERATURA_MIN_L_M2_DIA` y `RENDIMIENTO_LITERATURA_MAX_L_M2_DIA`). |
+| Klemm, O., Schemenauer, R. S., Lummerich, A., et al. (2012). Fog as a fresh-water resource: overview and perspectives. *Ambio*, 41, 221-234. https://doi.org/10.1007/s13280-012-0247-8 | Los proyectos operativos de captación de niebla reportan promedios anuales típicos de 3 a 10 L por m² de malla al día. Se usa para contrastar el flujo de niebla supuesto por el modelo y el umbral de rendimiento de la Conjetura 3 (sección 4), como rango de rendimiento real en el impacto comunitario (`RENDIMIENTO_LITERATURA_MIN_L_M2_DIA` y `RENDIMIENTO_LITERATURA_MAX_L_M2_DIA`) y como objetivo de la calibración inversa del flujo de niebla (`FLUJO_NIEBLA_CALIBRADO_MIN_L_M2_H` y `FLUJO_NIEBLA_CALIBRADO_MAX_L_M2_H`). |
 | Howard, G., Bartram, J., Williams, A., Overbo, A., Fuente, D. y Geere, J.-A. (2020). *Domestic water quantity, service level and health* (2.ª ed.). Organización Mundial de la Salud. https://www.who.int/publications/i/item/9789240015241 | Acceso básico de unos 20 L por persona al día. Se usa para estimar las personas abastecidas en el impacto comunitario (`CONSUMO_ACCESO_BASICO_L_PERSONA_DIA`; documento 04, sección 7.6). |
 | Sphere Association (2018). *The Sphere Handbook: Humanitarian Charter and Minimum Standards in Humanitarian Response* (4.ª ed.), estándar 2.1 de abastecimiento de agua. https://spherestandards.org | Mínimo de 15 L por persona al día. Se usa para estimar las personas abastecidas con el mínimo humanitario en el impacto comunitario (`CONSUMO_SUPERVIVENCIA_L_PERSONA_DIA`; documento 04, sección 7.6). |
 
@@ -36,6 +36,7 @@ La tabla recorre todas las constantes de `backend/config.py` en el orden del arc
 - **Criterio del equipo:** decisión documentada en [04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md).
 - **Supuesto:** estimación de orden de magnitud del modelo, pendiente de calibración con datos de campo.
 - **Referencia:** valor tomado de una de las fuentes de la sección 2.
+- **Calibración:** valor obtenido con el modelo para reproducir una cifra de una fuente de la sección 2.
 
 | Constante | Valor | Origen | Fuente |
 |---|---|---|---|
@@ -112,6 +113,10 @@ La tabla recorre todas las constantes de `backend/config.py` en el orden del arc
 | `CONSUMO_ACCESO_BASICO_L_PERSONA_DIA` | 20.0 L/persona/día | Referencia | OMS, Howard et al. (2020), acceso básico. Indicador informativo de impacto comunitario |
 | `RENDIMIENTO_LITERATURA_MIN_L_M2_DIA` | 3.0 L/m²/día | Referencia | Klemm et al. (2012). Indicador informativo de impacto comunitario |
 | `RENDIMIENTO_LITERATURA_MAX_L_M2_DIA` | 10.0 L/m²/día | Referencia | Klemm et al. (2012). Indicador informativo de impacto comunitario |
+| `FLUJO_NIEBLA_CALIBRADO_MIN_L_M2_H` | 0.49 L/m²/h | Calibración | Calibración inversa: rendimiento de 3 L/m²/día de Klemm et al. (2012), DIA_NORMAL, 85 %, semilla 42 (documento 04, sección 8.6). Solo se usa en el análisis de incertidumbre |
+| `FLUJO_NIEBLA_CALIBRADO_MAX_L_M2_H` | 1.83 L/m²/h | Calibración | Calibración inversa: rendimiento de 10 L/m²/día de Klemm et al. (2012), DIA_NORMAL, 85 %, semilla 42 (documento 04, sección 8.6). Solo se usa en el análisis de incertidumbre |
+| `EFICACIA_PULSO_RANGO_MIN` | 0.80 | Supuesto | Rango plausible alrededor de 0.90, pendiente de medición. Solo se usa en el análisis de incertidumbre (documento 04, sección 8.7) |
+| `EFICACIA_PULSO_RANGO_MAX` | 1.00 | Supuesto | Rango plausible alrededor de 0.90, pendiente de medición. Solo se usa en el análisis de incertidumbre (documento 04, sección 8.7) |
 
 `FRACCION_EXTRACCION_TEMPORIZADOR`, `INTERVALO_PULSO_TEMPORIZADOR_MIN` e `INCREMENTO_TERMICO_TEMPORIZADOR_C` se describen en config.py como "Especificación del simulador": definen el control tradicional de comparación y no provienen de una fuente externa.
 
@@ -126,4 +131,4 @@ La comparación es de orden de magnitud: la literatura se refiere a colectores d
 - `FLUJO_NIEBLA_MAXIMO_L_M2_H = 6.0` es un supuesto optimista. Con humedad inicial de 45 %, el rendimiento nocturno del modelo (5.95 L/m²/noche en la corrida de referencia del PRD, documento 04, sección 5.1) sí queda dentro del rango reportado.
 - El umbral de 12 L/m²/noche de la Conjetura 3 (`RENDIMIENTO_MINIMO_L_M2_NOCHE`) supera el rango típico de operación de 3 a 10 L/m²/día. La validación de la Conjetura 3 con humedad inicial de 85 % depende, por tanto, de un flujo de niebla mayor que el observado en proyectos reales.
 
-La calibración del flujo con mediciones en Cabo de la Vela queda como pregunta para el Ciclo 3 ([04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 8.3).
+Una calibración inversa contra el rango de Klemm et al. (2012) da un flujo de 0.49 a 1.83 L/m²/h, entre 3.3 y 12 veces menor que el supuesto; con él, la Conjetura 3 no se valida en DIA_NORMAL con humedad inicial de 85 % ([04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 8.6). El valor por defecto del modelo no cambia (decisión D5). La calibración del flujo con mediciones en Cabo de la Vela queda como pregunta para el Ciclo 3 ([04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 8.3).

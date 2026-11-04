@@ -170,6 +170,7 @@ def test_api_url_se_toma_del_entorno(monkeypatch):
     [
         (cliente_api.ejecutar_barrido, "/api/v1/analisis/barrido-salinidad"),
         (cliente_api.ejecutar_sensibilidad, "/api/v1/analisis/sensibilidad"),
+        (cliente_api.ejecutar_incertidumbre, "/api/v1/analisis/incertidumbre"),
     ],
 )
 def test_analisis_usa_su_ruta_y_timeout(request_simulado, funcion, ruta):

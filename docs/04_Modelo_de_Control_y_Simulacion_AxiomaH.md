@@ -98,7 +98,7 @@ La impedancia total es `Z = Z_nom + Z_sal + Z_polvo`.
 | Caudal durante pulso / reserva crítica | 80 % / 50 % | PRD | [Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros) |
 | Factor de impedancia regenerada | 1.10 (1100 Ohm) | Criterio del equipo | [Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros) |
 | Área de colector por nodo | 1.0 m² | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
-| Flujo máximo de niebla | 6.0 L/m²/h (0.35 g/m³ a 5 m/s) | Supuesto | Sin fuente; contrastado con Klemm et al. (2012) en [Documento 06, sección 4](06_Referencias_y_Trazabilidad_AxiomaH.md#4-comparación-del-flujo-de-niebla-supuesto-con-la-literatura) |
+| Flujo máximo de niebla | 6.0 L/m²/h (0.35 g/m³ a 5 m/s) | Supuesto | Sin fuente; contrastado con Klemm et al. (2012) en [Documento 06, sección 4](06_Referencias_y_Trazabilidad_AxiomaH.md#4-comparación-del-flujo-de-niebla-supuesto-con-la-literatura). La calibración inversa contra la literatura da 0.49 a 1.83 L/m²/h (sección 8.6) |
 | HR mínima de captación, exponente | 20 %, 1.5 | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
 | Amplitud del ciclo de HR | 10 puntos, máximo a las 04:00 | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
 | Temperatura ambiente | 30 +/- 4.5 °C, máximo a las 14:00 | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
@@ -478,7 +478,7 @@ La comparación completa está en [06_Referencias_y_Trazabilidad_AxiomaH.md](06_
 - el flujo máximo de niebla supuesto (`FLUJO_NIEBLA_MAXIMO_L_M2_H = 6.0`) es optimista;
 - el umbral de 12 L/m²/noche de la Conjetura 3 supera el rango típico de operación.
 
-La validación de la Conjetura 3 en cuatro escenarios con humedad inicial de 85 % depende de ese flujo optimista. Con humedad inicial de 45 %, el rendimiento del modelo (4.0 a 6.0 L/m²/noche, sección 5.5) queda dentro del rango de la literatura y la conjetura no se valida.
+La validación de la Conjetura 3 en cuatro escenarios con humedad inicial de 85 % depende de ese flujo optimista. Con humedad inicial de 45 %, el rendimiento del modelo (4.0 a 6.0 L/m²/noche, sección 5.5) queda dentro del rango de la literatura y la conjetura no se valida. La sección 8.6 calibra el flujo contra ese rango y confirma que, con un flujo como el de la literatura, la Conjetura 3 tampoco se valida con 85 %.
 
 ### 8.3 Preguntas emergentes para el Ciclo 3
 
@@ -548,3 +548,62 @@ La sección 8.3 e) propone separar la Conjetura 2 en dos aspectos: qué tan ráp
   - con 85 % en INCRUSTACION_SALINA_RAPIDA (1174.7 Ohm) y TORMENTA_DE_SAL_Y_CALOR_EXTREMO (1136.7 Ohm), porque la REGLA_04 se activa con la reserva baja (16 y 8 veces en la bitácora) y posterga pulsos, que luego se aplican con más carga salina (sección 6.2). En DIA_NORMAL con 85 % la REGLA_04 no se activa.
 
 En el modelo, el pulso actúa rápido pero no limpia lo suficiente. La Conjetura 2 no falla por la cinética, sino por la extensión de la limpieza, que depende de la eficacia del pulso (`eta_max`), un parámetro supuesto. Si los dos indicadores de la pregunta 8.3 e) se declaran antes de ejecutar, la cinética cumpliría en el modelo y la extensión no, y el experimento de la sección 6.3 es el que decide la extensión.
+
+### 8.6 Calibración del flujo de niebla contra la literatura
+
+La sección 8.2 muestra que el flujo máximo de niebla supuesto, 6.0 L/m²/h, es optimista: con humedad inicial de 85 % el modelo base obtiene 31.8 L/m²/día en DIA_NORMAL (sección 7.6), frente a los 3 a 10 L/m²/día que Klemm et al. (2012) reportan para proyectos operativos. Para anclar el rango del flujo a la literatura se hizo una calibración inversa.
+
+**Método.** `calibrar_flujo_niebla` (`backend/analisis.py`) busca por bisección, en el intervalo de 0.1 a 6.0 L/m²/h, el flujo con el que el modo neuro-simbólico alcanza un rendimiento objetivo en L/m²/día. Cada evaluación es una corrida de 24 h en DIA_NORMAL con humedad inicial de 85 %, tasa ALTA, 8 nodos y semilla 42, con una copia de `ParametrosModelo` en la que solo cambia el flujo. En los flujos evaluados el rendimiento crece con el flujo, de 0.67 L/m²/día con 0.1 L/m²/h a 31.8 con 6.0, lo que permite la bisección. La búsqueda se detiene cuando el intervalo mide menos de 0.01 L/m²/h.
+
+**Resultado.**
+
+| Rendimiento objetivo (L/m²/día) | Flujo calibrado (L/m²/h) | Constante de `backend/config.py` |
+|---|---|---|
+| 3.0 (mínimo de Klemm et al.) | 0.4889 | `FLUJO_NIEBLA_CALIBRADO_MIN_L_M2_H = 0.49` |
+| 10.0 (máximo de Klemm et al.) | 1.8256 | `FLUJO_NIEBLA_CALIBRADO_MAX_L_M2_H = 1.83` |
+
+El rango calibrado, de 0.49 a 1.83 L/m²/h, está entre 3.3 y 12 veces por debajo del valor supuesto de 6.0. El valor por defecto del modelo no cambia (decisión D5): las secciones 5 a 7 se siguen calculando con 6.0, y el rango calibrado solo se usa en el análisis de incertidumbre de la sección 8.7. Una prueba automatizada verifica que las dos constantes coinciden con la calibración dentro de 0.01.
+
+**Efecto sobre la Conjetura 3.** Con el flujo calibrado, la Conjetura 3 no se valida en DIA_NORMAL con humedad inicial de 85 %, el caso en que sí se valida con el flujo de 6.0:
+
+| Flujo (L/m²/h) | Rendimiento (L/m²/día) | Rendimiento nocturno neuro (L/m²/noche) | Rendimiento nocturno temporizador (L/m²/noche) | C3 | Causa |
+|---|---|---|---|---|---|
+| 6.0 (supuesto) | 31.83 | 16.97 | 21.96 | Validada | |
+| 1.83 (calibrado, máximo) | 10.02 | 5.47 | 8.09 | No validada | `LIMITE_DEL_RECURSO_ATMOSFERICO` |
+| 0.49 (calibrado, mínimo) | 3.02 | 1.67 | 2.35 | No validada | `LIMITE_DEL_RECURSO_ATMOSFERICO` |
+
+Con rendimientos como los de la literatura, ni el temporizador alcanza el umbral de 12 L/m²/noche. Esto confirma la lectura de la sección 8.2: la validación de la Conjetura 3 con 85 % depende del flujo optimista, y el umbral de rendimiento de la Matriz está por encima de lo que reportan los proyectos operativos. El indicador de violaciones ecológicas no cambia: el modo neuro-simbólico sigue sin violaciones.
+
+La calibración usa un solo escenario, una semilla y un rango de rendimientos medido en colectores de malla. Calibrar el flujo con mediciones en Cabo de la Vela sigue pendiente (sección 8.3).
+
+### 8.7 Propagación de la incertidumbre
+
+Las secciones 5.6 y 5.7 varían un parámetro a la vez. Para ver el efecto conjunto de los dos parámetros supuestos que más influyen en las conjeturas, `POST /api/v1/analisis/incertidumbre` (`ejecutar_incertidumbre` en `backend/analisis.py`) los muestrea a la vez.
+
+**Método.**
+
+- Cada muestra toma una eficacia máxima del pulso y un flujo máximo de niebla con distribución uniforme e independiente. Los rangos por defecto son 0.80 a 1.00 para la eficacia (`EFICACIA_PULSO_RANGO_MIN` y `EFICACIA_PULSO_RANGO_MAX`, supuesto alrededor de 0.90) y 0.49 a 1.83 L/m²/h para el flujo (sección 8.6).
+- El muestreo usa un generador con semilla (`semilla_muestreo`, 7 por defecto), creado con la misma función que genera el entorno de la simulación. La misma configuración produce siempre las mismas muestras.
+- Cada muestra se simula una vez, con el mismo entorno (semilla 42), y se verifican las conjeturas con la regla de validación sin cambios.
+- La probabilidad de una conjetura es la proporción de muestras que la validan. Para la recuperación tras pulso, el rendimiento en L/m²/día y la reducción de la degradación se reportan los percentiles 5, 50 y 95 de las muestras con datos.
+
+**Resultados.** 24 h, humedad inicial de 85 %, tasa ALTA, 8 nodos, semilla 42, 20 muestras y rangos por defecto. Los percentiles se indican como p5 / p50 / p95.
+
+| Escenario | P(C1) | P(C2) | P(C3) | Recuperación (%) | Muestras con pulsos | Rendimiento (L/m²/día) | Reducción de la degradación (%) |
+|---|---|---|---|---|---|---|---|
+| DIA_NORMAL | 0.05 | 0.00 | 0.00 | 85.98 / 87.64 / 89.94 | 8 de 20 | 3.47 / 5.56 / 8.88 | 99.03 / 100.00 / 100.00 |
+| INCRUSTACION_SALINA_RAPIDA | 0.15 | 0.10 | 0.00 | 85.99 / 88.00 / 91.31 | 20 de 20 | 3.16 / 5.31 / 8.54 | 95.74 / 97.71 / 99.03 |
+| SEQUIA | 0.00 | 0.00 | 0.00 | Sin datos | 0 de 20 | 2.12 / 3.47 / 5.31 | 100.00 / 100.00 / 100.00 |
+| TORMENTA_DE_ARENA | 0.00 | 0.00 | 0.00 | 76.86 / 78.93 / 84.32 | 20 de 20 | 3.18 / 5.17 / 8.08 | 97.24 / 98.62 / 98.62 |
+| TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 0.10 | 0.05 | 0.00 | 85.99 / 88.00 / 90.49 | 14 de 20 | 3.30 / 5.48 / 8.71 | 98.62 / 99.31 / 100.00 |
+
+**Interpretación.**
+
+- **Conjetura 3.** No se valida en ninguna muestra de ningún escenario. Con el flujo calibrado, el rendimiento nocturno queda por debajo de 12 L/m²/noche (sección 8.6). El resultado depende sobre todo del umbral de la Matriz frente a la literatura, no de la eficacia del pulso.
+- **Conjeturas 1 y 2.** Su probabilidad es baja, entre 0.00 y 0.15 para C1 y entre 0.00 y 0.10 para C2, por dos causas distintas:
+  - la eficacia necesaria con el flujo de 6.0 (alrededor de 0.94 para C1 y 0.97 para C2, sección 6.2) solo ocupa el 30 % y el 15 % del rango muestreado. Con el flujo calibrado el umbral puede variar: en DIA_NORMAL la única muestra que valida C1 tiene una eficacia de 0.936;
+  - con el flujo calibrado se capta menos agua, se acumula menos sal y en muchas corridas el motor no llega a aplicar pulsos. En DIA_NORMAL, 12 de 20 muestras no aplican pulsos, y en SEQUIA ninguna. Sin pulsos no hay recuperación ni tiempo de regeneración que medir, y la causa de no validación es `SIN_DATOS`. En esas muestras las conjeturas no se refutan: no se ponen a prueba.
+
+  En TORMENTA_DE_ARENA la recuperación no supera 84.32 % en el percentil 95, porque el pulso no remueve el polvo (sección 8.5), y ninguna muestra valida C1.
+- **Desgaste.** Entre los percentiles 5 y 95, la reducción de la degradación frente al temporizador se mantiene entre 95.7 % y 100 % en los cinco escenarios. Vale 100 % cuando el neuro-simbólico no aplica pulsos y su membrana no se degrada. Es el resultado más robusto del análisis, y es coherente con el barrido de la sección 7.
+- **Alcance.** Las probabilidades son proporciones del espacio de parámetros supuesto, no probabilidades de lo que ocurrirá en campo: cambian si cambian los rangos o la distribución. Con 20 muestras, la resolución es de 0.05, de modo que valores como 0.05 o 0.10 corresponden a una o dos muestras. La incertidumbre del clima (semillas) y la de los demás parámetros supuestos no está incluida.

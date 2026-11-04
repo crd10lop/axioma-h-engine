@@ -113,6 +113,12 @@ def test_supuestos_clave():
         assert "sin fuente" in supuesto["origen"]
 
 
+def test_supuesto_de_flujo_incluye_el_rango_calibrado():
+    flujo = contenido.SUPUESTOS_CLAVE[1]
+    assert "0.49 a 1.83 L/m²/h" in flujo["valor"]
+    assert "calibración inversa" in flujo["origen"]
+
+
 def test_perspectivas_y_titulos():
     assert set(contenido.PERSPECTIVAS) == {"social", "etica", "cultural", "humana"}
     assert set(contenido.TITULOS_PERSPECTIVAS) == set(contenido.PERSPECTIVAS)

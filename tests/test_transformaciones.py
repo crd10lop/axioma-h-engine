@@ -5,8 +5,15 @@ import copy
 import pandas as pd
 import pytest
 
-from backend.analisis import ejecutar_barrido
-from backend.schemas import BarridoConfig, CausaNoValidacion, Escenario, SimulationConfig, TasaSalinizacion
+from backend.analisis import ejecutar_barrido, ejecutar_incertidumbre
+from backend.schemas import (
+    BarridoConfig,
+    CausaNoValidacion,
+    Escenario,
+    IncertidumbreConfig,
+    SimulationConfig,
+    TasaSalinizacion,
+)
 from backend.simulador import ejecutar_simulacion
 from frontend import config
 from frontend import transformaciones as tr
@@ -600,3 +607,112 @@ def test_resumen_impacto_sin_temporizador():
 @pytest.mark.parametrize("respuesta", [{}, {CLAVE_IMPACTO: {}}, {CLAVE_IMPACTO: None}])
 def test_resumen_impacto_sin_campo(respuesta):
     assert tr.resumen_impacto(respuesta) is None
+
+
+# ---------------------------------------------------------------------------
+# Incertidumbre de los parámetros supuestos
+# ---------------------------------------------------------------------------
+def _incertidumbre_real(escenario: Escenario, n_muestras: int) -> dict:
+    """Respuesta real del análisis de incertidumbre serializada como la entrega la API."""
+    cfg = IncertidumbreConfig(
+        escenario=escenario,
+        humedad_ambiente_inicial_pct=85.0,
+        tasa_salinizacion=TasaSalinizacion.ALTA,
+        n_muestras=n_muestras,
+    )
+    return ejecutar_incertidumbre(cfg).model_dump(mode="json")
+
+
+@pytest.fixture(scope="module")
+def incertidumbre_dia_normal():
+    """DIA_NORMAL con 20 muestras: varias muestras no ejecutan pulsos."""
+    return _incertidumbre_real(Escenario.DIA_NORMAL, 20)
+
+
+@pytest.fixture(scope="module")
+def incertidumbre_salina():
+    """INCRUSTACION_SALINA_RAPIDA con 5 muestras: todas ejecutan pulsos."""
+    return _incertidumbre_real(Escenario.INCRUSTACION_SALINA_RAPIDA, 5)
+
+
+def test_configuracion_incertidumbre():
+    carga = tr.configuracion_incertidumbre("SEQUIA", 85, 10)
+    assert carga == {
+        "escenario": "SEQUIA",
+        "humedad_ambiente_inicial_pct": 85.0,
+        "tasa_salinizacion": "ALTA",
+        "n_muestras": 10,
+    }
+
+
+def test_configuracion_incertidumbre_usa_20_muestras_por_defecto():
+    assert tr.configuracion_incertidumbre("SEQUIA", 85.0)["n_muestras"] == 20
+
+
+def test_incertidumbre_a_dataframe(incertidumbre_salina):
+    df = tr.incertidumbre_a_dataframe(incertidumbre_salina)
+    assert list(df.columns) == tr.COLUMNAS_INCERTIDUMBRE
+    assert len(df) == 5
+    assert set(df[tr.COLUMNA_ESTADO_C1]) <= {"Validada", "No validada"}
+    assert df["eficacia"].iloc[0] == pytest.approx(incertidumbre_salina["muestras"][0]["eficacia"])
+
+
+def test_incertidumbre_a_dataframe_vacio():
+    df = tr.incertidumbre_a_dataframe({})
+    assert df.empty
+    assert list(df.columns) == tr.COLUMNAS_INCERTIDUMBRE
+
+
+def test_probabilidades_incertidumbre(incertidumbre_dia_normal):
+    tabla = tr.probabilidades_incertidumbre(incertidumbre_dia_normal)
+    assert list(tabla["Conjetura"]) == list(tr.NOMBRES_CONJETURA.values())
+    primera = tabla.iloc[0]
+    assert primera["Probabilidad"] == pytest.approx(primera["Muestras validadas"] / 20)
+
+
+def test_lectura_incertidumbre_con_muestras_sin_pulsos(incertidumbre_dia_normal):
+    frases = tr.lectura_incertidumbre(incertidumbre_dia_normal)
+    sin_pulsos = 20 - incertidumbre_dia_normal["recuperacion"]["n_validos"]
+    assert frases[0].startswith("Conjetura 1. Eficiencia: se valida en ")
+    assert "de 20 muestras (probabilidad " in frases[0]
+    assert "entre los percentiles 5 y 95" in frases[4]
+    assert frases[-1].startswith(f"En {sin_pulsos} de 20 muestras el neuro-simbólico no aplicó pulsos")
+
+
+def test_lectura_incertidumbre_sin_muestras_sin_pulsos(incertidumbre_salina):
+    frases = tr.lectura_incertidumbre(incertidumbre_salina)
+    assert len(frases) == 6
+    assert "no aplicó pulsos" not in " ".join(frases)
+
+
+def test_lectura_incertidumbre_indicador_sin_datos():
+    muestra = {
+        "eficacia": 0.9,
+        "flujo": 1.0,
+        "conjeturas_validadas": {
+            "conjetura_1_eficiencia": False,
+            "conjetura_2_autorreparacion": False,
+            "conjetura_3_saber_territorial": False,
+        },
+    }
+    sin_datos = {"p5": None, "p50": None, "p95": None, "n_validos": 0}
+    resultado = {
+        "probabilidad_c1": 0.0,
+        "probabilidad_c2": 0.0,
+        "probabilidad_c3": 0.0,
+        "recuperacion": sin_datos,
+        "rendimiento": {"p5": 2.1, "p50": 3.4, "p95": 5.3, "n_validos": 1},
+        "reduccion_degradacion": sin_datos,
+        "muestras": [muestra],
+    }
+    frases = tr.lectura_incertidumbre(resultado)
+    assert frases[3] == "Recuperación tras pulso: ninguna muestra tiene datos."
+    assert frases[4] == (
+        "Rendimiento del neuro-simbólico: de 2.10 a 5.30 L/m² al día entre los percentiles 5 y 95 "
+        "(mediana 3.40; 1 de 1 muestras con datos)."
+    )
+    assert frases[-1].startswith("En 1 de 1 muestras")
+
+
+def test_lectura_incertidumbre_vacia():
+    assert tr.lectura_incertidumbre({"muestras": []}) == ["El análisis no devolvió muestras."]
