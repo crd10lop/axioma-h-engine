@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from functools import wraps
 from pathlib import Path
 from typing import Callable, List, Optional
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -425,14 +426,27 @@ def imprimir_tabla(resultados: List[ResultadoPrueba]) -> None:
     print(f"\n{exitosas}/{len(resultados)} pruebas exitosas.")
 
 
+def _url_base(valor: str) -> str:
+    """Valida una URL base recibida por argumento y la devuelve sin barra final.
+
+    Solo se aceptan los esquemas http y https con un host no vacío; cualquier
+    otro valor se rechaza con argparse.ArgumentTypeError.
+    """
+    partes = urlsplit(valor)
+    if partes.scheme not in ("http", "https") or not partes.hostname:
+        raise argparse.ArgumentTypeError(f"URL no válida (se espera http o https con host): {valor!r}")
+    return valor.rstrip("/")
+
+
 def construir_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Verifica la API y el dashboard desplegados de Axioma-H.")
     parser.add_argument(
         "--api",
+        type=_url_base,
         default=os.environ.get("AXIOMA_API_URL", API_POR_DEFECTO),
         help="URL base de la API (por defecto AXIOMA_API_URL o %(default)s).",
     )
-    parser.add_argument("--dashboard", default=DASHBOARD_POR_DEFECTO, help="URL base del dashboard.")
+    parser.add_argument("--dashboard", type=_url_base, default=DASHBOARD_POR_DEFECTO, help="URL base del dashboard.")
     parser.add_argument(
         "--timeout",
         type=float,

@@ -10,7 +10,7 @@ Desde la raíz del proyecto, con el entorno virtual activo:
 python scripts/generar_resultados_referencia.py
 ```
 
-La salida es determinista: dos ejecuciones con el mismo código producen archivos idénticos. Para escribir en otra carpeta, agregar `--salida <carpeta>`. Si cambia el modelo, se deben regenerar los archivos y revisar que las cifras de `README.md` y `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md` sigan coincidiendo.
+La salida es determinista: dos ejecuciones con el mismo código producen archivos idénticos. Para comprobar que los archivos de esta carpeta coinciden con el modelo actual sin modificarlos, agregar `--comprobar`: el script genera los datos en un directorio temporal, los compara byte a byte con los de esta carpeta y termina con código 1 si alguno difiere o falta. La carpeta de destino no se puede cambiar por línea de comandos. Si cambia el modelo, se deben regenerar los archivos y revisar que las cifras de `README.md` y `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md` sigan coincidiendo.
 
 ## 2. Condiciones
 

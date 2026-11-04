@@ -147,4 +147,4 @@ python scripts/verificar_despliegue.py --api https://otra-api.onrender.com --das
 
 ### 6.3 Uso sin el despliegue
 
-La aplicación no depende de Render. El backend y el dashboard se ejecutan en local sin conexión a internet, y los resultados de referencia se regeneran sin la API con `python scripts/generar_resultados_referencia.py` (ver `README.md`, sección Uso local sin conexión, y [datos/README.md](datos/README.md)).
+La aplicación no depende de Render. El backend y el dashboard se ejecutan en local sin conexión a internet, y los resultados de referencia se regeneran sin la API con `python scripts/generar_resultados_referencia.py`. Con `python scripts/generar_resultados_referencia.py --comprobar` se verifica, sin modificar `docs/datos/`, que los archivos publicados coinciden con el modelo actual; el script termina con código 0 si coinciden y con código 1 si alguno difiere o falta (ver `README.md`, sección Uso local sin conexión, y [datos/README.md](datos/README.md)).

@@ -6,7 +6,7 @@ Importa el backend directamente (no llama a la API) y ejecuta:
   8 nodos, paso de 5 min, semilla 42);
 - el barrido de salinidad con humedad inicial de 85 % y semillas 1 a 5.
 
-Escribe en docs/datos/ (o en la carpeta indicada con --salida):
+Escribe en docs/datos/:
 
 - resultados_escenarios.csv: una fila por escenario y humedad inicial;
 - barrido_salinidad.csv: una fila por combinación de escenario y tasa;
@@ -17,12 +17,19 @@ La salida es determinista: ejecutar el script dos veces produce archivos
 idénticos. Uso, desde la raíz del proyecto:
 
     python scripts/generar_resultados_referencia.py
+
+Con --comprobar, el script genera los archivos en un directorio temporal, los
+compara byte a byte con los de docs/datos/ y termina con código 1 si alguno
+difiere o falta, sin modificar docs/datos/:
+
+    python scripts/generar_resultados_referencia.py --comprobar
 """
 
 import argparse
 import csv
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 # Se incluye la raíz del proyecto para importar el paquete backend.
@@ -39,6 +46,7 @@ CARPETA_POR_DEFECTO = RAIZ_PROYECTO / "docs" / "datos"
 ARCHIVO_ESCENARIOS = "resultados_escenarios.csv"
 ARCHIVO_BARRIDO = "barrido_salinidad.csv"
 ARCHIVO_JSON = "resultados_completos.json"
+ARCHIVOS = (ARCHIVO_ESCENARIOS, ARCHIVO_BARRIDO, ARCHIVO_JSON)
 
 HUMEDADES_PCT = (45.0, 85.0)
 DURACION_HORAS = 24
@@ -157,15 +165,20 @@ def condiciones() -> dict:
     }
 
 
-def generar(carpeta: Path) -> list[Path]:
-    """Ejecuta el modelo y escribe los tres archivos; devuelve sus rutas."""
+def generar(carpeta: Path = CARPETA_POR_DEFECTO) -> list[Path]:
+    """Ejecuta el modelo y escribe los tres archivos; devuelve sus rutas.
+
+    La carpeta de destino solo la fija el propio script: la constante
+    CARPETA_POR_DEFECTO o un directorio de tempfile.TemporaryDirectory(). Nunca
+    proviene de la línea de comandos ni de variables de entorno.
+    """
     carpeta.mkdir(parents=True, exist_ok=True)
     corridas = ejecutar_escenarios()
     barrido = ejecutar_barrido(
         BarridoConfig(humedad_ambiente_inicial_pct=HUMEDAD_BARRIDO_PCT, semillas=SEMILLAS_BARRIDO)
     ).model_dump(mode="json")
 
-    rutas = [carpeta / ARCHIVO_ESCENARIOS, carpeta / ARCHIVO_BARRIDO, carpeta / ARCHIVO_JSON]
+    rutas = [carpeta / nombre for nombre in ARCHIVOS]
     escribir_csv(rutas[0], [fila_escenario(escenario, humedad, r) for escenario, humedad, r in corridas])
     escribir_csv(rutas[1], [{**punto, "humedad_inicial_pct": HUMEDAD_BARRIDO_PCT} for punto in barrido["puntos"]])
 
@@ -189,12 +202,48 @@ def generar(carpeta: Path) -> list[Path]:
     return rutas
 
 
+def comparar_con_referencia(carpeta_generada: Path, carpeta_referencia: Path = CARPETA_POR_DEFECTO) -> list[str]:
+    """Compara byte a byte los archivos de ARCHIVOS en ambas carpetas.
+
+    Devuelve los nombres de los archivos que difieren o que faltan en alguna de
+    las dos carpetas; una lista vacía indica que coinciden.
+    """
+    diferentes = []
+    for nombre in ARCHIVOS:
+        generado = carpeta_generada / nombre
+        referencia = carpeta_referencia / nombre
+        if not (generado.is_file() and referencia.is_file()) or generado.read_bytes() != referencia.read_bytes():
+            diferentes.append(nombre)
+    return diferentes
+
+
 def main(argv: list[str] | None = None) -> int:
+    """Genera los datos de referencia en docs/datos/ o, con --comprobar, verifica que estén al día.
+
+    Devuelve 0 si los archivos se escribieron o coinciden con la referencia, y
+    1 si --comprobar encuentra archivos distintos o ausentes.
+    """
     parser = argparse.ArgumentParser(description="Genera los resultados de referencia del modelo en CSV y JSON.")
-    parser.add_argument("--salida", type=Path, default=CARPETA_POR_DEFECTO, help="Carpeta de destino.")
+    parser.add_argument(
+        "--comprobar",
+        action="store_true",
+        help="Genera en un directorio temporal y compara con docs/datos/ sin modificarlo.",
+    )
     argumentos = parser.parse_args(argv)
-    for ruta in generar(argumentos.salida):
-        print(f"Escrito: {ruta}")
+    if not argumentos.comprobar:
+        for ruta in generar():
+            print(f"Escrito: {ruta}")
+        return 0
+
+    with tempfile.TemporaryDirectory() as temporal:
+        carpeta_temporal = Path(temporal)
+        generar(carpeta_temporal)
+        diferentes = comparar_con_referencia(carpeta_temporal)
+    if diferentes:
+        print(f"Difieren de {CARPETA_POR_DEFECTO} o faltan: {', '.join(diferentes)}")
+        print("Regenerar con: python scripts/generar_resultados_referencia.py")
+        return 1
+    print(f"Los {len(ARCHIVOS)} archivos de {CARPETA_POR_DEFECTO} coinciden con el modelo actual.")
     return 0
 
 
