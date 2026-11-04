@@ -80,6 +80,44 @@ El barrido de salinidad, con su método y su análisis, está en [modelo_simulac
 
 La respuesta a la pregunta es, por tanto, condicional: la ventaja en recuperación aparece y crece con la salinidad, mientras que la reducción del desgaste se observa en todos los niveles. Estos resultados dependen de parámetros físicos supuestos, en particular la eficacia del pulso, que deben medirse en laboratorio.
 
+### 2.7 Perspectivas social, ética, cultural y humana
+
+Esta sección se limita a lo que el repositorio implementa o documenta. Lo que no se ha realizado se declara de forma explícita.
+
+**Perspectiva social.**
+
+- El proyecto se orienta a Cabo de la Vela, en la Alta Guajira, un territorio árido con escasez hídrica.
+- El control es descentralizado por nodo: cada uno de los 8 nodos decide con su propia telemetría (sección 2.2), de modo que una condición local, como la cristalización de una membrana, se atiende sin detener los demás nodos.
+- Respetar el tope ecológico tiene un costo hídrico medible. Con humedad inicial de 85 %, el modo neuro-simbólico capta entre 23 % y 27 % menos agua que el temporizador ([modelo_simulacion.md](modelo_simulacion.md), sección 5.5). El estudio hace visible ese costo en lugar de ocultarlo.
+
+**Perspectiva ética.**
+
+- El sistema nunca extrae más del 33 % de la niebla disponible (decisión D3) y suspende la extracción con humedad relativa menor que 30 % (REGLA_02).
+- Los resultados se calculan con el modelo y no se ajustan parámetros para forzar la validación de una conjetura (decisión D5). Las conjeturas que no se validan se reportan como tales.
+- El funcionamiento es transparente: cada simulación devuelve `detalle_verificacion`, con el valor, el umbral y el cumplimiento de cada indicador, y una `bitacora` con los cambios de regla. La API es pública, con documentación interactiva, y el código se distribuye con licencia MIT.
+- Antes de cualquier piloto en territorio Wayuu se requiere consulta previa con las comunidades, conforme al Convenio 169 de la OIT, ratificado por Colombia mediante la Ley 21 de 1991. **Esta consulta no se ha realizado.** El Ciclo 2 se limita a la simulación y no involucra a las comunidades ni su territorio.
+
+**Perspectiva cultural.**
+
+- La Conjetura 3 se denomina "saber territorial" y su motivación es preservar la humedad disponible para la vegetación local de trupillo y cardón.
+- **Limitaciones no resueltas:** la interfaz está solo en español y no tiene versión en wayuunaiki; la orientación del colector a 20° al norte, que forma parte de la formulación de la Conjetura 3, no se modela en el simulador (sección 3).
+
+**Perspectiva humana.**
+
+- Cada decisión del motor incluye un campo `motivo` con una explicación legible de la regla activada y de la acción tomada.
+- La vista "Evaluación manual de nodo" del dashboard permite explorar las reglas: se ajustan los valores de telemetría y se observa qué regla se activa y por qué.
+- **Limitación no resuelta:** no hay anulación manual ni supervisión humana dentro del lazo de control. Las decisiones del motor se aplican sin intervención de un operador. Incorporar ese mecanismo se propone para el Ciclo 3.
+
+### 2.8 Alcance y madurez
+
+El artefacto del Ciclo 2 es una prueba de concepto analítica por simulación, equivalente de forma aproximada a un nivel de madurez tecnológica TRL 2-3: el concepto y sus reglas de control están formulados e implementados, y su comportamiento se evalúa con un modelo físico simplificado.
+
+- No existe un prototipo físico del captador ni de la membrana.
+- No hay datos de campo. Los parámetros marcados como supuestos en `backend/config.py` son estimaciones de orden de magnitud; su trazabilidad está en [referencias.md](referencias.md), sección 3.
+- Lo que sí está implementado y verificado es el software de control: la API, el simulador, el dashboard, las pruebas automatizadas y el despliegue público.
+
+El horizonte del siguiente ciclo es la medición experimental prioritaria descrita en [modelo_simulacion.md](modelo_simulacion.md), sección 6.3: medir en laboratorio qué fracción de la costra salina remueve un pulso de 90 s a 44 °C. Las preguntas emergentes que surgen de la lectura crítica de las conjeturas están en la sección 8 del mismo documento.
+
 ---
 
 ## 3. Matriz de Operacionalización de Conjeturas
@@ -127,6 +165,8 @@ Los indicadores de la matriz se calculan en el simulador del Ciclo 2. La definic
 └────────────────────────────────────────────────────────┘
 ```
 
+**Sobre el componente neuronal.** El motor implementado en el Ciclo 2 es simbólico: aplica reglas explícitas en orden de prioridad (`backend/motor_reglas.py`) y se apoya en un modelo físico explícito (`backend/modelo_fisico.py`). El "Módulo Neuronal" del diagrama no está implementado; la detección del umbral salino se hace con una comparación directa de la impedancia contra 1500 Ohm. El componente sub-simbólico queda como trabajo futuro, en particular para distinguir la impedancia causada por sal de la causada por polvo ([modelo_simulacion.md](modelo_simulacion.md), pregunta 8.3 c). El término neuro-simbólico describe la arquitectura objetivo del sistema, no la implementación actual.
+
 ### Reglas Lógicas de la API (Motor de Inferencia):
 1. **Regla de Integridad Térmica:** Si $T_{polímero} \ge 45^\circ\text{C} \implies \text{Acción: CORTE_DE_EMERGENCIA}$.
 2. **Regla de Preservación Ecológica:** Si $\text{Humedad}_{ambiental} < 30\% \implies \text{Acción: DETENER_CAPTACIÓN}$.
@@ -157,7 +197,7 @@ Las decisiones que justifican estas diferencias están en [modelo_simulacion.md]
 - **Hito 2 (Completado):** Implementación de la API de control neuro-simbólico en FastAPI (`backend/`), con motor de reglas, simulador comparativo y pruebas automatizadas.
 - **Hito 3 (Completado):** Desarrollo del Frontend Interactivo en Streamlit (`frontend/app.py`): panel de telemetría, simulación comparativa, consola de decisiones y gráficos.
 - **Hito 4 (En desarrollo):** Las pruebas de simulación de los cinco escenarios y el barrido de salinidad que responde la pregunta de investigación están ejecutados y documentados en [modelo_simulacion.md](modelo_simulacion.md). Queda pendiente la redacción del Informe de Avance del Ciclo 2.
-- **Hito 5 (En desarrollo):** Despliegue público de la API y del dashboard para la demostración del Ciclo 2. El procedimiento está en [despliegue.md](despliegue.md).
+- **Hito 5 (Completado):** Despliegue público de la API y del dashboard para la demostración del Ciclo 2, en Render: [Dashboard](https://axioma-h-dashboard.onrender.com) y [API](https://axioma-h-api.onrender.com/docs). La verificación automatizada (`scripts/verificar_despliegue.py`) pasó 17 de 17 comprobaciones. El procedimiento y la verificación están en [despliegue.md](despliegue.md).
 
 ---
 *Documento preparado por el Equipo AXIOMA para el seguimiento del Ciclo 2 — Universidad de Antioquia.*

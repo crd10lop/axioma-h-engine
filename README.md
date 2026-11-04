@@ -29,6 +29,21 @@ Para una explicación general de qué hace la aplicación y cómo funciona, ver 
 
 Las sub-preguntas, las variables y la hipótesis de trabajo están en [docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2. La respuesta preliminar del simulador está en la sección [Resultados](#barrido-de-salinidad).
 
+## Cómo leer este artefacto
+
+Se recomienda recorrer el proyecto en este orden:
+
+1. **Pregunta.** La pregunta de investigación de la sección anterior y su desarrollo en [docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2.
+2. **Respuesta.** El [Barrido de salinidad](#barrido-de-salinidad), que compara ambos modos de control a medida que aumenta la salinidad.
+3. **Conjeturas.** La verificación de las tres conjeturas en [Resultados](#resultados) y su detalle en [docs/modelo_simulacion.md](docs/modelo_simulacion.md), secciones 5 y 6.
+4. **Lectura crítica.** El conflicto entre los indicadores de la Conjetura 1, el contraste del umbral de la Conjetura 3 con la literatura y las preguntas para el Ciclo 3, en [docs/modelo_simulacion.md](docs/modelo_simulacion.md), sección 8.
+5. **Limitaciones.** Las [Limitaciones conocidas](#limitaciones-conocidas) y el [Alcance y madurez](#alcance-y-madurez) del artefacto.
+6. **Referencias.** El software de terceros, la fuente científica y la trazabilidad de cada parámetro en [docs/referencias.md](docs/referencias.md).
+
+## Naturaleza del control
+
+El motor implementado es simbólico: aplica reglas explícitas en orden de prioridad (`backend/motor_reglas.py`) y se apoya en un modelo físico explícito (`backend/modelo_fisico.py`). El "Módulo Neuronal" del diagrama de arquitectura del plan no está implementado y queda como trabajo futuro, en particular para distinguir la impedancia causada por sal de la causada por polvo. El término neuro-simbólico describe la arquitectura objetivo del sistema, no la implementación actual. El detalle está en [docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 4.
+
 ## Arquitectura
 
 El sistema se compone de dos servicios que se ejecutan por separado:
@@ -59,7 +74,8 @@ axioma-h-engine/
 │   ├── 02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md
 │   ├── modelo_simulacion.md
 │   ├── despliegue.md
-│   └── funcionamiento.md
+│   ├── funcionamiento.md
+│   └── referencias.md      Software de terceros, fuentes y trazabilidad de parámetros
 ├── pytest.ini
 ├── render.yaml             Blueprint de despliegue en Render
 └── requirements.txt
@@ -351,3 +367,14 @@ El análisis completo, las ecuaciones, los parámetros y las tablas de sensibili
 - El clima de referencia usa ciclos diurnos idealizados con ruido gaussiano, y los escenarios repiten sus ventanas de sequía o tormenta cada día simulado.
 - La configuración CORS admite por defecto solo orígenes locales. Para que una página web consuma la API desde el navegador, sus dominios deben agregarse con `AXIOMA_CORS_ORIGINS`.
 - En el plan gratuito de Render, los servicios se suspenden tras 15 minutos sin tráfico y tardan cerca de un minuto en reactivarse.
+
+## Alcance y madurez
+
+El artefacto es una prueba de concepto analítica por simulación, equivalente de forma aproximada a un nivel de madurez tecnológica TRL 2-3. No hay prototipo físico ni datos de campo. El horizonte del siguiente ciclo es medir en laboratorio la fracción de costra salina que remueve un pulso de 90 s a 44 °C.
+
+- Alcance y madurez: [docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2.8.
+- Perspectivas social, ética, cultural y humana, incluida la consulta previa pendiente antes de cualquier piloto en territorio Wayuu: [docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2.7.
+
+## Referencias y créditos
+
+El software de terceros con su uso, URL y licencia, la fuente científica usada para contrastar el flujo de niebla y la trazabilidad de cada parámetro de `backend/config.py` están en [docs/referencias.md](docs/referencias.md). El proyecto se distribuye con licencia MIT (archivo `LICENSE`).

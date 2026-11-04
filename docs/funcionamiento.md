@@ -116,6 +116,7 @@ Todos los resultados provienen de una simulación, no de mediciones de campo. Va
 | [02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md](02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md) | Datos que recibe y entrega la API. |
 | [modelo_simulacion.md](modelo_simulacion.md) | Ecuaciones, parámetros, resultados detallados y análisis. |
 | [despliegue.md](despliegue.md) | Publicación de la aplicación en internet. |
+| [referencias.md](referencias.md) | Software de terceros con su licencia, fuente científica y origen de cada parámetro del modelo. |
 
 ## 10. Calidad del código y cobertura
 

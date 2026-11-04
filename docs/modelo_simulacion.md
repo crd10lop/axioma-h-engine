@@ -79,39 +79,39 @@ La impedancia total es `Z = Z_nom + Z_sal + Z_polvo`.
 
 ### 3.4 Parámetros
 
-| Parámetro | Valor | Origen |
-|---|---|---|
-| Umbral de corte térmico | 45.0 °C | PRD |
-| Temperatura objetivo del pulso | 44.0 °C | Matriz |
-| Umbral de humedad ecológica | 30.0 % | PRD |
-| Umbral de reserva crítica | 30.0 % | PRD |
-| Umbral de impedancia | 1500 Ohm | PRD |
-| Impedancia nominal | 1000 Ohm | PRD |
-| Duración del pulso | 90 s | PRD |
-| Fracción máxima de extracción | 0.33 | Matriz |
-| Caudal durante pulso / reserva crítica | 80 % / 50 % | PRD |
-| Factor de impedancia regenerada | 1.10 (1100 Ohm) | Criterio del equipo |
-| Área de colector por nodo | 1.0 m² | Supuesto |
-| Flujo máximo de niebla | 6.0 L/m²/h (0.35 g/m³ a 5 m/s) | Supuesto |
-| HR mínima de captación, exponente | 20 %, 1.5 | Supuesto |
-| Amplitud del ciclo de HR | 10 puntos, máximo a las 04:00 | Supuesto |
-| Temperatura ambiente | 30 +/- 4.5 °C, máximo a las 14:00 | Supuesto |
-| Calentamiento solar de la matriz | +7 °C con radiación máxima | Supuesto |
-| Incrustación BAJA / MEDIA / ALTA | 20 / 40 / 80 Ohm por L/m² | Supuesto |
-| Eficacia máxima del pulso | 0.90 | Supuesto |
-| Temperaturas de efecto mínimo y de saturación | 30 °C / 44 °C | Supuesto |
-| Carga salina de referencia | 2500 Ohm | Supuesto |
-| Constante de disolución | 25 s | Supuesto |
-| Capacidad de reserva, reserva inicial | 150 Wh, 70 % | Supuesto |
-| Recarga solar máxima | 20 W | Supuesto |
-| Capacidad térmica de la matriz | 800 J/K | Supuesto |
-| Conductancia de pérdidas | 30 W/K | Supuesto |
-| Consumo base neuro-simbólico / temporizador | 0.6 W / 0.2 W | Supuesto |
-| Fatiga por pulso | 0.02 % | Supuesto |
-| Degradación térmica | 0.05 %/(°C·min) | Supuesto |
-| Degradación por cristalización | 0.10 %/h | Supuesto |
-| Ruido HR / T por paso | 1.0 % / 0.3 °C | Supuesto |
-| Dispersión entre nodos HR / T / salinización | +/-2 % / +/-0.5 °C / +/-10 % | Supuesto |
+| Parámetro | Valor | Origen | Fuente |
+|---|---|---|---|
+| Umbral de corte térmico | 45.0 °C | PRD | [referencias.md](referencias.md#3-trazabilidad-de-parámetros) |
+| Temperatura objetivo del pulso | 44.0 °C | Matriz | [referencias.md](referencias.md#3-trazabilidad-de-parámetros) |
+| Umbral de humedad ecológica | 30.0 % | PRD | [referencias.md](referencias.md#3-trazabilidad-de-parámetros) |
+| Umbral de reserva crítica | 30.0 % | PRD | [referencias.md](referencias.md#3-trazabilidad-de-parámetros) |
+| Umbral de impedancia | 1500 Ohm | PRD | [referencias.md](referencias.md#3-trazabilidad-de-parámetros) |
+| Impedancia nominal | 1000 Ohm | PRD | [referencias.md](referencias.md#3-trazabilidad-de-parámetros) |
+| Duración del pulso | 90 s | PRD | [referencias.md](referencias.md#3-trazabilidad-de-parámetros) |
+| Fracción máxima de extracción | 0.33 | Matriz | [referencias.md](referencias.md#3-trazabilidad-de-parámetros) |
+| Caudal durante pulso / reserva crítica | 80 % / 50 % | PRD | [referencias.md](referencias.md#3-trazabilidad-de-parámetros) |
+| Factor de impedancia regenerada | 1.10 (1100 Ohm) | Criterio del equipo | [referencias.md](referencias.md#3-trazabilidad-de-parámetros) |
+| Área de colector por nodo | 1.0 m² | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
+| Flujo máximo de niebla | 6.0 L/m²/h (0.35 g/m³ a 5 m/s) | Supuesto | Sin fuente; contrastado con Klemm et al. (2012) en [referencias.md](referencias.md#4-comparación-del-flujo-de-niebla-supuesto-con-la-literatura) |
+| HR mínima de captación, exponente | 20 %, 1.5 | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
+| Amplitud del ciclo de HR | 10 puntos, máximo a las 04:00 | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
+| Temperatura ambiente | 30 +/- 4.5 °C, máximo a las 14:00 | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
+| Calentamiento solar de la matriz | +7 °C con radiación máxima | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
+| Incrustación BAJA / MEDIA / ALTA | 20 / 40 / 80 Ohm por L/m² | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
+| Eficacia máxima del pulso | 0.90 | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
+| Temperaturas de efecto mínimo y de saturación | 30 °C / 44 °C | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
+| Carga salina de referencia | 2500 Ohm | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
+| Constante de disolución | 25 s | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
+| Capacidad de reserva, reserva inicial | 150 Wh, 70 % | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
+| Recarga solar máxima | 20 W | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
+| Capacidad térmica de la matriz | 800 J/K | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
+| Conductancia de pérdidas | 30 W/K | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
+| Consumo base neuro-simbólico / temporizador | 0.6 W / 0.2 W | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
+| Fatiga por pulso | 0.02 % | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
+| Degradación térmica | 0.05 %/(°C·min) | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
+| Degradación por cristalización | 0.10 %/h | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
+| Ruido HR / T por paso | 1.0 % / 0.3 °C | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
+| Dispersión entre nodos HR / T / salinización | +/-2 % / +/-0.5 °C / +/-10 % | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
 
 Los parámetros marcados como supuestos son estimaciones de orden de magnitud y deben calibrarse con mediciones de campo.
 
@@ -359,3 +359,62 @@ Con humedad inicial de 45 % hay menos agua captada y, por tanto, menos sal. El m
 - La recuperación tras pulso compara momentos distintos en cada modo: el neuro-simbólico mide justo después de un pulso disparado por impedancia alta, y el temporizador mide después de pulsos a intervalos fijos. Por eso, con salinidad baja, un valor alto del temporizador no indica una membrana mejor mantenida, sino una membrana que no necesitaba limpieza.
 - Los valores absolutos dependen de parámetros supuestos, en especial la eficacia máxima del pulso (0.90), la fatiga por pulso y la degradación térmica (sección 3.4). La dirección de los resultados se explica por la lógica de control (pulsar por demanda frente a pulsar por horario, y el límite de 45 °C), pero su magnitud debe calibrarse con mediciones.
 - Las cifras corresponden a una semilla. Para el informe final se recomienda repetir el barrido con varias semillas y reportar media y dispersión.
+
+## 8. Lectura crítica de las conjeturas
+
+### 8.1 Conflicto entre los indicadores de la Conjetura 1
+
+La sección 5.5 muestra que la Conjetura 1 falla por la recuperación de caudal, mientras que el ahorro de energía cumple en la mayoría de los escenarios. Una pregunta natural es si disparar el pulso antes, con menos carga salina, resolvería el problema. Para responderla se ejecutó un análisis exploratorio con un script temporal, fuera del repositorio, que asigna en memoria `UMBRAL_IMPEDANCIA_OHMS` a 1500, 1400, 1300 y 1200 Ohm y ejecuta `ejecutar_simulacion` con estas condiciones:
+
+- escenarios DIA_NORMAL, INCRUSTACION_SALINA_RAPIDA y TORMENTA_DE_SAL_Y_CALOR_EXTREMO;
+- 24 h, inicio a las 18:00, paso de 5 min, 8 nodos, semilla 42, tasa ALTA, humedad inicial 85 %;
+- los demás parámetros de `backend/config.py` sin modificar.
+
+| Umbral (Ohm) | Escenario | Recuperación (%) | Ahorro (%) | C1 | Pulsos neuro / temporizador | Litros neuro / temporizador | Degradación neuro / temporizador (%) |
+|---|---|---|---|---|---|---|---|
+| 1500 | DIA_NORMAL | 88.78 | 46.50 | false | 46 / 88 | 254.60 / 340.40 | 0.115 / 2.427 |
+| 1500 | INCRUSTACION_SALINA_RAPIDA | 85.92 | 12.49 | false | 97 / 88 | 185.37 / 240.94 | 1.073 / 4.117 |
+| 1500 | TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 88.02 | 35.17 | false | 64 / 88 | 234.98 / 305.83 | 0.408 / 3.903 |
+| 1400 | DIA_NORMAL | 91.50 | 30.47 | false | 60 / 88 | 261.71 / 339.81 | 0.216 / 2.798 |
+| 1400 | INCRUSTACION_SALINA_RAPIDA | 88.65 | 4.35 | false | 113 / 88 | 183.48 / 240.83 | 1.231 / 4.275 |
+| 1400 | TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 90.47 | 30.11 | false | 75 / 88 | 227.77 / 305.43 | 0.668 / 4.298 |
+| 1300 | DIA_NORMAL | 93.63 | 25.09 | false | 70 / 88 | 248.94 / 339.14 | 0.566 / 3.275 |
+| 1300 | INCRUSTACION_SALINA_RAPIDA | 91.31 | -8.64 | false | 136 / 88 | 178.99 / 240.74 | 1.423 / 4.381 |
+| 1300 | TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 92.82 | 28.15 | false | 88 / 88 | 218.71 / 305.01 | 0.942 / 4.715 |
+| 1200 | DIA_NORMAL | 95.68 | 16.16 | false | 89 / 88 | 231.90 / 338.45 | 0.954 / 3.858 |
+| 1200 | INCRUSTACION_SALINA_RAPIDA | 93.90 | -26.58 | false | 176 / 88 | 173.20 / 240.70 | 1.680 / 4.419 |
+| 1200 | TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 95.06 | 20.22 | false | 115 / 88 | 209.42 / 304.68 | 1.236 / 5.052 |
+
+Las filas de 1500 Ohm coinciden con las secciones 5.3, 5.4 y 7.3. Un ahorro negativo indica que el modo neuro-simbólico gastó más energía en pulsos que el temporizador.
+
+El umbral no solo dispara el pulso: también define el criterio de degradación por cristalización (pérdida de 0.10 %/h mientras Z supera el umbral, sección 3.2), que se aplica a ambos modos. Por eso, al bajar el umbral, la degradación y los litros del temporizador también cambian, aunque su programación de pulsos no dependa de la impedancia.
+
+Los dos indicadores de la Conjetura 1 se mueven en direcciones opuestas:
+
+- **Recuperación.** Con un umbral más bajo, el pulso actúa sobre menos carga salina, remueve una fracción mayor y deja la membrana más cerca de la impedancia nominal. La recuperación supera el 90 % desde 1400 Ohm en DIA_NORMAL y TORMENTA_DE_SAL_Y_CALOR_EXTREMO, y desde 1300 Ohm en INCRUSTACION_SALINA_RAPIDA.
+- **Ahorro.** Con un umbral más bajo, el pulso se dispara más veces y el ahorro de energía cae. Solo con 1500 Ohm alcanza el 35 % (DIA_NORMAL y TORMENTA_DE_SAL_Y_CALOR_EXTREMO). Con 1200 Ohm, el modo neuro-simbólico pulsa más veces que el temporizador en los tres escenarios.
+
+Ningún umbral entre 1200 y 1500 Ohm satisface a la vez la recuperación >= 90 % y el ahorro >= 35 % en los escenarios evaluados. Con la eficacia del pulso supuesta (0.90), el conflicto es estructural: un umbral fijo único no puede optimizar los dos indicadores al mismo tiempo. Bajar el umbral también aumenta la degradación neuro-simbólica en los tres escenarios, por la fatiga de los pulsos adicionales y por el criterio de cristalización más estricto. Con 1300 y 1200 Ohm, el agua captada por el modo neuro-simbólico es menor que con 1500 Ohm en los tres escenarios.
+
+Este es un análisis exploratorio. No modifica `backend/config.py` y el umbral de 1500 Ohm del PRD se mantiene. Ningún valor se ajustó para cambiar el resultado de una conjetura (decisión D5).
+
+### 8.2 Umbral de la Conjetura 3 frente a la literatura
+
+La comparación completa está en [referencias.md](referencias.md), sección 4. En síntesis, con humedad inicial de 85 % el modelo obtiene 16.97 L/m²/noche en DIA_NORMAL (sección 5.4), por encima del rango de 3 a 10 L/m²/día que Klemm et al. (2012) reportan para proyectos operativos de captación de niebla. Por eso:
+
+- el flujo máximo de niebla supuesto (`FLUJO_NIEBLA_MAXIMO_L_M2_H = 6.0`) es optimista;
+- el umbral de 12 L/m²/noche de la Conjetura 3 supera el rango típico de operación.
+
+La validación de la Conjetura 3 en cuatro escenarios con humedad inicial de 85 % depende de ese flujo optimista. Con humedad inicial de 45 %, el rendimiento del modelo (4.0 a 6.0 L/m²/noche, sección 5.5) queda dentro del rango de la literatura y la conjetura no se valida.
+
+### 8.3 Preguntas emergentes para el Ciclo 3
+
+a) ¿Un umbral de disparo adaptativo, que dependa por ejemplo de la reserva o de la tasa de incrustación, puede cumplir a la vez la recuperación y el ahorro de la Conjetura 1? La sección 8.1 muestra que un umbral fijo no lo logra.
+
+b) ¿Qué fracción de la costra remueve un pulso de 90 s a 44 °C? Es la medición experimental prioritaria descrita en 6.3, de la que depende el estado de las Conjeturas 1 y 2.
+
+c) ¿Un estimador sub-simbólico puede distinguir la impedancia causada por sal de la causada por polvo? Esa distinción explica el resultado de TORMENTA_DE_ARENA (sección 6.2), donde el ensuciamiento por polvo eleva la impedancia y no se remueve con el pulso.
+
+d) ¿Cuál es el rendimiento real de niebla en Cabo de la Vela? De él dependen el flujo supuesto y la pertinencia del umbral de la Conjetura 3 (sección 8.2).
+
+e) Reoperacionalizar la Conjetura 2 en dos indicadores declarados antes de ejecutar las simulaciones: la cinética de desprendimiento (< 120 s) y la extensión de la limpieza (Z <= 1100 Ohm). Hoy ambos aspectos se miden en un solo indicador, el tiempo hasta 1100 Ohm, y el criterio se endureció después de observar los primeros resultados (sección 6.4).
