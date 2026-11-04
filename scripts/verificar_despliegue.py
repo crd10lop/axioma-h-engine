@@ -94,6 +94,9 @@ class CasoRegla:
     caudal_pct: float
 
 
+# Anulación manual de un operador usada en los casos de supervisión humana (REGLA_06).
+SUSPENSION_MANUAL = {"anulacion_manual": "SUSPENDER_EXTRACCION"}
+
 # Cada caso cumple también las condiciones de las reglas de menor prioridad,
 # de modo que se verifica el orden REGLA_01 > 02 > 04 > 03 > 05.
 CASOS_REGLAS = [
@@ -141,6 +144,26 @@ CASOS_REGLAS = [
         accion="FILTRACION_PASIVA_CONTINUA",
         pulso=False,
         caudal_pct=100.0,
+    ),
+    # Supervisión humana (REGLA_06): el operador solo puede ser más conservador, y el
+    # corte térmico prevalece sobre su decisión.
+    CasoRegla(
+        nombre="Supervisión humana: suspender la extracción",
+        ajustes=dict(impedancia_ohms=1000.0, **SUSPENSION_MANUAL),
+        regla="REGLA_06_SUPERVISION_HUMANA",
+        estado="SUPERVISION_HUMANA",
+        accion="SUSPENSION_MANUAL",
+        pulso=False,
+        caudal_pct=0.0,
+    ),
+    CasoRegla(
+        nombre="Supervisión humana: el corte térmico prevalece (T = 46 °C)",
+        ajustes=dict(temperatura_celsius=46.0, **SUSPENSION_MANUAL),
+        regla="REGLA_01_LIMITE_TERMICO_ABSOLUTO",
+        estado="EMERGENCIA_TERMICA",
+        accion="CORTE_DE_EMERGENCIA",
+        pulso=False,
+        caudal_pct=0.0,
     ),
 ]
 

@@ -131,19 +131,28 @@ REGLAS: list[dict[str, int | str]] = [
     ),
     _regla(
         3,
+        "REGLA_06_SUPERVISION_HUMANA",
+        (
+            "Anulación del operador: suspender la extracción, o inhibir el pulso con impedancia "
+            f"{_IMPEDANCIA_ALTA}"
+        ),
+        f"Suspender: caudal 0 %, sin pulso. Inhibir el pulso: caudal al 50 % del {_TOPE}, sin pulso",
+    ),
+    _regla(
+        4,
         "REGLA_04_PROTECCION_RESERVA_CRITICA",
         f"Reserva < {config.UMBRAL_RESERVA_CRITICA_PCT:g} % e impedancia {_IMPEDANCIA_ALTA}",
         f"Reducir el caudal al 50 % del {_TOPE}, sin pulso",
     ),
     _regla(
-        4,
+        5,
         "REGLA_03_DESPRENDIMIENTO_SAL_POR_IMPEDANCIA",
         f"Impedancia {_IMPEDANCIA_ALTA} y reserva >= {config.UMBRAL_RESERVA_CRITICA_PCT:g} %",
         f"Pulso resistivo de {DURACION_PULSO_SEG} s hacia {TEMPERATURA_OBJETIVO_PULSO_C:g} °C; "
         f"caudal al 80 % del {_TOPE}",
     ),
     _regla(
-        5,
+        6,
         "REGLA_05_OPERACION_NOMINAL",
         "Ninguna de las anteriores",
         f"Filtración pasiva continua; caudal al 100 % del {_TOPE}",
@@ -161,7 +170,9 @@ NOTA_REGLAS = (
     "Las reglas se evalúan en este orden y la primera que se cumple decide. El sistema nunca extrae "
     f"más del {FRACCION_MAXIMA_EXTRACCION_PCT:g} % de la niebla disponible. La REGLA_04 se evalúa "
     "antes que la REGLA_03 porque ambas comparten la condición de impedancia y la REGLA_04 protege "
-    "la reserva térmica."
+    "la reserva térmica. La REGLA_06 aplica la supervisión humana en la evaluación de un nodo: el "
+    "operador solo puede ser más conservador que el motor, nunca forzar extracción ni pulsos, y los "
+    "límites térmico y ecológico prevalecen sobre su decisión."
 )
 
 
@@ -241,8 +252,10 @@ PERSPECTIVAS: dict[str, str] = {
     ),
     "humana": (
         "Cada decisión del motor incluye un motivo legible, y la vista de evaluación manual permite "
-        "explorar las reglas. No resuelto: no hay anulación manual ni supervisión humana dentro del "
-        "lazo de control; se propone incorporarlas en el Ciclo 3."
+        "explorar las reglas. En la evaluación de un nodo, un operador puede suspender la extracción o "
+        "inhibir el pulso (REGLA_06): solo en sentido conservador y sin pasar por encima de los límites "
+        "térmico y ecológico. Resuelto parcialmente: la simulación no admite supervisión humana y sus "
+        "decisiones se aplican sin operador; incorporarla se propone para el Ciclo 3."
     ),
 }
 
@@ -312,6 +325,12 @@ GLOSARIO: dict[str, str] = {
     "temporizador fijo": (
         "Control tradicional de comparación: aplica un pulso cada 120 min sin leer sensores, con una "
         "fracción de extracción fija de 0.45 y sin corte térmico ni pausa ecológica."
+    ),
+    "supervisión humana": (
+        "Intervención de un operador sobre la decisión de un nodo (REGLA_06). Puede suspender la "
+        "extracción o impedir el pulso de limpieza, pero nunca forzar extracción ni pulsos. Se evalúa "
+        f"después del corte térmico ({config.UMBRAL_TEMPERATURA_CORTE_C:g} °C) y de la pausa ecológica "
+        f"(humedad < {config.UMBRAL_HUMEDAD_ECOLOGICA_PCT:g} %), que siempre prevalecen."
     ),
     "semilla": (
         "Número que inicializa el generador aleatorio del entorno. La misma semilla reproduce la "

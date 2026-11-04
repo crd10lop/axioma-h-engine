@@ -117,7 +117,8 @@ Esta sección se limita a lo que el repositorio implementa o documenta. Lo que n
 
 - Cada decisión del motor incluye un campo `motivo` con una explicación legible de la regla activada y de la acción tomada.
 - La vista "Evaluación manual de nodo" del dashboard permite explorar las reglas: se ajustan los valores de telemetría y se observa qué regla se activa y por qué.
-- **Limitación no resuelta:** no hay anulación manual ni supervisión humana dentro del lazo de control. Las decisiones del motor se aplican sin intervención de un operador. Incorporar ese mecanismo se propone para el Ciclo 3.
+- **Supervisión humana en la evaluación de un nodo.** `POST /api/v1/nodo/evaluar` admite el campo `anulacion_manual`, y la vista "Evaluación manual de nodo" lo ofrece con el selector "Supervisión humana". Un operador puede suspender la extracción o inhibir el pulso (REGLA_06), solo en sentido conservador: nunca puede forzar extracción ni pulsos, y el corte térmico (REGLA_01) y la pausa ecológica (REGLA_02) prevalecen sobre su decisión ([04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 2 y decisión D6).
+- **Limitación resuelta parcialmente:** la supervisión existe en la evaluación individual, pero no en la simulación, cuyas decisiones se aplican sin intervención de un operador. Incorporarla al simulador, con reglas sobre cuándo y cómo interviene el operador, se propone para el Ciclo 3.
 
 ### 2.8 Alcance y madurez
 
@@ -184,13 +185,14 @@ Los indicadores de la matriz se calculan en el simulador del Ciclo 2. La definic
 3. **Regla de Reserva Energética:** Si $\text{Reserva}_{térmica} < 30\% \implies \text{Acción: REDUCIR_CAUDAL}$.
 4. **Regla de Regeneración Salina:** Si $\text{Impedancia} > 1500\ \Omega \implies \text{Acción: APLICAR_PULSO_RESONANTE}$.
 
-**Nota sobre la implementación.** La API sigue la versión de las reglas del PRD (`02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md`, sección 4), con cinco reglas evaluadas en orden de prioridad:
+**Nota sobre la implementación.** La API sigue la versión de las reglas del PRD (`02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md`, sección 4), con seis reglas evaluadas en orden de prioridad:
 
 1. REGLA_01, corte térmico;
 2. REGLA_02, pausa ecológica;
-3. REGLA_04, reserva crítica;
-4. REGLA_03, pulso resistivo;
-5. REGLA_05, operación nominal.
+3. REGLA_06, supervisión humana, que solo actúa si un operador indica una anulación manual (sección 2.7);
+4. REGLA_04, reserva crítica;
+5. REGLA_03, pulso resistivo;
+6. REGLA_05, operación nominal.
 
 Frente a esta lista:
 

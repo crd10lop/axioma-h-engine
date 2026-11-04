@@ -7,6 +7,8 @@ from backend.main import app
 
 cliente = TestClient(app)
 
+RUTA_EVALUAR = "/api/v1/nodo/evaluar"
+
 PAYLOAD_TELEMETRIA_PRD = {
     "nodo_id": "NODO_04",
     "impedancia_ohms": 1650.5,
@@ -54,7 +56,7 @@ def test_salud():
 
 
 def test_evaluar_nodo_valido():
-    respuesta = cliente.post("/api/v1/nodo/evaluar", json=PAYLOAD_TELEMETRIA_PRD)
+    respuesta = cliente.post(RUTA_EVALUAR, json=PAYLOAD_TELEMETRIA_PRD)
     assert respuesta.status_code == 200
     datos = respuesta.json()
     assert datos["regla_activada"] == "REGLA_03_DESPRENDIMIENTO_SAL_POR_IMPEDANCIA"
@@ -76,7 +78,45 @@ def test_evaluar_nodo_invalido_devuelve_422():
         {key: value for key, value in PAYLOAD_TELEMETRIA_PRD.items() if key != "temperatura_celsius"},
     ]
     for payload in invalidos:
-        assert cliente.post("/api/v1/nodo/evaluar", json=payload).status_code == 422
+        assert cliente.post(RUTA_EVALUAR, json=payload).status_code == 422
+
+
+def _evaluar_con_anulacion(anulacion: str, **cambios) -> dict:
+    """Evalúa el payload del PRD con la anulación manual y los campos indicados."""
+    respuesta = cliente.post(RUTA_EVALUAR, json={**PAYLOAD_TELEMETRIA_PRD, **cambios, "anulacion_manual": anulacion})
+    assert respuesta.status_code == 200
+    return respuesta.json()
+
+
+@pytest.mark.parametrize(
+    ("anulacion", "regla", "accion", "caudal"),
+    [
+        ("NINGUNA", "REGLA_03_DESPRENDIMIENTO_SAL_POR_IMPEDANCIA", "APLICAR_PULSO_RESISTIVO", 80.0),
+        ("SUSPENDER_EXTRACCION", "REGLA_06_SUPERVISION_HUMANA", "SUSPENSION_MANUAL", 0.0),
+        ("INHIBIR_PULSO", "REGLA_06_SUPERVISION_HUMANA", "REDUCIR_CAUDAL_SIN_PULSO", 50.0),
+    ],
+)
+def test_evaluar_nodo_con_anulacion_manual(anulacion, regla, accion, caudal):
+    datos = _evaluar_con_anulacion(anulacion)
+    assert datos["regla_activada"] == regla
+    assert datos["accion_recomendada"] == accion
+    assert datos["ajuste_caudal_pct"] == pytest.approx(caudal)
+
+
+def test_supervision_humana_se_reporta_como_estado():
+    datos = _evaluar_con_anulacion("INHIBIR_PULSO")
+    assert datos["estado_nodo"] == "SUPERVISION_HUMANA"
+    assert datos["pulso_termico_activo"] is False
+
+
+def test_corte_termico_prevalece_sobre_la_suspension_manual():
+    datos = _evaluar_con_anulacion("SUSPENDER_EXTRACCION", temperatura_celsius=46.0)
+    assert datos["regla_activada"] == "REGLA_01_LIMITE_TERMICO_ABSOLUTO"
+
+
+def test_anulacion_manual_invalida_devuelve_422():
+    payload = {**PAYLOAD_TELEMETRIA_PRD, "anulacion_manual": "FORZAR_PULSO"}
+    assert cliente.post(RUTA_EVALUAR, json=payload).status_code == 422
 
 
 def test_ejecutar_simulacion_payload_prd():

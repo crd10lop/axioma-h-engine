@@ -45,6 +45,7 @@ class EstadoNodo(str, Enum):
     RESERVA_CRITICA = "RESERVA_CRITICA"
     CRISTALIZACION_DETECTADA = "CRISTALIZACION_DETECTADA"
     NOMINAL = "NOMINAL"
+    SUPERVISION_HUMANA = "SUPERVISION_HUMANA"
 
 
 class AccionControl(str, Enum):
@@ -55,6 +56,15 @@ class AccionControl(str, Enum):
     REDUCIR_CAUDAL_SIN_PULSO = "REDUCIR_CAUDAL_SIN_PULSO"
     APLICAR_PULSO_RESISTIVO = "APLICAR_PULSO_RESISTIVO"
     FILTRACION_PASIVA_CONTINUA = "FILTRACION_PASIVA_CONTINUA"
+    SUSPENSION_MANUAL = "SUSPENSION_MANUAL"
+
+
+class AnulacionManual(str, Enum):
+    """Intervención de un operador sobre la decisión del motor; solo puede ser más conservadora."""
+
+    NINGUNA = "NINGUNA"
+    SUSPENDER_EXTRACCION = "SUSPENDER_EXTRACCION"
+    INHIBIR_PULSO = "INHIBIR_PULSO"
 
 
 class TelemetryInput(BaseModel):
@@ -90,6 +100,15 @@ class TelemetryInput(BaseModel):
     flujo_actual_ml_min: float = Field(..., ge=0, description="Caudal de agua captada en mililitros por minuto.")
     modo_operacion: ModoOperacion = Field(
         default=ModoOperacion.NEURO_SIMBOLICO, description="Estrategia de control a aplicar."
+    )
+    anulacion_manual: AnulacionManual = Field(
+        default=AnulacionManual.NINGUNA,
+        description=(
+            "Intervención del operador (REGLA_06). Solo puede ser más conservadora que el motor: "
+            "SUSPENDER_EXTRACCION detiene la extracción e INHIBIR_PULSO impide el pulso resistivo. "
+            "Los límites térmico (REGLA_01) y ecológico (REGLA_02) prevalecen. No aplica en modo "
+            "TEMPORIZADOR_FIJO."
+        ),
     )
 
 

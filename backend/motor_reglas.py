@@ -5,13 +5,21 @@ cumple determina la decisión:
 
     1. REGLA_01_LIMITE_TERMICO_ABSOLUTO
     2. REGLA_02_LIMITE_ECOLOGICO_TERRITORIAL
-    3. REGLA_04_PROTECCION_RESERVA_CRITICA
-    4. REGLA_03_DESPRENDIMIENTO_SAL_POR_IMPEDANCIA
-    5. REGLA_05_OPERACION_NOMINAL
+    3. REGLA_06_SUPERVISION_HUMANA
+    4. REGLA_04_PROTECCION_RESERVA_CRITICA
+    5. REGLA_03_DESPRENDIMIENTO_SAL_POR_IMPEDANCIA
+    6. REGLA_05_OPERACION_NOMINAL
 
 La REGLA_04 se evalúa antes que la REGLA_03 porque ambas comparten la
 condición de impedancia alta y la REGLA_04 protege la reserva térmica. Los
-nombres conservan la numeración del PRD.
+nombres conservan la numeración del PRD; por eso la regla agregada después
+es la REGLA_06.
+
+La REGLA_06 aplica la anulación manual de un operador (decisión D6). Solo
+puede ser más conservadora que el motor: SUSPENDER_EXTRACCION lleva el caudal
+a 0 % sin pulso, e INHIBIR_PULSO, con impedancia alta, sustituye el pulso por
+una reducción del caudal al 50 % sin pulso. Se evalúa después de la REGLA_01
+y la REGLA_02, que siempre prevalecen, y no aplica en modo TEMPORIZADOR_FIJO.
 
 Todas las funciones son puras: no dependen de estado global y, con el mismo
 instante de referencia, devuelven siempre la misma decisión.
@@ -24,6 +32,7 @@ from typing import Optional
 from backend import config, modelo_fisico
 from backend.schemas import (
     AccionControl,
+    AnulacionManual,
     ControlDecision,
     EstadoNodo,
     MetricasConjeturas,
@@ -36,6 +45,7 @@ REGLA_02 = "REGLA_02_LIMITE_ECOLOGICO_TERRITORIAL"
 REGLA_03 = "REGLA_03_DESPRENDIMIENTO_SAL_POR_IMPEDANCIA"
 REGLA_04 = "REGLA_04_PROTECCION_RESERVA_CRITICA"
 REGLA_05 = "REGLA_05_OPERACION_NOMINAL"
+REGLA_06 = "REGLA_06_SUPERVISION_HUMANA"
 SIN_REGLAS_TEMPORIZADOR = "SIN_REGLAS_TEMPORIZADOR_FIJO"
 
 
@@ -53,7 +63,22 @@ class _Accion:
 
 
 def _seleccionar_regla(t: TelemetryInput) -> _Accion:
-    """Aplica las reglas en orden de prioridad y devuelve la primera que se cumple."""
+    """Aplica las reglas en orden de prioridad y devuelve la primera que se cumple.
+
+    La REGLA_01 y la REGLA_02 se evalúan primero y prevalecen sobre cualquier
+    anulación manual. La REGLA_06 se evalúa después y sustituye a la regla
+    automática que habría aplicado (REGLA_04, REGLA_03 o REGLA_05).
+    """
+    seguridad = _regla_seguridad(t)
+    if seguridad is not None:
+        return seguridad
+    automatica = _regla_automatica(t)
+    supervision = _regla_supervision_humana(t, automatica)
+    return automatica if supervision is None else supervision
+
+
+def _regla_seguridad(t: TelemetryInput) -> _Accion | None:
+    """Límites térmico (REGLA_01) y ecológico (REGLA_02); None si ninguno se cumple."""
     if t.temperatura_celsius >= config.UMBRAL_TEMPERATURA_CORTE_C:
         return _Accion(
             regla=REGLA_01,
@@ -82,6 +107,11 @@ def _seleccionar_regla(t: TelemetryInput) -> _Accion:
                 "competir con la vegetación y la fauna locales."
             ),
         )
+    return None
+
+
+def _regla_automatica(t: TelemetryInput) -> _Accion:
+    """Reglas de operación del motor sin intervención: REGLA_04, REGLA_03 y REGLA_05, en ese orden."""
     impedancia_alta = t.impedancia_ohms > config.UMBRAL_IMPEDANCIA_OHMS
     if impedancia_alta and t.reserva_calor_pct < config.UMBRAL_RESERVA_CRITICA_PCT:
         return _Accion(
@@ -126,6 +156,55 @@ def _seleccionar_regla(t: TelemetryInput) -> _Accion:
             "Filtración pasiva continua al tope ecológico."
         ),
     )
+
+
+def _sin_intervencion(automatica: _Accion) -> str:
+    """Frase que indica qué regla automática habría aplicado sin la intervención del operador."""
+    return (
+        f" Sin la intervención, el motor habría aplicado {automatica.regla} "
+        f"({automatica.accion.value}, caudal {automatica.caudal_pct:.0f} %)."
+    )
+
+
+def _regla_supervision_humana(t: TelemetryInput, automatica: _Accion) -> _Accion | None:
+    """Anulación manual del operador (REGLA_06); None si no hay anulación que aplicar.
+
+    Solo produce decisiones más conservadoras que la automática:
+    - SUSPENDER_EXTRACCION: caudal 0 % y sin pulso, en cualquier condición.
+    - INHIBIR_PULSO: con impedancia sobre el umbral, donde el motor aplicaría un
+      pulso o protegería la reserva, reduce el caudal al 50 % sin pulso. Con
+      impedancia normal no actúa y decide la regla automática.
+    """
+    if t.anulacion_manual == AnulacionManual.SUSPENDER_EXTRACCION:
+        return _Accion(
+            regla=REGLA_06,
+            estado=EstadoNodo.SUPERVISION_HUMANA,
+            accion=AccionControl.SUSPENSION_MANUAL,
+            pulso=False,
+            temperatura_objetivo_c=None,
+            caudal_pct=0.0,
+            motivo=(
+                "Decisión del operador (supervisión humana): suspender la extracción. Caudal 0 % y sin "
+                "pulso." + _sin_intervencion(automatica)
+            ),
+        )
+    impedancia_alta = t.impedancia_ohms > config.UMBRAL_IMPEDANCIA_OHMS
+    if t.anulacion_manual == AnulacionManual.INHIBIR_PULSO and impedancia_alta:
+        return _Accion(
+            regla=REGLA_06,
+            estado=EstadoNodo.SUPERVISION_HUMANA,
+            accion=AccionControl.REDUCIR_CAUDAL_SIN_PULSO,
+            pulso=False,
+            temperatura_objetivo_c=None,
+            caudal_pct=config.CAUDAL_RESERVA_CRITICA_PCT,
+            motivo=(
+                "Decisión del operador (supervisión humana): inhibir el pulso resistivo con impedancia "
+                f"{t.impedancia_ohms:.1f} Ohm sobre el umbral de {config.UMBRAL_IMPEDANCIA_OHMS:.1f} Ohm. "
+                f"Se reduce el caudal al {config.CAUDAL_RESERVA_CRITICA_PCT:.0f} % sin aplicar pulso."
+                + _sin_intervencion(automatica)
+            ),
+        )
+    return None
 
 
 def temperatura_alcanzada_pulso(temperatura_matriz_c: float) -> float:

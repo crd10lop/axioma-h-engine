@@ -26,7 +26,8 @@ from frontend import transformaciones as tr  # noqa: E402
 st.set_page_config(page_title="Axioma-H Engine - Simulador", layout="wide")
 
 NODOS = [f"NODO_{i:02d}" for i in range(1, 9)]
-MODOS = {"NEURO_SIMBOLICO": "Neuro-simbólico", "TEMPORIZADOR_FIJO": "Temporizador fijo"}
+MODO_NEURO = "NEURO_SIMBOLICO"
+MODOS = {MODO_NEURO: "Neuro-simbólico", "TEMPORIZADOR_FIJO": "Temporizador fijo"}
 ESCENARIOS = {
     "DIA_NORMAL": "Día normal",
     "INCRUSTACION_SALINA_RAPIDA": "Incrustación salina rápida",
@@ -46,6 +47,17 @@ CONTROLES = {
     "reserva_calor_pct": "tel_reserva",
     "humedad_relativa_pct": "tel_humedad",
     "flujo_actual_ml_min": "tel_flujo",
+}
+# Controles de selección que un caso de demostración puede fijar además de la telemetría.
+CAMPO_ANULACION = "anulacion_manual"
+CLAVE_ANULACION = "tel_anulacion"
+SELECTORES = {"modo_operacion": "tel_modo", CAMPO_ANULACION: CLAVE_ANULACION}
+ANULACION_POR_DEFECTO = "NINGUNA"
+# Opciones de supervisión humana (REGLA_06), con el valor que espera la API.
+ANULACIONES = {
+    ANULACION_POR_DEFECTO: "Sin intervención: decide el motor",
+    "SUSPENDER_EXTRACCION": "Suspender la extracción",
+    "INHIBIR_PULSO": "Impedir el pulso de limpieza",
 }
 TELEMETRIA_PRD = {
     "impedancia_ohms": 1650.5,
@@ -90,6 +102,15 @@ CASOS_DEMO = {
         "humedad_relativa_pct": 70.0,
         "flujo_actual_ml_min": 10.0,
     },
+    "Operador inhibe el pulso": {
+        "impedancia_ohms": 1850.0,
+        "temperatura_celsius": 36.0,
+        "reserva_calor_pct": 65.0,
+        "humedad_relativa_pct": 82.0,
+        "flujo_actual_ml_min": 9.0,
+        "modo_operacion": MODO_NEURO,
+        CAMPO_ANULACION: "INHIBIR_PULSO",
+    },
 }
 RETARDO_REPRODUCCION_SEG = {"Lenta": 0.5, "Media": 0.2, "Rápida": 0.08, "Muy rápida": 0.02}
 COLORES_MODO = alt.Scale(
@@ -113,7 +134,8 @@ def inicializar_estado() -> None:
     """
     widgets = {
         "tel_nodo": "NODO_04",
-        "tel_modo": "NEURO_SIMBOLICO",
+        "tel_modo": MODO_NEURO,
+        CLAVE_ANULACION: ANULACION_POR_DEFECTO,
         "sim_duracion": 24,
         "sim_humedad": 85.0,
         "sim_tasa": "ALTA",
@@ -185,9 +207,14 @@ def mostrar_error(error: cliente_api.ErrorApiAxioma) -> None:
 
 
 def cargar_caso(valores: dict) -> None:
-    """Callback que precarga los controles de telemetría con un caso de demostración."""
+    """Callback que precarga los controles de telemetría con un caso de demostración.
+
+    Los casos que no indican anulación manual la restablecen a NINGUNA, para que muestren la
+    decisión automática del motor. El modo de operación solo cambia si el caso lo indica.
+    """
+    st.session_state[CLAVE_ANULACION] = ANULACION_POR_DEFECTO
     for campo, valor in valores.items():
-        st.session_state[CONTROLES[campo]] = valor
+        st.session_state[CONTROLES.get(campo) or SELECTORES[campo]] = valor
 
 
 # ---------------------------------------------------------------------------
@@ -306,7 +333,7 @@ def panel_decision(decision: dict) -> None:
     resumen = f"Estado del nodo: {estado}. Acción recomendada: {decision['accion_recomendada']}."
     if estado == "NOMINAL":
         st.success(resumen)
-    elif estado in ("CRISTALIZACION_DETECTADA", "RESERVA_CRITICA"):
+    elif estado in ("CRISTALIZACION_DETECTADA", "RESERVA_CRITICA", "SUPERVISION_HUMANA"):
         st.warning(resumen)
     else:
         st.error(resumen)
@@ -388,10 +415,22 @@ def vista_evaluacion(api_disponible: bool) -> None:
         st.slider("Reserva de calor (%)", 0.0, 100.0, step=0.5, key="tel_reserva", disabled=bloqueado)
         st.slider("Humedad relativa (%)", 0.0, 100.0, step=0.5, key="tel_humedad", disabled=bloqueado)
         st.slider("Flujo actual (ml/min)", 0.0, 30.0, step=0.1, key="tel_flujo", disabled=bloqueado)
+        st.selectbox(
+            "Supervisión humana",
+            list(ANULACIONES),
+            format_func=ANULACIONES.get,
+            key=CLAVE_ANULACION,
+            disabled=bloqueado,
+            help=(
+                "El operador solo puede ser más conservador que el motor. El corte térmico y la pausa "
+                "ecológica prevalecen sobre su decisión. No aplica en modo temporizador fijo."
+            ),
+        )
 
     telemetria = {
         "nodo_id": st.session_state.tel_nodo,
         "modo_operacion": st.session_state.tel_modo,
+        CAMPO_ANULACION: st.session_state[CLAVE_ANULACION],
         **{campo: float(st.session_state[clave]) for campo, clave in CONTROLES.items()},
     }
     zonas = tr.zonas_telemetria(telemetria)

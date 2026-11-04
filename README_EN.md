@@ -31,9 +31,12 @@ Rules are evaluated in this order and the first one that matches decides. Flow i
 |---|---|---|---|---|
 | 1 | REGLA_01 | Temperature >= 45 °C | Emergency cut-off | 0 % |
 | 2 | REGLA_02 | Relative humidity < 30 % | Ecological pause | 0 % |
-| 3 | REGLA_04 | Reserve < 30 % and impedance > 1500 Ohm | Reduce flow, no pulse | 50 % |
-| 4 | REGLA_03 | Impedance > 1500 Ohm and reserve >= 30 % | Resistive pulse to 44 °C for 90 s | 80 % |
-| 5 | REGLA_05 | None of the above | Continuous passive filtration | 100 % |
+| 3 | REGLA_06 | Operator override: `SUSPENDER_EXTRACCION`, or `INHIBIR_PULSO` with impedance > 1500 Ohm | Manual suspension, or reduce flow without pulse | 0 % or 50 % |
+| 4 | REGLA_04 | Reserve < 30 % and impedance > 1500 Ohm | Reduce flow, no pulse | 50 % |
+| 5 | REGLA_03 | Impedance > 1500 Ohm and reserve >= 30 % | Resistive pulse to 44 °C for 90 s | 80 % |
+| 6 | REGLA_05 | None of the above | Continuous passive filtration | 100 % |
+
+REGLA_06 is human supervision, set with the optional `anulacion_manual` field of `POST /api/v1/nodo/evaluar` (`NINGUNA` by default). The operator can only be more conservative than the engine: it can never force extraction or pulses, and REGLA_01 and REGLA_02 take precedence. It does not apply to the fixed timer mode or to the simulation.
 
 ## Architecture
 
@@ -82,7 +85,7 @@ pytest --cov --cov-report=term-missing
 
 ## Deployment
 
-The API and the dashboard are deployed on **Render** (free plan) as two web services defined in `render.yaml` and built from the `main` branch. Each push to `main` runs the CI workflow (tests, coverage and SonarQube Cloud analysis), and Render deploys both services only when all checks pass. The automated verification script (`python scripts/verificar_despliegue.py`) runs 19 checks against the published services; the latest run, on 2026-11-04, passed 19 of 19. Details are in [docs/05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md) (in Spanish).
+The API and the dashboard are deployed on **Render** (free plan) as two web services defined in `render.yaml` and built from the `main` branch. Each push to `main` runs the CI workflow (tests, coverage and SonarQube Cloud analysis), and Render deploys both services only when all checks pass. The automated verification script (`python scripts/verificar_despliegue.py`) runs 21 checks against the published services; the latest recorded run is in section 4.3 of docs/05. Details are in [docs/05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md) (in Spanish).
 
 ## Results
 

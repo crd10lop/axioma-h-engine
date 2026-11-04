@@ -13,20 +13,25 @@ Los documentos de referencia son el PRD de la API ([02_Especificacion_Tecnica_y_
 | D3 | El sistema nunca extrae más del 33 % de la niebla disponible. `ajuste_caudal_pct` es relativo a ese tope. | Es el límite ecológico de la Matriz. Expresar el caudal relativo al tope impide superarlo por construcción. |
 | D4 | El enum de escenarios es único: DIA_NORMAL, INCRUSTACION_SALINA_RAPIDA, SEQUIA, TORMENTA_DE_ARENA y TORMENTA_DE_SAL_Y_CALOR_EXTREMO. | Unifica los nombres del PRD y de la Matriz. |
 | D5 | Los resultados y la validación de conjeturas se calculan con el modelo. No se fijan valores ni se ajustan parámetros para forzar resultados. | Garantiza que el simulador sirva como instrumento de verificación y no como confirmación circular. |
+| D6 | Un operador puede intervenir en la decisión de un nodo (REGLA_06), pero solo puede ser más conservador que el motor: suspender la extracción o inhibir el pulso, nunca forzar extracción ni pulsos. La REGLA_01 y la REGLA_02 prevalecen sobre su decisión. | Incorpora supervisión humana sin abrir una vía para saltarse los límites térmico y ecológico. Que la intervención solo pueda reducir el caudal o retirar el pulso la hace segura por construcción. |
 
 ## 2. Reglas de control
 
-Las reglas se evalúan en el orden de la tabla y la primera que se cumple decide. La REGLA_04 se evalúa antes que la REGLA_03 porque ambas comparten la condición de impedancia alta y la REGLA_04 protege la reserva.
+Las reglas se evalúan en el orden de la tabla y la primera que se cumple decide. La REGLA_04 se evalúa antes que la REGLA_03 porque ambas comparten la condición de impedancia alta y la REGLA_04 protege la reserva. La REGLA_06 conserva la numeración del PRD, por eso es la 06 aunque se evalúe en tercer lugar.
 
 | Prioridad | Regla | Condición | Estado | Acción | Pulso | Caudal (% del tope) |
 |---|---|---|---|---|---|---|
 | 1 | REGLA_01_LIMITE_TERMICO_ABSOLUTO | T >= 45.0 °C | EMERGENCIA_TERMICA | CORTE_DE_EMERGENCIA | No | 0 |
 | 2 | REGLA_02_LIMITE_ECOLOGICO_TERRITORIAL | HR < 30.0 % | PAUSA_ECOLOGICA | PAUSA_ECOLOGICA | No | 0 |
-| 3 | REGLA_04_PROTECCION_RESERVA_CRITICA | Reserva < 30.0 % y Z > 1500 Ohm | RESERVA_CRITICA | REDUCIR_CAUDAL_SIN_PULSO | No | 50 |
-| 4 | REGLA_03_DESPRENDIMIENTO_SAL_POR_IMPEDANCIA | Z > 1500 Ohm y reserva >= 30.0 % | CRISTALIZACION_DETECTADA | APLICAR_PULSO_RESISTIVO | 44 °C, 90 s | 80 |
-| 5 | REGLA_05_OPERACION_NOMINAL | Ningún caso anterior | NOMINAL | FILTRACION_PASIVA_CONTINUA | No | 100 |
+| 3 | REGLA_06_SUPERVISION_HUMANA | `anulacion_manual = SUSPENDER_EXTRACCION` | SUPERVISION_HUMANA | SUSPENSION_MANUAL | No | 0 |
+| 3 | REGLA_06_SUPERVISION_HUMANA | `anulacion_manual = INHIBIR_PULSO` y Z > 1500 Ohm | SUPERVISION_HUMANA | REDUCIR_CAUDAL_SIN_PULSO | No | 50 |
+| 4 | REGLA_04_PROTECCION_RESERVA_CRITICA | Reserva < 30.0 % y Z > 1500 Ohm | RESERVA_CRITICA | REDUCIR_CAUDAL_SIN_PULSO | No | 50 |
+| 5 | REGLA_03_DESPRENDIMIENTO_SAL_POR_IMPEDANCIA | Z > 1500 Ohm y reserva >= 30.0 % | CRISTALIZACION_DETECTADA | APLICAR_PULSO_RESISTIVO | 44 °C, 90 s | 80 |
+| 6 | REGLA_05_OPERACION_NOMINAL | Ningún caso anterior | NOMINAL | FILTRACION_PASIVA_CONTINUA | No | 100 |
 
-En modo `TEMPORIZADOR_FIJO`, el endpoint de evaluación no aplica reglas. Devuelve `FILTRACION_PASIVA_CONTINUA` con caudal del 100 % y regla `SIN_REGLAS_TEMPORIZADOR_FIJO`.
+**Supervisión humana (decisión D6).** `anulacion_manual` es un campo opcional de la telemetría, con valor `NINGUNA` por defecto, que no cambia ninguna decisión del motor. Con `INHIBIR_PULSO` e impedancia de 1500 Ohm o menos, la REGLA_06 no actúa y decide la REGLA_05, porque no hay pulso que inhibir. En cada caso el caudal resultante es menor o igual que el de la regla automática y nunca hay pulso. El `motivo` indica que la decisión es del operador y qué regla automática habría aplicado. La anulación solo existe en la evaluación individual: el simulador construye la telemetría con `NINGUNA`, de modo que sus resultados no cambian.
+
+En modo `TEMPORIZADOR_FIJO`, el endpoint de evaluación no aplica reglas ni la anulación manual. Devuelve `FILTRACION_PASIVA_CONTINUA` con caudal del 100 % y regla `SIN_REGLAS_TEMPORIZADOR_FIJO`.
 
 ### Métricas de una evaluación individual
 

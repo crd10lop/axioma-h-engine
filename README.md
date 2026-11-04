@@ -148,7 +148,7 @@ El dashboard queda disponible en http://localhost:8501. Streamlit escucha por de
 La barra lateral ofrece un recorrido de cuatro vistas, con un botón "Siguiente" al final de cada una, salvo la última:
 
 1. **Investigación y guía:** pregunta, hipótesis, conjeturas, reglas, perspectivas y alcance. No requiere la API.
-2. **Evaluación manual de nodo:** decisión del motor para una telemetría ajustable.
+2. **Evaluación manual de nodo:** decisión del motor para una telemetría ajustable, con supervisión humana opcional (suspender la extracción o impedir el pulso).
 3. **Simulación comparativa:** ambos modos sobre un escenario, con impacto comunitario estimado, gráficos, conjeturas y bitácora.
 4. **Respuesta a la pregunta:** barrido de salinidad con 1 a 5 semillas (media y banda de +/- una desviación) y sensibilidad a la eficacia del pulso o al flujo de niebla. Usa los endpoints de `/api/v1/analisis` y no modifica la configuración del modelo.
 
@@ -186,7 +186,7 @@ La aplicación está desplegada en **Render**, en el plan gratuito, con el Bluep
 
 Cada push a `main` ejecuta el workflow CI (pruebas, cobertura y análisis de SonarQube Cloud), y Render despliega ambos servicios solo cuando todos los checks del commit están en verde (`autoDeployTrigger: checksPass`). El dashboard se conecta a la API publicada mediante la variable `AXIOMA_API_URL`.
 
-La verificación automatizada (`python scripts/verificar_despliegue.py`) ejecuta 19 comprobaciones contra los servicios publicados; la última, del 2026-11-04, pasó 19 de 19. La configuración de cada plataforma, las variables de entorno, la verificación, la operación en el plan gratuito y el procedimiento para recrear el despliegue están en [docs/05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md).
+La verificación automatizada (`python scripts/verificar_despliegue.py`) ejecuta 21 comprobaciones contra los servicios publicados; la última ejecución registrada está en la sección 4.3 de docs/05. La configuración de cada plataforma, las variables de entorno, la verificación, la operación en el plan gratuito y el procedimiento para recrear el despliegue están en [docs/05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md).
 
 ## Endpoints
 
@@ -252,6 +252,8 @@ Respuesta:
   }
 }
 ```
+
+La solicitud admite además el campo opcional `anulacion_manual` (`NINGUNA` por defecto, `SUSPENDER_EXTRACCION` o `INHIBIR_PULSO`), que aplica la supervisión humana de la REGLA_06 (ver [Reglas de control](#reglas-de-control)). Con el mismo payload y `"anulacion_manual": "INHIBIR_PULSO"`, la respuesta cambia a `"estado_nodo": "SUPERVISION_HUMANA"`, `"accion_recomendada": "REDUCIR_CAUDAL_SIN_PULSO"`, `"pulso_termico_activo": false`, `"ajuste_caudal_pct": 50.0` y `"regla_activada": "REGLA_06_SUPERVISION_HUMANA"`, y el motivo indica que el motor habría aplicado la REGLA_03 sin la intervención.
 
 ### POST /api/v1/simulacion/ejecutar
 
@@ -349,11 +351,14 @@ Las reglas se evalúan en este orden y la primera que se cumple decide.
 |---|---|---|---|---|
 | 1 | REGLA_01_LIMITE_TERMICO_ABSOLUTO | Temperatura >= 45 °C | Corte de emergencia | 0 % |
 | 2 | REGLA_02_LIMITE_ECOLOGICO_TERRITORIAL | Humedad < 30 % | Pausa ecológica | 0 % |
-| 3 | REGLA_04_PROTECCION_RESERVA_CRITICA | Reserva < 30 % e impedancia > 1500 Ω | Reducir caudal sin pulso | 50 % |
-| 4 | REGLA_03_DESPRENDIMIENTO_SAL_POR_IMPEDANCIA | Impedancia > 1500 Ω y reserva >= 30 % | Pulso resistivo a 44 °C durante 90 s | 80 % |
-| 5 | REGLA_05_OPERACION_NOMINAL | Ninguna de las anteriores | Filtración pasiva continua | 100 % |
+| 3 | REGLA_06_SUPERVISION_HUMANA | Anulación del operador: `SUSPENDER_EXTRACCION`, o `INHIBIR_PULSO` con impedancia > 1500 Ω | Suspensión manual, o reducir caudal sin pulso | 0 % o 50 % |
+| 4 | REGLA_04_PROTECCION_RESERVA_CRITICA | Reserva < 30 % e impedancia > 1500 Ω | Reducir caudal sin pulso | 50 % |
+| 5 | REGLA_03_DESPRENDIMIENTO_SAL_POR_IMPEDANCIA | Impedancia > 1500 Ω y reserva >= 30 % | Pulso resistivo a 44 °C durante 90 s | 80 % |
+| 6 | REGLA_05_OPERACION_NOMINAL | Ninguna de las anteriores | Filtración pasiva continua | 100 % |
 
 El caudal se expresa como porcentaje del tope ecológico: el sistema nunca extrae más del 33 % de la niebla disponible. La REGLA_04 se evalúa antes que la REGLA_03 porque ambas comparten la condición de impedancia y la REGLA_04 protege la reserva térmica.
+
+La REGLA_06 aplica la supervisión humana mediante el campo opcional `anulacion_manual` de `POST /api/v1/nodo/evaluar` (`NINGUNA` por defecto). El operador solo puede ser más conservador que el motor: nunca puede forzar extracción ni pulsos, y la REGLA_01 y la REGLA_02 prevalecen sobre su decisión. Con `INHIBIR_PULSO` e impedancia normal, la regla no actúa y decide la REGLA_05. No aplica en modo `TEMPORIZADOR_FIJO` ni en la simulación, donde las decisiones se toman sin operador.
 
 ## Pruebas
 
@@ -361,7 +366,7 @@ El caudal se expresa como porcentaje del tope ecológico: el sistema nunca extra
 pytest -v
 ```
 
-La suite cubre el motor de reglas (cada regla, casos límite y prioridad), el simulador (reproducibilidad, límites térmico y ecológico, criterio de regeneración, modo de referencia, indicadores informativos y causas de no validación), el impacto comunitario, el análisis de robustez (barrido, sensibilidad, validaciones y ausencia de efectos sobre la configuración global, también con solicitudes simultáneas), la API, el cliente HTTP del dashboard (con `requests` simulado), las transformaciones de datos y el contenido de la vista de investigación. Ninguna prueba usa la red.
+La suite cubre el motor de reglas (cada regla, casos límite, prioridad y supervisión humana, incluido que los límites térmico y ecológico prevalecen sobre cualquier anulación), el simulador (reproducibilidad, límites térmico y ecológico, criterio de regeneración, modo de referencia, indicadores informativos y causas de no validación), el impacto comunitario, el análisis de robustez (barrido, sensibilidad, validaciones y ausencia de efectos sobre la configuración global, también con solicitudes simultáneas), la API, el cliente HTTP del dashboard (con `requests` simulado), las transformaciones de datos y el contenido de la vista de investigación. Ninguna prueba usa la red.
 
 ### Integración continua y calidad
 

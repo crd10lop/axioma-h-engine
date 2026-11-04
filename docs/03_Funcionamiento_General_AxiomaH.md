@@ -48,13 +48,16 @@ Cada nodo envía cuatro lecturas:
 - reserva de energía;
 - humedad relativa del aire.
 
-El motor revisa cinco reglas en orden y la primera que se cumple decide:
+El motor revisa seis reglas en orden y la primera que se cumple decide:
 
 1. **Temperatura de 45 °C o más:** corte de emergencia. Se detiene todo para no dañar la membrana.
 2. **Humedad menor que 30 %:** pausa ecológica. No se extrae agua, para no restársela a la vegetación local (trupillo y cardón).
-3. **Membrana obstruida (impedancia mayor que 1500 Ohm) y reserva menor que 30 %:** se reduce el caudal a la mitad y no se limpia, para no agotar la energía.
-4. **Membrana obstruida y energía suficiente:** pulso de limpieza de 90 segundos que lleva la membrana a 44 °C, con un grado de margen frente al límite de 45 °C.
-5. **Condiciones normales:** filtración continua.
+3. **Intervención de un operador (supervisión humana):** una persona puede pedir que se suspenda la extracción, o que no se aplique el pulso de limpieza. En el segundo caso, si la membrana está obstruida, el caudal baja a la mitad sin pulso. El operador solo puede ser más prudente que el motor: no puede forzar la extracción ni un pulso, y las dos reglas anteriores siempre se imponen a su decisión.
+4. **Membrana obstruida (impedancia mayor que 1500 Ohm) y reserva menor que 30 %:** se reduce el caudal a la mitad y no se limpia, para no agotar la energía.
+5. **Membrana obstruida y energía suficiente:** pulso de limpieza de 90 segundos que lleva la membrana a 44 °C, con un grado de margen frente al límite de 45 °C.
+6. **Condiciones normales:** filtración continua.
+
+La intervención del operador está disponible al evaluar un nodo, no en la simulación, donde las decisiones se toman sin operador.
 
 Además, el sistema nunca extrae más del 33 % de la niebla disponible. Es un límite ecológico incorporado en el diseño que no puede superarse.
 
@@ -102,7 +105,7 @@ Ninguno de los dos análisis cambia la configuración del modelo, de modo que va
 La barra lateral presenta un recorrido de cuatro vistas numeradas, en el orden recomendado de lectura. Al final de las tres primeras, un botón "Siguiente" lleva a la vista siguiente; también se puede saltar directamente a cualquiera desde la barra lateral.
 
 - **Investigación y guía:** es la vista inicial y no requiere la API. Presenta la pregunta de investigación, su versión divulgativa, la hipótesis de trabajo y la respuesta preliminar del simulador; la tabla de conjeturas con su criterio y la lectura de su resultado; las reglas de control; las perspectivas social, ética, cultural y humana; y el alcance y la madurez del artefacto. En secciones desplegables muestra los supuestos clave y las limitaciones, un glosario y las referencias. Los textos resumen el README y el plan del Ciclo 2 y están en `frontend/contenido.py`.
-- **Evaluación manual de nodo:** se ajustan la impedancia, la temperatura, la energía y la humedad, y se observa al instante qué regla se activa y por qué.
+- **Evaluación manual de nodo:** se ajustan la impedancia, la temperatura, la energía y la humedad, y se observa al instante qué regla se activa y por qué. El selector "Supervisión humana" permite suspender la extracción o impedir el pulso, y el caso de demostración "Operador inhibe el pulso" muestra el efecto sobre una membrana obstruida.
 - **Simulación comparativa:** se ejecuta un escenario y se comparan lado a lado el control neuro-simbólico y el temporizador. Empieza con un resumen ejecutivo de cinco frases (agua, desgaste, energía, límite ecológico y conjeturas validadas). Luego muestra las tarjetas de la comparativa, con la descomposición de la diferencia de agua según el temporizador de referencia; el bloque "Impacto comunitario estimado", con las personas que abastecería el agua captada y el rendimiento frente a la literatura; el estado de cada conjetura con sus indicadores y, si no se valida, sus causas; los gráficos en el tiempo y los totales. Las condiciones del entorno, la consola de decisiones y la reproducción paso a paso están en secciones desplegables, para no recargar la página.
 - **Respuesta a la pregunta:** usa los dos análisis de robustez de la API (sección 4). Muestra la pregunta y la hipótesis, y un aviso de que se trata de un análisis exploratorio que no cambia la configuración del modelo (decisión D5). Tiene dos bloques:
   - **Barrido de salinidad.** Se elige la humedad inicial y de 1 a 5 semillas (consecutivas desde 1) y se presiona "Ejecutar barrido". Dos gráficos muestran, en función de la carga salina, la recuperación tras el pulso (con la referencia de 90 %) y la degradación de la membrana de ambos modos, con su media y una banda de más o menos una desviación estándar. Debajo aparecen frases calculadas con los datos: la carga desde la cual el neuro-simbólico recupera más que el temporizador y el rango de reducción del desgaste.

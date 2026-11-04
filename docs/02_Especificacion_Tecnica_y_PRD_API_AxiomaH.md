@@ -230,6 +230,11 @@ Los valores de ambos ejemplos son los que calcula el modelo y coinciden con `doc
    * *Condición:* Todos los parámetros en rango normal.
    * *Acción:* `FILTRACION_PASIVA_CONTINUA`, `ajuste_caudal_pct = 100.0`.
 
+6. **REGLA 06 — Supervisión Humana (agregada en el Ciclo 2):**
+   * *Condición:* `anulacion_manual = SUSPENDER_EXTRACCION`, o `anulacion_manual = INHIBIR_PULSO` Y `impedancia_ohms > 1500.0`.
+   * *Acción:* con `SUSPENDER_EXTRACCION`, `SUSPENSION_MANUAL`, `ajuste_caudal_pct = 0.0`, `pulso_termico = False`; con `INHIBIR_PULSO`, `REDUCIR_CAUDAL_SIN_PULSO`, `ajuste_caudal_pct = 50.0`, `pulso_termico = False`. El estado del nodo es `SUPERVISION_HUMANA`.
+   * *Motivo:* Permite que un operador intervenga solo en sentido conservador. Se evalúa después de la REGLA 01 y la REGLA 02, que prevalecen, y antes de la REGLA 04, la REGLA 03 y la REGLA 05. El operador nunca puede forzar extracción ni pulsos.
+
 ---
 
 ## 5. Especificación del Frontend Dashboard (Simulador Gráfico)
@@ -254,6 +259,7 @@ La API y el dashboard están implementados en `backend/` (FastAPI) y `frontend/`
   - `comparativa` incluye un tercer modo, `modo_temporizador_tope_ecologico`: el temporizador fijo con la fracción de 0.33 del modo neuro-simbólico. Es una referencia para separar el efecto del tope ecológico del de la lógica de control y no interviene en la validación ni en `series_temporales`.
   - Cada conjetura de `detalle_verificacion` incluye `causas_no_validacion`, la lista de causas de los indicadores que no cumplen (`SIN_DATOS`, `DEPENDE_DE_PARAMETRO_SUPUESTO`, `LIMITE_DEL_RECURSO_ATMOSFERICO`, `DESEMPENO_DEL_CONTROL`); está vacía si la conjetura se valida. `indicadores_informativos` incluye además `reduccion_degradacion_pct` (Conjetura 1), `tiempo_desprendimiento_t95_promedio_seg` e `impedancia_promedio_tras_pulso_ohms` (Conjetura 2) y `rendimiento_nocturno_temporizador_l_m2_noche` (Conjetura 3). Ninguno de estos campos cambia la validación. Las definiciones están en `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md`, sección 4.
   - `SimulationResult` incluye `impacto_comunitario`, con una entrada por modo (`modo_neuro_simbolico`, `modo_temporizador_fijo` y `modo_temporizador_tope_ecologico`). Cada entrada tiene `litros_dia_red`, `rendimiento_l_m2_dia`, `personas_supervivencia` (15 L por persona al día, Sphere), `personas_acceso_basico` (20 L por persona al día, OMS) y el área de colector por persona para el acceso básico con los rendimientos de la literatura (`area_m2_por_persona_basico_literatura_min` y `area_m2_por_persona_basico_literatura_max`). Es opcional, con un diccionario vacío por defecto, y no interviene en la validación. Las definiciones y los resultados están en `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md`, sección 7.6.
+- **Supervisión humana.** `TelemetryInput` admite el campo opcional `anulacion_manual` (`NINGUNA`, `SUSPENDER_EXTRACCION` o `INHIBIR_PULSO`; por defecto `NINGUNA`), que aplica la REGLA 06 de la sección 4. Se agregaron el estado `SUPERVISION_HUMANA` y la acción `SUSPENSION_MANUAL`. El payload de la sección 3.1 sigue siendo válido sin cambios y produce la misma decisión. La regla no aplica en modo `TEMPORIZADOR_FIJO` ni en la simulación. El detalle está en `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md`, sección 2 y decisión D6.
 - **Campos opcionales en la solicitud.** `SimulationConfig` admite `numero_nodos` (por defecto 8), `paso_minutos` (por defecto 5) y `semilla` (por defecto 42). El payload de la sección 3.2 sigue siendo válido sin cambios.
 - **Temperatura objetivo del pulso.** Es 44.0 °C. Con 45.0 °C el pulso activaría el corte térmico de la REGLA_01 (`>= 45.0`). El ejemplo de la sección 3.1 se actualizó en consecuencia.
 - **Orden de evaluación.** La REGLA_04 se evalúa antes que la REGLA_03, porque ambas comparten la condición de impedancia alta. El caudal se expresa como porcentaje del tope ecológico del 33 %.

@@ -15,6 +15,7 @@ VISTA_SIMULACION = "Simulación comparativa"
 VISTA_RESPUESTA = "Respuesta a la pregunta"
 REGLA_03 = "REGLA_03_DESPRENDIMIENTO_SAL_POR_IMPEDANCIA"
 REGLA_04 = "REGLA_04_PROTECCION_RESERVA_CRITICA"
+REGLA_06 = "REGLA_06_SUPERVISION_HUMANA"
 ACCESO_BASICO = "acceso básico al agua"
 
 
@@ -176,7 +177,7 @@ def test_glosario_usa_los_estandares_de_config(termino, valor):
 # ---------------------------------------------------------------------------
 def test_reglas_en_orden_de_prioridad():
     prioridades = [regla["prioridad"] for regla in contenido.REGLAS]
-    assert prioridades == [1, 2, 3, 4, 5]
+    assert prioridades == [1, 2, 3, 4, 5, 6]
     for regla in contenido.REGLAS:
         assert set(regla) == set(contenido.COLUMNAS_REGLAS)
 
@@ -200,6 +201,43 @@ def test_reglas_describen_pulso_reserva_critica_y_tope():
     assert "sin pulso" in _accion(REGLA_04)
     assert tope in _texto_reglas()
     assert tope in contenido.NOTA_REGLAS
+
+
+def test_regla_06_en_tercera_posicion_tras_los_limites_de_seguridad():
+    orden = [regla["regla"] for regla in contenido.REGLAS]
+    assert orden == [
+        "REGLA_01_LIMITE_TERMICO_ABSOLUTO",
+        "REGLA_02_LIMITE_ECOLOGICO_TERRITORIAL",
+        REGLA_06,
+        REGLA_04,
+        REGLA_03,
+        "REGLA_05_OPERACION_NOMINAL",
+    ]
+
+
+@pytest.mark.parametrize("texto", ["Suspender: caudal 0 %", "Inhibir el pulso: caudal al 50 %", "sin pulso"])
+def test_regla_06_describe_acciones_conservadoras(texto):
+    assert texto in _accion(REGLA_06)
+
+
+def test_regla_06_condicion_usa_el_umbral_de_impedancia():
+    assert "impedancia > 1500 Ω" in _condicion(REGLA_06)
+
+
+@pytest.mark.parametrize("texto", ["REGLA_06", "más conservador que el motor", "prevalecen"])
+def test_nota_reglas_explica_la_supervision_humana(texto):
+    assert texto in contenido.NOTA_REGLAS
+
+
+@pytest.mark.parametrize("texto", ["REGLA_06", "Resuelto parcialmente", "la simulación no admite supervisión humana"])
+def test_perspectiva_humana_describe_la_supervision(texto):
+    assert texto in contenido.PERSPECTIVAS["humana"]
+
+
+def test_glosario_supervision_humana_cita_los_limites():
+    definicion = contenido.GLOSARIO["supervisión humana"]
+    assert "45 °C" in definicion
+    assert "nunca forzar extracción ni pulsos" in definicion
 
 
 def test_constantes_de_pulso_y_tope():
@@ -282,6 +320,7 @@ def test_glosario_contiene_los_terminos_requeridos():
         "integridad de la membrana",
         "control neuro-simbólico",
         "temporizador fijo",
+        "supervisión humana",
         "semilla",
     }
     assert set(contenido.GLOSARIO) == requeridos

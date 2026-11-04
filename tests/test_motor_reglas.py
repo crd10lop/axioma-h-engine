@@ -11,10 +11,11 @@ from backend.motor_reglas import (
     REGLA_03,
     REGLA_04,
     REGLA_05,
+    REGLA_06,
     SIN_REGLAS_TEMPORIZADOR,
     evaluar_telemetria,
 )
-from backend.schemas import AccionControl, EstadoNodo, ModoOperacion, TelemetryInput
+from backend.schemas import AccionControl, AnulacionManual, EstadoNodo, ModoOperacion, TelemetryInput
 
 LECTURA_NOMINAL = {
     "nodo_id": "NODO_01",
@@ -190,3 +191,122 @@ def test_evaluacion_determinista_con_instante_fijo():
     primera = evaluar_telemetria(telemetria, instante)
     segunda = evaluar_telemetria(telemetria, instante)
     assert primera == segunda
+
+
+# ---------------------------------------------------------------------------
+# Supervisión humana (REGLA_06)
+# ---------------------------------------------------------------------------
+SUSPENDER = AnulacionManual.SUSPENDER_EXTRACCION
+INHIBIR = AnulacionManual.INHIBIR_PULSO
+# Nombres de los argumentos parametrizados.
+ANULACION = "anulacion"
+CAMBIOS = "cambios"
+CAMBIOS_Y_REGLA = (CAMBIOS, "regla_esperada")
+INSTANTE_FIJO = datetime(2026, 1, 1, tzinfo=timezone.utc)
+IMPEDANCIA_ALTA = {"impedancia_ohms": 1800.0}
+RESERVA_CRITICA = {"impedancia_ohms": 1800.0, "reserva_calor_pct": 20.0}
+
+# Lecturas que activan cada regla automática sin intervención del operador.
+CASOS_POR_REGLA = [
+    ({"temperatura_celsius": 47.0}, REGLA_01),
+    ({"humedad_relativa_pct": 20.0}, REGLA_02),
+    (RESERVA_CRITICA, REGLA_04),
+    (IMPEDANCIA_ALTA, REGLA_03),
+    ({}, REGLA_05),
+]
+LECTURAS_POR_REGLA = [cambios for cambios, _ in CASOS_POR_REGLA]
+
+
+def evaluar_fijo(**cambios):
+    """Evalúa una lectura nominal modificada con un instante fijo, para comparar decisiones completas."""
+    return evaluar_telemetria(TelemetryInput(**{**LECTURA_NOMINAL, **cambios}), INSTANTE_FIJO)
+
+
+def test_anulacion_por_defecto_es_ninguna():
+    assert TelemetryInput(**LECTURA_NOMINAL).anulacion_manual is AnulacionManual.NINGUNA
+
+
+@pytest.mark.parametrize(CAMBIOS_Y_REGLA, CASOS_POR_REGLA)
+def test_anulacion_ninguna_conserva_la_regla(cambios, regla_esperada):
+    decision = evaluar(**cambios, anulacion_manual=AnulacionManual.NINGUNA)
+    assert decision.regla_activada == regla_esperada
+
+
+@pytest.mark.parametrize(CAMBIOS, LECTURAS_POR_REGLA)
+def test_anulacion_ninguna_conserva_la_decision_completa(cambios):
+    explicita = evaluar_fijo(**cambios, anulacion_manual=AnulacionManual.NINGUNA)
+    por_defecto = evaluar_fijo(**cambios)
+    assert explicita == por_defecto
+
+
+@pytest.mark.parametrize(CAMBIOS, [{}, IMPEDANCIA_ALTA, RESERVA_CRITICA])
+def test_suspender_extraccion(cambios):
+    decision = evaluar(**cambios, anulacion_manual=SUSPENDER)
+    assert decision.regla_activada == REGLA_06
+    assert decision.estado_nodo == EstadoNodo.SUPERVISION_HUMANA
+    assert decision.accion_recomendada == AccionControl.SUSPENSION_MANUAL
+    assert decision.pulso_termico_activo is False
+    assert decision.duracion_pulso_seg == 0
+    assert decision.ajuste_caudal_pct == pytest.approx(0.0)
+
+
+@pytest.mark.parametrize((CAMBIOS, "regla_automatica"), [(IMPEDANCIA_ALTA, REGLA_03), (RESERVA_CRITICA, REGLA_04)])
+def test_inhibir_pulso_con_impedancia_alta(cambios, regla_automatica):
+    decision = evaluar(**cambios, anulacion_manual=INHIBIR)
+    assert decision.regla_activada == REGLA_06
+    assert decision.estado_nodo == EstadoNodo.SUPERVISION_HUMANA
+    assert decision.accion_recomendada == AccionControl.REDUCIR_CAUDAL_SIN_PULSO
+    assert decision.pulso_termico_activo is False
+    assert decision.temperatura_objetivo_c is None
+    assert decision.ajuste_caudal_pct == pytest.approx(config.CAUDAL_RESERVA_CRITICA_PCT)
+    assert regla_automatica in decision.motivo
+
+
+@pytest.mark.parametrize("impedancia", [1100.0, 1500.0])
+def test_inhibir_pulso_sin_impedancia_alta_decide_regla_05(impedancia):
+    decision = evaluar(impedancia_ohms=impedancia, anulacion_manual=INHIBIR)
+    assert decision.regla_activada == REGLA_05
+
+
+def test_motivo_identifica_al_operador_y_la_regla_automatica():
+    motivo = evaluar(anulacion_manual=SUSPENDER).motivo
+    assert "Decisión del operador" in motivo
+    assert f"habría aplicado {REGLA_05}" in motivo
+
+
+@pytest.mark.parametrize(ANULACION, list(AnulacionManual))
+@pytest.mark.parametrize(
+    CAMBIOS_Y_REGLA,
+    [
+        ({"temperatura_celsius": 45.0, **IMPEDANCIA_ALTA}, REGLA_01),
+        ({"temperatura_celsius": 46.0, "humedad_relativa_pct": 10.0}, REGLA_01),
+        ({"humedad_relativa_pct": 29.9, **IMPEDANCIA_ALTA}, REGLA_02),
+        ({"humedad_relativa_pct": 20.0, **RESERVA_CRITICA}, REGLA_02),
+    ],
+)
+def test_limites_termico_y_ecologico_prevalecen_sobre_la_anulacion(anulacion, cambios, regla_esperada):
+    assert evaluar(**cambios, anulacion_manual=anulacion).regla_activada == regla_esperada
+
+
+@pytest.mark.parametrize(ANULACION, [SUSPENDER, INHIBIR])
+@pytest.mark.parametrize(CAMBIOS_Y_REGLA, CASOS_POR_REGLA)
+def test_anulacion_solo_reduce_el_caudal(anulacion, cambios, regla_esperada):
+    automatica = evaluar(**cambios)
+    anulada = evaluar(**cambios, anulacion_manual=anulacion)
+    assert automatica.regla_activada == regla_esperada
+    assert anulada.ajuste_caudal_pct <= automatica.ajuste_caudal_pct
+
+
+@pytest.mark.parametrize(ANULACION, [SUSPENDER, INHIBIR])
+@pytest.mark.parametrize(CAMBIOS, LECTURAS_POR_REGLA)
+def test_anulacion_nunca_activa_pulso(anulacion, cambios):
+    decision = evaluar(**cambios, anulacion_manual=anulacion)
+    assert decision.pulso_termico_activo is False
+
+
+@pytest.mark.parametrize(ANULACION, list(AnulacionManual))
+def test_modo_temporizador_ignora_la_anulacion(anulacion):
+    decision = evaluar(
+        impedancia_ohms=1800.0, modo_operacion=ModoOperacion.TEMPORIZADOR_FIJO, anulacion_manual=anulacion
+    )
+    assert decision.regla_activada == SIN_REGLAS_TEMPORIZADOR
