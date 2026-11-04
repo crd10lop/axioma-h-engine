@@ -11,7 +11,7 @@ El proyecto incluye una API REST y un dashboard simulador. El simulador compara 
 
 Lo desarrolla el equipo AXIOMA en el curso Fundamentos de Investigación de la Universidad de Antioquia (UdeA), Ciclo 2.
 
-Para una explicación general de qué hace la aplicación y cómo funciona, ver [docs/funcionamiento.md](docs/funcionamiento.md). Hay un resumen en inglés en [README_EN.md](README_EN.md).
+Para una explicación general de qué hace la aplicación y cómo funciona, ver [docs/03_Funcionamiento_General_AxiomaH.md](docs/03_Funcionamiento_General_AxiomaH.md). Hay un resumen en inglés en [README_EN.md](README_EN.md).
 
 ## Enlaces
 
@@ -25,6 +25,20 @@ Para una explicación general de qué hace la aplicación y cómo funciona, ver 
 | Datos de referencia abiertos (CSV y JSON) | [docs/datos/](docs/datos/README.md) |
 | Resumen en inglés | [README_EN.md](README_EN.md) |
 
+## Documentación
+
+Los documentos de `docs/` están numerados en orden de lectura:
+
+| N.º | Documento | Contenido |
+|---|---|---|
+| 01 | [Plan y Matriz de Operacionalización](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md) | Pregunta de investigación, conjeturas, variables, perspectivas del estudio, alcance e hitos. |
+| 02 | [Especificación técnica y PRD de la API](docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md) | Datos que recibe y entrega la API, payloads de ejemplo y estado de la implementación. |
+| 03 | [Funcionamiento general](docs/03_Funcionamiento_General_AxiomaH.md) | Explicación en lenguaje general de la aplicación y del dashboard. |
+| 04 | [Modelo de control y simulación](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md) | Reglas, ecuaciones, parámetros, resultados, sensibilidad y lectura crítica de las conjeturas. |
+| 05 | [Despliegue y operación](docs/05_Despliegue_y_Operacion_AxiomaH.md) | Despliegue en Render, integración continua, verificación y operación del plan gratuito. |
+| 06 | [Referencias y trazabilidad](docs/06_Referencias_y_Trazabilidad_AxiomaH.md) | Software de terceros, fuente científica y origen de cada parámetro del modelo. |
+| Anexo | [Datos de referencia](docs/datos/README.md) | Resultados en CSV y JSON con su diccionario de campos. |
+
 ## Pregunta de investigación
 
 > ¿En qué medida un sistema de control neuro-simbólico, evaluado mediante simulación, mejora la recuperación del caudal de agua y reduce el desgaste de las membranas de un captador de agua atmosférica, en comparación con un control convencional por temporizador, a medida que aumenta la salinidad del ambiente? 
@@ -37,10 +51,10 @@ Se recomienda recorrer el proyecto en este orden:
 
 1. **Pregunta.** La pregunta de investigación de la sección anterior y su desarrollo en [docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2.
 2. **Respuesta.** El [Barrido de salinidad](#barrido-de-salinidad), que compara ambos modos de control a medida que aumenta la salinidad.
-3. **Conjeturas.** La verificación de las tres conjeturas en [Resultados](#resultados) y su detalle en [docs/modelo_simulacion.md](docs/modelo_simulacion.md), secciones 5 y 6.
-4. **Lectura crítica.** El conflicto entre los indicadores de la Conjetura 1, el contraste del umbral de la Conjetura 3 con la literatura y las preguntas para el Ciclo 3, en [docs/modelo_simulacion.md](docs/modelo_simulacion.md), sección 8.
+3. **Conjeturas.** La verificación de las tres conjeturas en [Resultados](#resultados) y su detalle en [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), secciones 5 y 6.
+4. **Lectura crítica.** El conflicto entre los indicadores de la Conjetura 1, el contraste del umbral de la Conjetura 3 con la literatura y las preguntas para el Ciclo 3, en [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 8.
 5. **Limitaciones.** Las [Limitaciones conocidas](#limitaciones-conocidas) y el [Alcance y madurez](#alcance-y-madurez) del artefacto.
-6. **Referencias.** El software de terceros, la fuente científica y la trazabilidad de cada parámetro en [docs/referencias.md](docs/referencias.md).
+6. **Referencias.** El software de terceros, la fuente científica y la trazabilidad de cada parámetro en [docs/06_Referencias_y_Trazabilidad_AxiomaH.md](docs/06_Referencias_y_Trazabilidad_AxiomaH.md).
 
 ## Naturaleza del control
 
@@ -50,7 +64,7 @@ El motor implementado es simbólico: aplica reglas explícitas en orden de prior
 
 El sistema se compone de dos servicios que se ejecutan por separado:
 
-- **Backend (FastAPI, puerto 8000):** contiene el motor de reglas, el modelo físico, el simulador comparativo y la verificación de conjeturas.
+- **Backend (FastAPI, puerto 8000):** contiene el motor de reglas, el modelo físico, el simulador comparativo, la verificación de conjeturas y el análisis de robustez (barrido de salinidad y sensibilidad).
 - **Frontend (Streamlit, puerto 8501):** dashboard que consume la API por HTTP. No importa código del backend, de modo que ambos servicios pueden desplegarse en máquinas distintas.
 
 ```
@@ -73,14 +87,14 @@ axioma-h-engine/
 │   ├── cliente_api.py      Cliente HTTP con manejo de errores
 │   └── transformaciones.py Conversión de respuestas en DataFrames
 ├── tests/                  Pruebas con pytest
-├── docs/
-│   ├── 01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md
-│   ├── 02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md
-│   ├── modelo_simulacion.md
-│   ├── despliegue.md
-│   ├── funcionamiento.md
-│   ├── referencias.md      Software de terceros, fuentes y trazabilidad de parámetros
-│   └── datos/              Resultados de referencia en CSV y JSON, con su diccionario de campos
+├── docs/                                            Documentación, en orden de lectura
+│   ├── 01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md   Pregunta, conjeturas, variables, perspectivas e hitos
+│   ├── 02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md        Especificación de la API y estado de la implementación
+│   ├── 03_Funcionamiento_General_AxiomaH.md                  Explicación general de la aplicación y del dashboard
+│   ├── 04_Modelo_de_Control_y_Simulacion_AxiomaH.md          Reglas, ecuaciones, resultados y lectura crítica
+│   ├── 05_Despliegue_y_Operacion_AxiomaH.md                  Despliegue en Render, CI y verificación
+│   ├── 06_Referencias_y_Trazabilidad_AxiomaH.md              Software de terceros, fuentes y trazabilidad de parámetros
+│   └── datos/                                       Resultados de referencia en CSV y JSON, con su diccionario de campos
 ├── scripts/
 │   ├── verificar_despliegue.py         Comprobaciones contra el despliegue publicado
 │   └── generar_resultados_referencia.py Datos de referencia sin red ni API
@@ -137,7 +151,7 @@ La barra lateral ofrece un recorrido de cuatro vistas, con un botón "Siguiente"
 3. **Simulación comparativa:** ambos modos sobre un escenario, con gráficos, conjeturas y bitácora.
 4. **Respuesta a la pregunta:** barrido de salinidad con 1 a 5 semillas (media y banda de +/- una desviación) y sensibilidad a la eficacia del pulso o al flujo de niebla. Usa los endpoints de `/api/v1/analisis` y no modifica la configuración del modelo.
 
-El detalle de cada vista está en [docs/funcionamiento.md](docs/funcionamiento.md), sección 5.
+El detalle de cada vista está en [docs/03_Funcionamiento_General_AxiomaH.md](docs/03_Funcionamiento_General_AxiomaH.md), sección 5.
 
 ### Uso local sin conexión
 
@@ -162,13 +176,16 @@ Los tiempos de espera son de 75 s para la verificación de salud (para tolerar l
 
 ## Despliegue
 
-La forma más rápida de publicar el proyecto es Render, con el Blueprint incluido en `render.yaml`:
+La aplicación está desplegada en **Render**, en el plan gratuito, con el Blueprint versionado en `render.yaml`. Son dos servicios web construidos desde la rama `main`:
 
-1. Subir los cambios a GitHub.
-2. En https://render.com, elegir **New > Blueprint** y seleccionar este repositorio.
-3. Cuando Render lo solicite, definir `AXIOMA_API_URL` del dashboard con la URL pública de la API, por ejemplo `https://axioma-h-api.onrender.com`.
+| Servicio | URL |
+|---|---|
+| `axioma-h-api` (FastAPI) | https://axioma-h-api.onrender.com |
+| `axioma-h-dashboard` (Streamlit) | https://axioma-h-dashboard.onrender.com |
 
-Render crea dos servicios web gratuitos: la API y el dashboard. Como alternativa, el dashboard puede publicarse en Streamlit Community Cloud. Las dos opciones, las variables de entorno, la verificación y las limitaciones del plan gratuito están en [docs/despliegue.md](docs/despliegue.md).
+Cada push a `main` ejecuta el workflow CI (pruebas, cobertura y análisis de SonarQube Cloud), y Render despliega ambos servicios solo cuando todos los checks del commit están en verde (`autoDeployTrigger: checksPass`). El dashboard se conecta a la API publicada mediante la variable `AXIOMA_API_URL`.
+
+La verificación automatizada (`python scripts/verificar_despliegue.py`) ejecuta 19 comprobaciones contra los servicios publicados; la última, del 2026-11-04, pasó 19 de 19. La configuración de cada plataforma, las variables de entorno, la verificación, la operación en el plan gratuito y el procedimiento para recrear el despliegue están en [docs/05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md).
 
 ## Endpoints
 
@@ -330,7 +347,7 @@ El caudal se expresa como porcentaje del tope ecológico: el sistema nunca extra
 pytest -v
 ```
 
-La suite cubre el motor de reglas (cada regla, casos límite y prioridad), el simulador (reproducibilidad, límites térmico y ecológico, criterio de regeneración), la API, el cliente HTTP del dashboard (con `requests` simulado) y las transformaciones de datos.
+La suite cubre el motor de reglas (cada regla, casos límite y prioridad), el simulador (reproducibilidad, límites térmico y ecológico, criterio de regeneración, modo de referencia, indicadores informativos y causas de no validación), el análisis de robustez (barrido, sensibilidad, validaciones y ausencia de efectos sobre la configuración global, también con solicitudes simultáneas), la API, el cliente HTTP del dashboard (con `requests` simulado), las transformaciones de datos y el contenido de la vista de investigación. Ninguna prueba usa la red.
 
 ### Integración continua y calidad
 
@@ -345,7 +362,7 @@ pytest --cov --cov-report=xml --cov-report=term
 
 Render despliega la API y el dashboard solo cuando el workflow CI termina en verde (`autoDeployTrigger: checksPass` en `render.yaml`).
 
-`frontend/app.py` y `scripts/` están excluidos de la cobertura; la justificación está en [docs/funcionamiento.md](docs/funcionamiento.md), sección 10.
+`frontend/app.py` y `scripts/` están excluidos de la cobertura; la justificación está en [docs/03_Funcionamiento_General_AxiomaH.md](docs/03_Funcionamiento_General_AxiomaH.md), sección 10.
 
 ## Resultados
 
@@ -404,7 +421,7 @@ Responde la pregunta de investigación. Usa `DIA_NORMAL` e `INCRUSTACION_SALINA_
 | 120 | 88.02 / 78.02 | 0.408 / 3.070 |
 | 240 | 85.92 / 63.21 | 1.073 / 4.117 |
 
-El control neuro-simbólico reduce la degradación acumulada entre 74 % y 99 % en todos los niveles. Su recuperación se mantiene estable, mientras que la del temporizador cae con la salinidad: el temporizador recupera más con salinidad baja, porque limpia membranas casi limpias, y el neuro-simbólico lo supera desde 60 Ohm por L/m². El método y las limitaciones están en [docs/modelo_simulacion.md](docs/modelo_simulacion.md), sección 7.
+El control neuro-simbólico reduce la degradación acumulada entre 74 % y 99 % en todos los niveles. Su recuperación se mantiene estable, mientras que la del temporizador cae con la salinidad: el temporizador recupera más con salinidad baja, porque limpia membranas casi limpias, y el neuro-simbólico lo supera desde 60 Ohm por L/m². El método y las limitaciones están en [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 7.
 
 ### Tope ecológico frente a lógica de control
 
@@ -425,9 +442,9 @@ Cada conjetura informa indicadores adicionales que no intervienen en la validaci
 - **C2:** el pulso logra el 95 % de su remoción en 64.4 s (cinética, bajo el umbral de 120 s), pero deja la impedancia en unos 1126 Ohm (extensión, sobre el criterio de 1100 Ohm). La conjetura falla por la extensión de la limpieza, no por la cinética.
 - **C3:** rendimiento nocturno del temporizador. Con 45 % tampoco alcanza 12 L/m²/noche, por lo que la causa es el límite del recurso atmosférico.
 
-Las causas de no validación son, en las diez corridas: dependencia de un parámetro supuesto en C1 y C2 (o falta de datos cuando no hay pulsos, en Sequía con 45 %), límite del recurso atmosférico en C3 con 45 % y desempeño del control en dos casos de Incrustación salina rápida con 85 % (ahorro de energía de C1 y rendimiento nocturno de C3). El detalle está en [docs/modelo_simulacion.md](docs/modelo_simulacion.md), secciones 4, 8.4 y 8.5.
+Las causas de no validación son, en las diez corridas: dependencia de un parámetro supuesto en C1 y C2 (o falta de datos cuando no hay pulsos, en Sequía con 45 %), límite del recurso atmosférico en C3 con 45 % y desempeño del control en dos casos de Incrustación salina rápida con 85 % (ahorro de energía de C1 y rendimiento nocturno de C3). El detalle está en [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), secciones 4, 8.4 y 8.5.
 
-El análisis completo, las ecuaciones, los parámetros y las tablas de sensibilidad están en [docs/modelo_simulacion.md](docs/modelo_simulacion.md).
+El análisis completo, las ecuaciones, los parámetros y las tablas de sensibilidad están en [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md).
 
 ## Limitaciones conocidas
 
@@ -447,4 +464,4 @@ El artefacto es una prueba de concepto analítica por simulación, equivalente d
 
 ## Referencias y créditos
 
-El software de terceros con su uso, URL y licencia, la fuente científica usada para contrastar el flujo de niebla y la trazabilidad de cada parámetro de `backend/config.py` están en [docs/referencias.md](docs/referencias.md). El proyecto se distribuye con licencia MIT (archivo `LICENSE`).
+El software de terceros con su uso, URL y licencia, la fuente científica usada para contrastar el flujo de niebla y la trazabilidad de cada parámetro de `backend/config.py` están en [docs/06_Referencias_y_Trazabilidad_AxiomaH.md](docs/06_Referencias_y_Trazabilidad_AxiomaH.md). El proyecto se distribuye con licencia MIT (archivo `LICENSE`).

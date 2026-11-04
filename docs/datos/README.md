@@ -10,7 +10,7 @@ Desde la raíz del proyecto, con el entorno virtual activo:
 python scripts/generar_resultados_referencia.py
 ```
 
-La salida es determinista: dos ejecuciones con el mismo código producen archivos idénticos. Para escribir en otra carpeta, agregar `--salida <carpeta>`. Si cambia el modelo, se deben regenerar los archivos y revisar que las cifras de `README.md` y `docs/modelo_simulacion.md` sigan coincidiendo.
+La salida es determinista: dos ejecuciones con el mismo código producen archivos idénticos. Para escribir en otra carpeta, agregar `--salida <carpeta>`. Si cambia el modelo, se deben regenerar los archivos y revisar que las cifras de `README.md` y `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md` sigan coincidiendo.
 
 ## 2. Condiciones
 
@@ -19,7 +19,7 @@ La salida es determinista: dos ejecuciones con el mismo código producen archivo
 | Escenarios | Los cinco escenarios con humedad inicial de 45 % y 85 %; 24 h, inicio a las 18:00, paso de 5 min, 8 nodos, tasa de salinización ALTA, semilla 42. |
 | Barrido de salinidad | `DIA_NORMAL` e `INCRUSTACION_SALINA_RAPIDA` con tasas BAJA, MEDIA y ALTA; humedad inicial de 85 %, 24 h, 8 nodos, semillas 1 a 5. |
 
-Todos los parámetros son los de `backend/config.py`, sin modificar. Varios son supuestos de orden de magnitud; su origen está en [../referencias.md](../referencias.md), sección 3.
+Todos los parámetros son los de `backend/config.py`, sin modificar. Varios son supuestos de orden de magnitud; su origen está en [../06_Referencias_y_Trazabilidad_AxiomaH.md](../06_Referencias_y_Trazabilidad_AxiomaH.md), sección 3.
 
 ## 3. resultados_escenarios.csv
 
@@ -47,7 +47,7 @@ Una fila por escenario y humedad inicial (10 filas). Una celda vacía indica que
 | `c3_rendimiento_temporizador_l_m2_noche` | Informativo: rendimiento nocturno del temporizador fijo. |
 | `c1_causas`, `c2_causas`, `c3_causas` | Causas de no validación separadas por `;`; vacío si la conjetura se valida. |
 
-`<modo>` es `neuro` (control neuro-simbólico), `temporizador` (temporizador fijo, fracción 0.45) o `temporizador_tope` (temporizador con tope ecológico, fracción 0.33). Las definiciones de los indicadores y de las causas están en [../modelo_simulacion.md](../modelo_simulacion.md), sección 4.
+`<modo>` es `neuro` (control neuro-simbólico), `temporizador` (temporizador fijo, fracción 0.45) o `temporizador_tope` (temporizador con tope ecológico, fracción 0.33). Las definiciones de los indicadores y de las causas están en [../04_Modelo_de_Control_y_Simulacion_AxiomaH.md](../04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 4.
 
 ## 4. barrido_salinidad.csv
 

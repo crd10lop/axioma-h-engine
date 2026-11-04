@@ -48,7 +48,7 @@ def barrido():
 
 @pytest.fixture(scope="module")
 def sensibilidad_eficacia():
-    """Sensibilidad a la eficacia del pulso con los valores de modelo_simulacion 5.6 y 5.7."""
+    """Sensibilidad a la eficacia del pulso con los valores del documento 04, secciones 5.6 y 5.7."""
     return analisis.ejecutar_sensibilidad(_sensibilidad(valores=(0.90, 0.94, 0.97)))
 
 

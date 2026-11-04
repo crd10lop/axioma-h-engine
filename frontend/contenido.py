@@ -166,7 +166,7 @@ NOTA_REGLAS = (
 
 
 # ---------------------------------------------------------------------------
-# Supuestos clave (docs/referencias.md) y limitaciones (README)
+# Supuestos clave (docs/06_Referencias_y_Trazabilidad_AxiomaH.md) y limitaciones (README)
 # ---------------------------------------------------------------------------
 def _supuesto(parametro: str, valor: str, origen: str) -> dict[str, str]:
     """Agrupa los textos de un supuesto con las claves que usa la tabla del dashboard."""
@@ -300,7 +300,7 @@ GLOSARIO: dict[str, str] = {
 REFERENCIAS: list[str] = [
     f"Repositorio del proyecto: {URL_REPOSITORIO}",
     "Software de terceros, fuente científica y trazabilidad de parámetros: "
-    f"{URL_REPOSITORIO}/blob/main/docs/referencias.md",
+    f"{URL_REPOSITORIO}/blob/main/docs/06_Referencias_y_Trazabilidad_AxiomaH.md",
 ]
 
 # ---------------------------------------------------------------------------

@@ -73,12 +73,14 @@ El control neuro-simbólico mantiene una recuperación de caudal estable y una d
 
 ### 2.6 Respuesta preliminar del simulador
 
-El barrido de salinidad, con su método y su análisis, está en [modelo_simulacion.md](modelo_simulacion.md), sección 7. En síntesis, con humedad inicial de 85 %:
+El barrido de salinidad, con su método y su análisis, está en [04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 7. En síntesis, con humedad inicial de 85 %:
 
 - **Desgaste.** El control neuro-simbólico reduce la degradación acumulada entre 74 % y 99 % frente al temporizador en los seis niveles de salinidad. La reducción es mayor con salinidad baja, donde el temporizador aplica pulsos que no hacen falta.
 - **Recuperación.** El control neuro-simbólico mantiene la recuperación entre 85.9 % y 88.9 % en todos los niveles. La del temporizador cae de 95.8 % a 63.2 % a medida que aumenta la salinidad. Con salinidad baja el temporizador recupera más, porque limpia una membrana casi limpia. Desde una carga de 60 Ohm por L/m² el neuro-simbólico lo supera, y la diferencia llega a 22.7 puntos con la carga más alta.
 
 La respuesta a la pregunta es, por tanto, condicional: la ventaja en recuperación aparece y crece con la salinidad, mientras que la reducción del desgaste se observa en todos los niveles. Estos resultados dependen de parámetros físicos supuestos, en particular la eficacia del pulso, que deben medirse en laboratorio.
+
+Las cifras anteriores corresponden a la semilla 42. Repetido con las semillas 1 a 5, el barrido muestra una dispersión pequeña y las mismas conclusiones; el punto de cruce de las curvas de recuperación (entre 40 y 60 Ohm por L/m²) es el resultado menos robusto ([04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 7.5). El barrido y el análisis de sensibilidad se pueden ejecutar desde la API y desde la vista "Respuesta a la pregunta" del dashboard.
 
 ### 2.7 Perspectivas social, ética, cultural y humana
 
@@ -88,7 +90,7 @@ Esta sección se limita a lo que el repositorio implementa o documenta. Lo que n
 
 - El proyecto se orienta a Cabo de la Vela, en la Alta Guajira, un territorio árido con escasez hídrica.
 - El control es descentralizado por nodo: cada uno de los 8 nodos decide con su propia telemetría (sección 2.2), de modo que una condición local, como la cristalización de una membrana, se atiende sin detener los demás nodos.
-- Respetar el tope ecológico tiene un costo hídrico medible. Con humedad inicial de 85 %, el modo neuro-simbólico capta entre 23 % y 27 % menos agua que el temporizador ([modelo_simulacion.md](modelo_simulacion.md), sección 5.5). El estudio hace visible ese costo en lugar de ocultarlo.
+- Respetar el tope ecológico tiene un costo hídrico medible. Con humedad inicial de 85 %, el modo neuro-simbólico capta entre 23 % y 27 % menos agua que el temporizador ([04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 5.5). El estudio hace visible ese costo en lugar de ocultarlo.
 
 **Perspectiva ética.**
 
@@ -113,10 +115,10 @@ Esta sección se limita a lo que el repositorio implementa o documenta. Lo que n
 El artefacto del Ciclo 2 es una prueba de concepto analítica por simulación, equivalente de forma aproximada a un nivel de madurez tecnológica TRL 2-3: el concepto y sus reglas de control están formulados e implementados, y su comportamiento se evalúa con un modelo físico simplificado.
 
 - No existe un prototipo físico del captador ni de la membrana.
-- No hay datos de campo. Los parámetros marcados como supuestos en `backend/config.py` son estimaciones de orden de magnitud; su trazabilidad está en [referencias.md](referencias.md), sección 3.
+- No hay datos de campo. Los parámetros marcados como supuestos en `backend/config.py` son estimaciones de orden de magnitud; su trazabilidad está en [06_Referencias_y_Trazabilidad_AxiomaH.md](06_Referencias_y_Trazabilidad_AxiomaH.md), sección 3.
 - Lo que sí está implementado y verificado es el software de control: la API, el simulador, el dashboard, las pruebas automatizadas y el despliegue público.
 
-El horizonte del siguiente ciclo es la medición experimental prioritaria descrita en [modelo_simulacion.md](modelo_simulacion.md), sección 6.3: medir en laboratorio qué fracción de la costra salina remueve un pulso de 90 s a 44 °C. Las preguntas emergentes que surgen de la lectura crítica de las conjeturas están en la sección 8 del mismo documento.
+El horizonte del siguiente ciclo es la medición experimental prioritaria descrita en [04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 6.3: medir en laboratorio qué fracción de la costra salina remueve un pulso de 90 s a 44 °C. Las preguntas emergentes que surgen de la lectura crítica de las conjeturas están en la sección 8 del mismo documento.
 
 ---
 
@@ -132,7 +134,7 @@ Para el Ciclo 2, la investigación pasa de la conceptualización narrativa a la 
 
 ### Nota de operacionalización en el simulador
 
-Los indicadores de la matriz se calculan en el simulador del Ciclo 2. La definición de cada uno está en [modelo_simulacion.md](modelo_simulacion.md), sección 4.
+Los indicadores de la matriz se calculan en el simulador del Ciclo 2. La definición de cada uno está en [04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 4.
 
 - **Conjetura 1.** La recuperación de caudal se mide como la conductancia relativa a la membrana limpia después de cada pulso. El ahorro de energía se mide como la reducción de la energía gastada en pulsos frente al temporizador fijo.
 - **Conjetura 2.** Una membrana se considera regenerada cuando la impedancia vuelve a 1100 Ohm o menos. La degradación térmica se registra cuando la matriz supera 45 °C. La frecuencia del pulso (Hz) no se modela: el pulso se representa como un calentamiento resistivo de 90 s hacia 44 °C.
@@ -165,7 +167,7 @@ Los indicadores de la matriz se calculan en el simulador del Ciclo 2. La definic
 └────────────────────────────────────────────────────────┘
 ```
 
-**Sobre el componente neuronal.** El motor implementado en el Ciclo 2 es simbólico: aplica reglas explícitas en orden de prioridad (`backend/motor_reglas.py`) y se apoya en un modelo físico explícito (`backend/modelo_fisico.py`). El "Módulo Neuronal" del diagrama no está implementado; la detección del umbral salino se hace con una comparación directa de la impedancia contra 1500 Ohm. El componente sub-simbólico queda como trabajo futuro, en particular para distinguir la impedancia causada por sal de la causada por polvo ([modelo_simulacion.md](modelo_simulacion.md), pregunta 8.3 c). El término neuro-simbólico describe la arquitectura objetivo del sistema, no la implementación actual.
+**Sobre el componente neuronal.** El motor implementado en el Ciclo 2 es simbólico: aplica reglas explícitas en orden de prioridad (`backend/motor_reglas.py`) y se apoya en un modelo físico explícito (`backend/modelo_fisico.py`). El "Módulo Neuronal" del diagrama no está implementado; la detección del umbral salino se hace con una comparación directa de la impedancia contra 1500 Ohm. El componente sub-simbólico queda como trabajo futuro, en particular para distinguir la impedancia causada por sal de la causada por polvo ([04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), pregunta 8.3 c). El término neuro-simbólico describe la arquitectura objetivo del sistema, no la implementación actual.
 
 ### Reglas Lógicas de la API (Motor de Inferencia):
 1. **Regla de Integridad Térmica:** Si $T_{polímero} \ge 45^\circ\text{C} \implies \text{Acción: CORTE_DE_EMERGENCIA}$.
@@ -187,17 +189,17 @@ Frente a esta lista:
 - la regla de reserva energética solo actúa cuando, además, la impedancia supera 1500 Ohm;
 - el pulso apunta a 44 °C.
 
-Las decisiones que justifican estas diferencias están en [modelo_simulacion.md](modelo_simulacion.md), sección 1.
+Las decisiones que justifican estas diferencias están en [04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 1.
 
 ---
 
 ## 5. Plan de Trabajo e Hitos para la Entrega Final del Ciclo 2
 
 - **Hito 1 (Completado):** Definición del alcance, conjeturas y matriz de operacionalización de variables.
-- **Hito 2 (Completado):** Implementación de la API de control neuro-simbólico en FastAPI (`backend/`), con motor de reglas, simulador comparativo y pruebas automatizadas.
-- **Hito 3 (Completado):** Desarrollo del Frontend Interactivo en Streamlit (`frontend/app.py`): panel de telemetría, simulación comparativa, consola de decisiones y gráficos.
-- **Hito 4 (En desarrollo):** Las pruebas de simulación de los cinco escenarios y el barrido de salinidad que responde la pregunta de investigación están ejecutados y documentados en [modelo_simulacion.md](modelo_simulacion.md). Queda pendiente la redacción del Informe de Avance del Ciclo 2.
-- **Hito 5 (Completado):** Despliegue público de la API y del dashboard para la demostración del Ciclo 2, en Render: [Dashboard](https://axioma-h-dashboard.onrender.com) y [API](https://axioma-h-api.onrender.com/docs). La verificación automatizada (`scripts/verificar_despliegue.py`) pasó 17 de 17 comprobaciones. El procedimiento y la verificación están en [despliegue.md](despliegue.md).
+- **Hito 2 (Completado):** Implementación de la API de control neuro-simbólico en FastAPI (`backend/`), con motor de reglas, simulador comparativo y pruebas automatizadas. Incluye el temporizador de referencia con tope ecológico, los indicadores informativos y las causas de no validación de cada conjetura, y los endpoints de análisis de robustez (barrido de salinidad con varias semillas y sensibilidad a parámetros supuestos).
+- **Hito 3 (Completado):** Desarrollo del Frontend Interactivo en Streamlit (`frontend/app.py`), organizado como un recorrido de cuatro vistas: investigación y guía, evaluación manual de nodo (panel de telemetría), simulación comparativa (resumen ejecutivo, conjeturas, gráficos, consola de decisiones y reproducción paso a paso) y respuesta a la pregunta (barrido de salinidad y sensibilidad).
+- **Hito 4 (En desarrollo):** Las pruebas de simulación de los cinco escenarios y el barrido de salinidad que responde la pregunta de investigación están ejecutados y documentados en [04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md). Queda pendiente la redacción del Informe de Avance del Ciclo 2.
+- **Hito 5 (Completado):** Despliegue público de la API y del dashboard para la demostración del Ciclo 2, en Render: [Dashboard](https://axioma-h-dashboard.onrender.com) y [API](https://axioma-h-api.onrender.com/docs). Cada push a `main` se despliega solo si las pruebas y la Quality Gate de SonarQube Cloud están en verde. La verificación automatizada (`scripts/verificar_despliegue.py`) pasó 17 de 17 comprobaciones en su primera versión y, tras agregar los endpoints de análisis, 19 de 19 en la verificación del 2026-11-04. La configuración, la verificación y la operación están en [05_Despliegue_y_Operacion_AxiomaH.md](05_Despliegue_y_Operacion_AxiomaH.md).
 
 ---
 *Documento preparado por el Equipo AXIOMA para el seguimiento del Ciclo 2 — Universidad de Antioquia.*

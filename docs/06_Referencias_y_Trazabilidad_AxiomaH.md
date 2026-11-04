@@ -31,26 +31,26 @@ La tabla recorre todas las constantes de `backend/config.py` en el orden del arc
 
 - **PRD:** [02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md](02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md).
 - **Matriz:** [01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 3.
-- **Criterio del equipo:** decisión documentada en [modelo_simulacion.md](modelo_simulacion.md).
+- **Criterio del equipo:** decisión documentada en [04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md).
 - **Supuesto:** estimación de orden de magnitud del modelo, pendiente de calibración con datos de campo.
 
 | Constante | Valor | Origen | Fuente |
 |---|---|---|---|
-| `UMBRAL_TEMPERATURA_CORTE_C` | 45.0 °C | PRD | PRD, sección 4 (REGLA 01); decisión D1 de modelo_simulacion |
-| `TEMPERATURA_OBJETIVO_PULSO_C` | 44.0 °C | Matriz | Matriz, Conjetura 2; decisión D1 de modelo_simulacion |
+| `UMBRAL_TEMPERATURA_CORTE_C` | 45.0 °C | PRD | PRD, sección 4 (REGLA 01); decisión D1 del documento 04 |
+| `TEMPERATURA_OBJETIVO_PULSO_C` | 44.0 °C | Matriz | Matriz, Conjetura 2; decisión D1 del documento 04 |
 | `UMBRAL_HUMEDAD_ECOLOGICA_PCT` | 30.0 % | PRD | PRD, sección 4 (REGLA 02) |
-| `UMBRAL_RESERVA_CRITICA_PCT` | 30.0 % | PRD | PRD, sección 4 (REGLA 03 y REGLA 04); decisión D2 de modelo_simulacion |
+| `UMBRAL_RESERVA_CRITICA_PCT` | 30.0 % | PRD | PRD, sección 4 (REGLA 03 y REGLA 04); decisión D2 del documento 04 |
 | `UMBRAL_IMPEDANCIA_OHMS` | 1500.0 Ohm | PRD | PRD, sección 4 (REGLA 03 y REGLA 04) |
 | `IMPEDANCIA_NOMINAL_OHMS` | 1000.0 Ohm | PRD | PRD, según el comentario de config.py. El PRD no declara el valor de forma explícita |
 | `DURACION_PULSO_SEG` | 90 s | PRD | PRD, sección 4 (REGLA 03) |
-| `FRACCION_MAXIMA_EXTRACCION` | 0.33 | Matriz | Matriz, Conjetura 3; decisión D3 de modelo_simulacion |
+| `FRACCION_MAXIMA_EXTRACCION` | 0.33 | Matriz | Matriz, Conjetura 3; decisión D3 del documento 04 |
 | `CAUDAL_DURANTE_PULSO_PCT` | 80.0 % | PRD | PRD, sección 3.1 (respuesta de ejemplo de REGLA_03) |
 | `CAUDAL_RESERVA_CRITICA_PCT` | 50.0 % | PRD | PRD, sección 4 (REGLA 04) |
 | `CAUDAL_NOMINAL_PCT` | 100.0 % | PRD | PRD, sección 4 (REGLA 05) |
 | `RECUPERACION_MINIMA_PCT` | 90.0 % | Matriz | Matriz, Conjetura 1 |
 | `AHORRO_ENERGIA_MINIMO_PCT` | 35.0 % | Matriz | Matriz, Conjetura 1 |
 | `TIEMPO_REGENERACION_MAX_SEG` | 120 s | Matriz | Matriz, Conjetura 2 |
-| `FACTOR_IMPEDANCIA_REGENERADA` | 1.10 (1100 Ohm) | Criterio del equipo | modelo_simulacion, sección 6.4 |
+| `FACTOR_IMPEDANCIA_REGENERADA` | 1.10 (1100 Ohm) | Criterio del equipo | Documento 04, sección 6.4 |
 | `PERDIDA_TERMICA_MAXIMA_PCT` | 0.0 % | Matriz | Matriz, Conjetura 2 |
 | `VIOLACIONES_ECOLOGICAS_MAXIMAS` | 0 | Matriz | Matriz, Conjetura 3 |
 | `RENDIMIENTO_MINIMO_L_M2_NOCHE` | 12.0 L/m²/noche | Matriz | Matriz, Conjetura 3. Contrastado con Klemm et al. (2012) en la sección 4 |
@@ -110,13 +110,13 @@ La tabla recorre todas las constantes de `backend/config.py` en el orden del arc
 
 ## 4. Comparación del flujo de niebla supuesto con la literatura
 
-El modelo supone un flujo máximo de niebla de 6.0 L/m²/h con humedad relativa del 100 % (`FLUJO_NIEBLA_MAXIMO_L_M2_H`). Con humedad inicial de 85 %, el modo neuro-simbólico obtiene un rendimiento nocturno de 16.97 L/m²/noche en DIA_NORMAL ([modelo_simulacion.md](modelo_simulacion.md), sección 5.4), aun con el tope de extracción del 33 %.
+El modelo supone un flujo máximo de niebla de 6.0 L/m²/h con humedad relativa del 100 % (`FLUJO_NIEBLA_MAXIMO_L_M2_H`). Con humedad inicial de 85 %, el modo neuro-simbólico obtiene un rendimiento nocturno de 16.97 L/m²/noche en DIA_NORMAL ([04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 5.4), aun con el tope de extracción del 33 %.
 
 Klemm et al. (2012) reportan para los proyectos operativos de captación de niebla promedios anuales típicos de 3 a 10 L por m² de malla al día. El valor del modelo supera en cerca de 70 % el extremo superior de ese rango, y corresponde solo a las 12 horas nocturnas, sin contar la captación diurna.
 
 La comparación es de orden de magnitud: la literatura se refiere a colectores de malla en sitios con niebla frecuente, mientras que el modelo describe una membrana con un flujo idealizado. Aun así, permite dos conclusiones:
 
-- `FLUJO_NIEBLA_MAXIMO_L_M2_H = 6.0` es un supuesto optimista. Con humedad inicial de 45 %, el rendimiento nocturno del modelo (5.95 L/m²/noche en la corrida de referencia del PRD, modelo_simulacion 5.1) sí queda dentro del rango reportado.
+- `FLUJO_NIEBLA_MAXIMO_L_M2_H = 6.0` es un supuesto optimista. Con humedad inicial de 45 %, el rendimiento nocturno del modelo (5.95 L/m²/noche en la corrida de referencia del PRD, documento 04, sección 5.1) sí queda dentro del rango reportado.
 - El umbral de 12 L/m²/noche de la Conjetura 3 (`RENDIMIENTO_MINIMO_L_M2_NOCHE`) supera el rango típico de operación de 3 a 10 L/m²/día. La validación de la Conjetura 3 con humedad inicial de 85 % depende, por tanto, de un flujo de niebla mayor que el observado en proyectos reales.
 
-La calibración del flujo con mediciones en Cabo de la Vela queda como pregunta para el Ciclo 3 ([modelo_simulacion.md](modelo_simulacion.md), sección 8.3).
+La calibración del flujo con mediciones en Cabo de la Vela queda como pregunta para el Ciclo 3 ([04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 8.3).

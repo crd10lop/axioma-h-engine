@@ -34,7 +34,9 @@ La aplicación tiene dos partes que se ejecutan por separado.
 - la verificación de las tres conjeturas del proyecto;
 - el análisis de robustez, que repite las simulaciones con varias semillas o con distintos valores de un parámetro supuesto.
 
-**Frontend o dashboard (Streamlit).** Es la página web que usa la persona. No calcula nada: solicita los resultados a la API y los presenta en tarjetas, tablas y gráficos.
+**Frontend o dashboard (Streamlit).** Es la página web que usa la persona. No calcula nada: solicita los resultados a la API y los presenta en tarjetas, tablas y gráficos. Guarda durante una hora la respuesta de cada simulación y de cada análisis, de modo que repetir una misma configuración no vuelve a llamar a la API.
+
+**Acceso.** Ambas partes están publicadas en Render (enlaces del encabezado) y se actualizan automáticamente con cada cambio aprobado en el repositorio. También se pueden ejecutar en un equipo local sin conexión a internet, como se explica en el `README.md` (secciones Ejecución y Uso local sin conexión). El despliegue se describe en [05_Despliegue_y_Operacion_AxiomaH.md](05_Despliegue_y_Operacion_AxiomaH.md).
 
 ## 3. Cómo decide un nodo
 
@@ -83,6 +85,10 @@ Al final, la simulación entrega para cada tipo de control:
 
 También entrega las series de tiempo para los gráficos y una bitácora de las decisiones.
 
+**Temporizador de referencia.** Cada simulación ejecuta además un tercer control, solo como referencia: el mismo temporizador, pero limitado al 33 % de la niebla, igual que el neuro-simbólico. Comparar los tres permite saber qué parte de la diferencia de agua se debe al límite ecológico y qué parte a las reglas. No interviene en la verificación de las conjeturas.
+
+**Explicación de los resultados.** Para cada conjetura, la simulación indica si se valida, los valores medidos frente a sus umbrales, algunos indicadores adicionales que ayudan a interpretarlos (por ejemplo, cuánto tarda el pulso en actuar y cómo queda la membrana después) y, cuando una conjetura no se valida, la causa: falta de datos, dependencia de un parámetro todavía no medido, falta de niebla disponible o desempeño del control.
+
 **Análisis de robustez.** La API ofrece dos análisis adicionales, pensados para comprobar qué tan firmes son los resultados:
 
 - **Barrido de salinidad** (`/api/v1/analisis/barrido-salinidad`): compara ambos tipos de control en seis niveles de sal, repitiendo cada caso con hasta cinco climas distintos (semillas). Entrega el promedio y la variación entre climas. Con cinco semillas, la variación resulta pequeña y las conclusiones del barrido se mantienen.
@@ -96,7 +102,7 @@ La barra lateral presenta un recorrido de cuatro vistas numeradas, en el orden r
 
 - **Investigación y guía:** es la vista inicial y no requiere la API. Presenta la pregunta de investigación, su versión divulgativa, la hipótesis de trabajo y la respuesta preliminar del simulador; la tabla de conjeturas con su criterio y la lectura de su resultado; las reglas de control; las perspectivas social, ética, cultural y humana; y el alcance y la madurez del artefacto. En secciones desplegables muestra los supuestos clave y las limitaciones, un glosario y las referencias. Los textos resumen el README y el plan del Ciclo 2 y están en `frontend/contenido.py`.
 - **Evaluación manual de nodo:** se ajustan la impedancia, la temperatura, la energía y la humedad, y se observa al instante qué regla se activa y por qué.
-- **Simulación comparativa:** se ejecuta un escenario y se comparan lado a lado el control neuro-simbólico y el temporizador. Incluye gráficos en el tiempo, el estado de cada conjetura y una reproducción paso a paso de la corrida.
+- **Simulación comparativa:** se ejecuta un escenario y se comparan lado a lado el control neuro-simbólico y el temporizador. Empieza con un resumen ejecutivo de cinco frases (agua, desgaste, energía, límite ecológico y conjeturas validadas). Luego muestra las tarjetas de la comparativa, con la descomposición de la diferencia de agua según el temporizador de referencia; el estado de cada conjetura con sus indicadores y, si no se valida, sus causas; los gráficos en el tiempo y los totales. Las condiciones del entorno, la consola de decisiones y la reproducción paso a paso están en secciones desplegables, para no recargar la página.
 - **Respuesta a la pregunta:** usa los dos análisis de robustez de la API (sección 4). Muestra la pregunta y la hipótesis, y un aviso de que se trata de un análisis exploratorio que no cambia la configuración del modelo (decisión D5). Tiene dos bloques:
   - **Barrido de salinidad.** Se elige la humedad inicial y de 1 a 5 semillas (consecutivas desde 1) y se presiona "Ejecutar barrido". Dos gráficos muestran, en función de la carga salina, la recuperación tras el pulso (con la referencia de 90 %) y la degradación de la membrana de ambos modos, con su media y una banda de más o menos una desviación estándar. Debajo aparecen frases calculadas con los datos: la carga desde la cual el neuro-simbólico recupera más que el temporizador y el rango de reducción del desgaste.
   - **Sensibilidad.** Se elige el parámetro (eficacia del pulso, con 0.85, 0.90, 0.94, 0.97 y 1.00; o flujo de niebla, con 3, 4.5, 6 y 7.5 L/m²/h) y el escenario. Un gráfico muestra el indicador correspondiente frente al valor, con su umbral: la recuperación (90 %) para la eficacia y el rendimiento nocturno (12 L/m²/noche) para el flujo. Una tabla indica qué conjeturas se validan con cada valor.
@@ -131,11 +137,14 @@ Todos los resultados provienen de una simulación, no de mediciones de campo. Va
 | Documento | Contenido |
 |---|---|
 | [README.md](../README.md) | Visión general, instalación, uso, endpoints y resultados resumidos. |
-| [01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md) | Pregunta de investigación, conjeturas, variables e hitos. |
-| [02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md](02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md) | Datos que recibe y entrega la API. |
-| [modelo_simulacion.md](modelo_simulacion.md) | Ecuaciones, parámetros, resultados detallados y análisis. |
-| [despliegue.md](despliegue.md) | Publicación de la aplicación en internet. |
-| [referencias.md](referencias.md) | Software de terceros con su licencia, fuente científica y origen de cada parámetro del modelo. |
+| [01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md) | Pregunta de investigación, conjeturas, variables, perspectivas del estudio, alcance e hitos. |
+| [02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md](02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md) | Datos que recibe y entrega la API y estado de la implementación. |
+| 03_Funcionamiento_General_AxiomaH.md | Este documento: explicación general de la aplicación. |
+| [04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md) | Reglas, ecuaciones, parámetros, resultados detallados, análisis y lectura crítica de las conjeturas. |
+| [05_Despliegue_y_Operacion_AxiomaH.md](05_Despliegue_y_Operacion_AxiomaH.md) | Despliegue en Render, integración continua, verificación y operación. |
+| [06_Referencias_y_Trazabilidad_AxiomaH.md](06_Referencias_y_Trazabilidad_AxiomaH.md) | Software de terceros con su licencia, fuente científica y origen de cada parámetro del modelo. |
+| [datos/README.md](datos/README.md) | Resultados de referencia en CSV y JSON y su diccionario de campos. |
+| [README_EN.md](../README_EN.md) | Resumen del proyecto en inglés. |
 
 ## 10. Calidad del código y cobertura
 
@@ -145,12 +154,12 @@ El código se analiza en SonarQube Cloud: [tablero del proyecto](https://sonarcl
 - cobertura de al menos 80 % en el código nuevo;
 - duplicación de 3 % como máximo en el código nuevo.
 
-**Alcance de la cobertura.** Las pruebas de `tests/` cubren todo `backend/` y la lógica del frontend: `frontend/cliente_api.py`, `frontend/transformaciones.py` y `frontend/config.py`. La cobertura medida localmente con el criterio de Sonar (líneas y ramas, sin `frontend/app.py`) es del 100 %.
+**Alcance de la cobertura.** Las pruebas de `tests/` cubren todo `backend/` y la lógica del frontend: `frontend/cliente_api.py`, `frontend/transformaciones.py`, `frontend/contenido.py` y `frontend/config.py`. La cobertura medida localmente con el criterio de Sonar (líneas y ramas, sin `frontend/app.py`) es del 100 %.
 
 **Rutas del reporte.** El archivo `.coveragerc` activa `relative_files`, de modo que `coverage.xml` registra cada archivo con su ruta desde la raíz del repositorio (por ejemplo, `backend/config.py` y `frontend/config.py`) y SonarQube Cloud lo asocia sin ambigüedad con el código fuente.
 
 **Exclusión de `frontend/app.py`.** Es la capa de presentación de Streamlit y no tiene lógica de negocio propia. Toda la lógica que usa, la transformación de datos y las llamadas a la API, está separada en `transformaciones.py` y `cliente_api.py`, que sí tienen pruebas. Su comportamiento se valida al ejecutar el dashboard y con `scripts/verificar_despliegue.py`. Probarla en CI exigiría simular la interfaz completa sin aportar verificación adicional de las reglas del motor.
 
-**Exclusión de `scripts/`.** Contiene una herramienta operativa que se ejecuta contra el despliegue real, no código de la aplicación.
+**Exclusión de `scripts/`.** Contiene dos herramientas operativas, no código de la aplicación: `verificar_despliegue.py`, que se ejecuta contra el despliegue real, y `generar_resultados_referencia.py`, que regenera los datos de `docs/datos/` importando el backend.
 
 **Trabajo futuro.** Si se quiere cubrir la interfaz, se puede usar `streamlit.testing.v1.AppTest` con `cliente_api` simulado mediante `monkeypatch`.

@@ -125,7 +125,7 @@ def test_perspectiva_etica_declara_consulta_previa_no_realizada():
 def test_referencias_incluyen_repositorio_y_documento():
     texto = " ".join(contenido.REFERENCIAS)
     assert contenido.URL_REPOSITORIO in texto
-    assert "docs/referencias.md" in texto
+    assert "docs/06_Referencias_y_Trazabilidad_AxiomaH.md" in texto
 
 
 # ---------------------------------------------------------------------------

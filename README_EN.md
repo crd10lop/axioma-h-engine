@@ -80,6 +80,10 @@ pip install -r requirements-dev.txt
 pytest --cov --cov-report=term-missing
 ```
 
+## Deployment
+
+The API and the dashboard are deployed on **Render** (free plan) as two web services defined in `render.yaml` and built from the `main` branch. Each push to `main` runs the CI workflow (tests, coverage and SonarQube Cloud analysis), and Render deploys both services only when all checks pass. The automated verification script (`python scripts/verificar_despliegue.py`) runs 19 checks against the published services; the latest run, on 2026-11-04, passed 19 of 19. Details are in [docs/05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md) (in Spanish).
+
 ## Results
 
 All runs: 24 h starting at 18:00, 5 min steps, 8 nodes, seed 42, high salinization rate (ALTA), unmodified parameters (pulse efficacy 0.90, regeneration criterion 1100 Ohm).
@@ -136,10 +140,23 @@ Across the five scenarios, the cap explains 69.8 % to 89.8 % of the gap with 45 
 - The assumed fog flux is optimistic compared with the literature (see references).
 - This is an analytical proof of concept, roughly TRL 2-3, with no physical prototype. Prior consultation with Wayuu communities (ILO Convention 169, Colombian Law 21 of 1991) is required before any pilot in their territory and has not been carried out.
 
+## Documentation
+
+The documents in `docs/` are numbered in reading order (all in Spanish):
+
+1. [01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md): research question, conjectures, variables, study perspectives, scope and milestones.
+2. [02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md](docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md): API specification and implementation status.
+3. [03_Funcionamiento_General_AxiomaH.md](docs/03_Funcionamiento_General_AxiomaH.md): plain-language explanation of the application and the dashboard.
+4. [04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md): rules, equations, results and critical reading of the conjectures.
+5. [05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md): deployment on Render, CI and verification.
+6. [06_Referencias_y_Trazabilidad_AxiomaH.md](docs/06_Referencias_y_Trazabilidad_AxiomaH.md): third-party software, scientific source and parameter traceability.
+
+The reference data and its field dictionary are in [docs/datos/](docs/datos/README.md).
+
 ## References
 
-- Third-party software, licenses, the scientific source and the traceability of every model parameter: [docs/referencias.md](docs/referencias.md) (in Spanish).
+- Third-party software, licenses, the scientific source and the traceability of every model parameter: [docs/06_Referencias_y_Trazabilidad_AxiomaH.md](docs/06_Referencias_y_Trazabilidad_AxiomaH.md) (in Spanish).
 - Klemm, O., Schemenauer, R. S., Lummerich, A., et al. (2012). Fog as a fresh-water resource: overview and perspectives. *Ambio*, 41, 221-234. https://doi.org/10.1007/s13280-012-0247-8
-- Model, equations, sensitivity analyses and critical reading of the conjectures: [docs/modelo_simulacion.md](docs/modelo_simulacion.md) (in Spanish).
+- Model, equations, sensitivity analyses and critical reading of the conjectures: [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md) (in Spanish).
 
 The project is distributed under the MIT license (`LICENSE` file).

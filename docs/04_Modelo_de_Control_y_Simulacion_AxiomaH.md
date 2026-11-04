@@ -1,6 +1,6 @@
 # Modelo de control y simulación del motor Axioma-H
 
-Este documento describe el motor de reglas neuro-simbólico, el simulador comparativo y la forma en que se verifican las conjeturas del Ciclo 2. Los valores de todos los parámetros están en `backend/config.py`. Las ecuaciones compartidas por el motor y el simulador están en `backend/modelo_fisico.py`.
+Este documento describe el motor de reglas neuro-simbólico, el simulador comparativo y la forma en que se verifican las conjeturas del Ciclo 2. Los valores de todos los parámetros están en `backend/config.py`. Las ecuaciones compartidas por el motor y el simulador están en `backend/modelo_fisico.py`. Los dos parámetros que admiten análisis de sensibilidad, la eficacia máxima del pulso y el flujo máximo de niebla, se agrupan además en `ParametrosModelo` (`backend/modelo_fisico.py`), que toma por defecto los valores de `backend/config.py`. El barrido de salinidad con varias semillas y la sensibilidad están en `backend/analisis.py` (secciones 6.4 y 7.5).
 
 Los documentos de referencia son el PRD de la API ([02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md](02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md)) y la Matriz de Operacionalización ([01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md)). Las decisiones de la sección 1 resuelven las diferencias entre ambos.
 
@@ -82,37 +82,37 @@ La impedancia total es `Z = Z_nom + Z_sal + Z_polvo`.
 
 | Parámetro | Valor | Origen | Fuente |
 |---|---|---|---|
-| Umbral de corte térmico | 45.0 °C | PRD | [referencias.md](referencias.md#3-trazabilidad-de-parámetros) |
-| Temperatura objetivo del pulso | 44.0 °C | Matriz | [referencias.md](referencias.md#3-trazabilidad-de-parámetros) |
-| Umbral de humedad ecológica | 30.0 % | PRD | [referencias.md](referencias.md#3-trazabilidad-de-parámetros) |
-| Umbral de reserva crítica | 30.0 % | PRD | [referencias.md](referencias.md#3-trazabilidad-de-parámetros) |
-| Umbral de impedancia | 1500 Ohm | PRD | [referencias.md](referencias.md#3-trazabilidad-de-parámetros) |
-| Impedancia nominal | 1000 Ohm | PRD | [referencias.md](referencias.md#3-trazabilidad-de-parámetros) |
-| Duración del pulso | 90 s | PRD | [referencias.md](referencias.md#3-trazabilidad-de-parámetros) |
-| Fracción máxima de extracción | 0.33 | Matriz | [referencias.md](referencias.md#3-trazabilidad-de-parámetros) |
-| Caudal durante pulso / reserva crítica | 80 % / 50 % | PRD | [referencias.md](referencias.md#3-trazabilidad-de-parámetros) |
-| Factor de impedancia regenerada | 1.10 (1100 Ohm) | Criterio del equipo | [referencias.md](referencias.md#3-trazabilidad-de-parámetros) |
-| Área de colector por nodo | 1.0 m² | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
-| Flujo máximo de niebla | 6.0 L/m²/h (0.35 g/m³ a 5 m/s) | Supuesto | Sin fuente; contrastado con Klemm et al. (2012) en [referencias.md](referencias.md#4-comparación-del-flujo-de-niebla-supuesto-con-la-literatura) |
-| HR mínima de captación, exponente | 20 %, 1.5 | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
-| Amplitud del ciclo de HR | 10 puntos, máximo a las 04:00 | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
-| Temperatura ambiente | 30 +/- 4.5 °C, máximo a las 14:00 | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
-| Calentamiento solar de la matriz | +7 °C con radiación máxima | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
-| Incrustación BAJA / MEDIA / ALTA | 20 / 40 / 80 Ohm por L/m² | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
-| Eficacia máxima del pulso | 0.90 | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
-| Temperaturas de efecto mínimo y de saturación | 30 °C / 44 °C | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
-| Carga salina de referencia | 2500 Ohm | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
-| Constante de disolución | 25 s | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
-| Capacidad de reserva, reserva inicial | 150 Wh, 70 % | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
-| Recarga solar máxima | 20 W | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
-| Capacidad térmica de la matriz | 800 J/K | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
-| Conductancia de pérdidas | 30 W/K | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
-| Consumo base neuro-simbólico / temporizador | 0.6 W / 0.2 W | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
-| Fatiga por pulso | 0.02 % | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
-| Degradación térmica | 0.05 %/(°C·min) | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
-| Degradación por cristalización | 0.10 %/h | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
-| Ruido HR / T por paso | 1.0 % / 0.3 °C | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
-| Dispersión entre nodos HR / T / salinización | +/-2 % / +/-0.5 °C / +/-10 % | Supuesto | Sin fuente: supuesto de orden de magnitud ([referencias.md](referencias.md#3-trazabilidad-de-parámetros)) |
+| Umbral de corte térmico | 45.0 °C | PRD | [Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros) |
+| Temperatura objetivo del pulso | 44.0 °C | Matriz | [Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros) |
+| Umbral de humedad ecológica | 30.0 % | PRD | [Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros) |
+| Umbral de reserva crítica | 30.0 % | PRD | [Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros) |
+| Umbral de impedancia | 1500 Ohm | PRD | [Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros) |
+| Impedancia nominal | 1000 Ohm | PRD | [Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros) |
+| Duración del pulso | 90 s | PRD | [Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros) |
+| Fracción máxima de extracción | 0.33 | Matriz | [Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros) |
+| Caudal durante pulso / reserva crítica | 80 % / 50 % | PRD | [Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros) |
+| Factor de impedancia regenerada | 1.10 (1100 Ohm) | Criterio del equipo | [Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros) |
+| Área de colector por nodo | 1.0 m² | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
+| Flujo máximo de niebla | 6.0 L/m²/h (0.35 g/m³ a 5 m/s) | Supuesto | Sin fuente; contrastado con Klemm et al. (2012) en [Documento 06, sección 4](06_Referencias_y_Trazabilidad_AxiomaH.md#4-comparación-del-flujo-de-niebla-supuesto-con-la-literatura) |
+| HR mínima de captación, exponente | 20 %, 1.5 | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
+| Amplitud del ciclo de HR | 10 puntos, máximo a las 04:00 | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
+| Temperatura ambiente | 30 +/- 4.5 °C, máximo a las 14:00 | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
+| Calentamiento solar de la matriz | +7 °C con radiación máxima | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
+| Incrustación BAJA / MEDIA / ALTA | 20 / 40 / 80 Ohm por L/m² | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
+| Eficacia máxima del pulso | 0.90 | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
+| Temperaturas de efecto mínimo y de saturación | 30 °C / 44 °C | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
+| Carga salina de referencia | 2500 Ohm | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
+| Constante de disolución | 25 s | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
+| Capacidad de reserva, reserva inicial | 150 Wh, 70 % | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
+| Recarga solar máxima | 20 W | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
+| Capacidad térmica de la matriz | 800 J/K | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
+| Conductancia de pérdidas | 30 W/K | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
+| Consumo base neuro-simbólico / temporizador | 0.6 W / 0.2 W | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
+| Fatiga por pulso | 0.02 % | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
+| Degradación térmica | 0.05 %/(°C·min) | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
+| Degradación por cristalización | 0.10 %/h | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
+| Ruido HR / T por paso | 1.0 % / 0.3 °C | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
+| Dispersión entre nodos HR / T / salinización | +/-2 % / +/-0.5 °C / +/-10 % | Supuesto | Sin fuente: supuesto de orden de magnitud ([Documento 06, sección 3](06_Referencias_y_Trazabilidad_AxiomaH.md#3-trazabilidad-de-parámetros)) |
 
 Los parámetros marcados como supuestos son estimaciones de orden de magnitud y deben calibrarse con mediciones de campo.
 
@@ -162,6 +162,8 @@ Todas las corridas comparten estas condiciones:
 - parámetros de `backend/config.py` sin modificar (eficacia máxima del pulso 0.90 y criterio de regeneración de 1100 Ohm).
 
 Solo cambia la humedad inicial, que se indica en el título de cada tabla.
+
+Los resultados de las secciones 5.1 a 5.4, junto con el modo de referencia de la sección 8.4 y el barrido con semillas 1 a 5 de la sección 7.5, están también como datos abiertos en [datos/](datos/README.md) (CSV y JSON). Se regeneran sin la API con `python scripts/generar_resultados_referencia.py`.
 
 ### 5.1 Corrida de referencia del PRD (TORMENTA_DE_SAL_Y_CALOR_EXTREMO, humedad inicial 45 %)
 
@@ -434,7 +436,7 @@ Este es un análisis exploratorio. No modifica `backend/config.py` y el umbral d
 
 ### 8.2 Umbral de la Conjetura 3 frente a la literatura
 
-La comparación completa está en [referencias.md](referencias.md), sección 4. En síntesis, con humedad inicial de 85 % el modelo obtiene 16.97 L/m²/noche en DIA_NORMAL (sección 5.4), por encima del rango de 3 a 10 L/m²/día que Klemm et al. (2012) reportan para proyectos operativos de captación de niebla. Por eso:
+La comparación completa está en [06_Referencias_y_Trazabilidad_AxiomaH.md](06_Referencias_y_Trazabilidad_AxiomaH.md), sección 4. En síntesis, con humedad inicial de 85 % el modelo obtiene 16.97 L/m²/noche en DIA_NORMAL (sección 5.4), por encima del rango de 3 a 10 L/m²/día que Klemm et al. (2012) reportan para proyectos operativos de captación de niebla. Por eso:
 
 - el flujo máximo de niebla supuesto (`FLUJO_NIEBLA_MAXIMO_L_M2_H = 6.0`) es optimista;
 - el umbral de 12 L/m²/noche de la Conjetura 3 supera el rango típico de operación.

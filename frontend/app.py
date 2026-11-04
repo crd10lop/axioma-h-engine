@@ -532,7 +532,7 @@ def seccion_conjeturas(resultado: dict) -> None:
     st.caption(
         "Resultados calculados por el modelo con parámetros físicos supuestos. "
         "Una conjetura se valida solo si todos sus indicadores cumplen; los marcados como informativos "
-        "no intervienen en la validación. Ver docs/modelo_simulacion.md."
+        "no intervienen en la validación. Ver docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md."
     )
     columnas = st.columns(3)
     for columna, conjetura in zip(columnas, tr.conjeturas_a_lista(resultado)):

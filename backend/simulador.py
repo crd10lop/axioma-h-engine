@@ -6,7 +6,7 @@ Los resultados y la verificación de las conjeturas se calculan a partir del
 modelo; ningún indicador se fija de antemano (decisión D5).
 
 La simulación arranca a las 18:00 hora local y avanza en pasos discretos de
-`paso_minutos`. Las ecuaciones se documentan en `docs/modelo_simulacion.md`.
+`paso_minutos`. Las ecuaciones se documentan en `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md`.
 """
 
 import math

@@ -3,7 +3,7 @@
 **Equipo:** AXIOMA — Curso Fundamentos de Investigación (UdeA)  
 **Ciclo:** 2 — Operacionalización, Simulación y Verificación de Conjeturas  
 **Repositorio:** https://github.com/crd10lop/axioma-h-engine  
-**API desplegada:** [Documentación interactiva](https://axioma-h-api.onrender.com/docs)  
+**Aplicación desplegada:** [Dashboard](https://axioma-h-dashboard.onrender.com) | [API, documentación interactiva](https://axioma-h-api.onrender.com/docs)  
 
 ---
 
@@ -200,7 +200,7 @@ Todos los campos son opcionales. `semillas` admite de 1 a 5 valores sin repetir;
 }
 ```
 
-Los valores de ambos ejemplos son los que calcula el modelo y coinciden con `docs/modelo_simulacion.md`, secciones 5.6, 5.7 y 7.3. Una configuración inválida (semillas repetidas, más de 5 semillas, eficacia igual a 0 o mayor que 1) devuelve `422`.
+Los valores de ambos ejemplos son los que calcula el modelo y coinciden con `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md`, secciones 5.6, 5.7 y 7.3. Una configuración inválida (semillas repetidas, más de 5 semillas, eficacia igual a 0 o mayor que 1) devuelve `422`.
 
 ---
 
@@ -252,13 +252,14 @@ La API y el dashboard están implementados en `backend/` (FastAPI) y `frontend/`
   - Cada modo de `comparativa` incluye `recuperacion_caudal_promedio_pct` (nulo si el modo no ejecutó pulsos) y `degradacion_acumulada_pct`. Son las variables dependientes de la pregunta de investigación (`01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md`, sección 2) y se muestran en el dashboard.
   - `SimulationResult` incluye `detalle_verificacion`, con los indicadores de cada conjetura, su umbral y si cumplen, y los indicadores informativos `pulsos_regenerados` y `pulsos_totales` de la Conjetura 2. También incluye `series_temporales`, para las gráficas, y `bitacora`, con los cambios de regla del modo neuro-simbólico.
   - `comparativa` incluye un tercer modo, `modo_temporizador_tope_ecologico`: el temporizador fijo con la fracción de 0.33 del modo neuro-simbólico. Es una referencia para separar el efecto del tope ecológico del de la lógica de control y no interviene en la validación ni en `series_temporales`.
-  - Cada conjetura de `detalle_verificacion` incluye `causas_no_validacion`, la lista de causas de los indicadores que no cumplen (`SIN_DATOS`, `DEPENDE_DE_PARAMETRO_SUPUESTO`, `LIMITE_DEL_RECURSO_ATMOSFERICO`, `DESEMPENO_DEL_CONTROL`); está vacía si la conjetura se valida. `indicadores_informativos` incluye además `reduccion_degradacion_pct` (Conjetura 1), `tiempo_desprendimiento_t95_promedio_seg` e `impedancia_promedio_tras_pulso_ohms` (Conjetura 2) y `rendimiento_nocturno_temporizador_l_m2_noche` (Conjetura 3). Ninguno de estos campos cambia la validación. Las definiciones están en `docs/modelo_simulacion.md`, sección 4.
+  - Cada conjetura de `detalle_verificacion` incluye `causas_no_validacion`, la lista de causas de los indicadores que no cumplen (`SIN_DATOS`, `DEPENDE_DE_PARAMETRO_SUPUESTO`, `LIMITE_DEL_RECURSO_ATMOSFERICO`, `DESEMPENO_DEL_CONTROL`); está vacía si la conjetura se valida. `indicadores_informativos` incluye además `reduccion_degradacion_pct` (Conjetura 1), `tiempo_desprendimiento_t95_promedio_seg` e `impedancia_promedio_tras_pulso_ohms` (Conjetura 2) y `rendimiento_nocturno_temporizador_l_m2_noche` (Conjetura 3). Ninguno de estos campos cambia la validación. Las definiciones están en `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md`, sección 4.
 - **Campos opcionales en la solicitud.** `SimulationConfig` admite `numero_nodos` (por defecto 8), `paso_minutos` (por defecto 5) y `semilla` (por defecto 42). El payload de la sección 3.2 sigue siendo válido sin cambios.
 - **Temperatura objetivo del pulso.** Es 44.0 °C. Con 45.0 °C el pulso activaría el corte térmico de la REGLA_01 (`>= 45.0`). El ejemplo de la sección 3.1 se actualizó en consecuencia.
 - **Orden de evaluación.** La REGLA_04 se evalúa antes que la REGLA_03, porque ambas comparten la condición de impedancia alta. El caudal se expresa como porcentaje del tope ecológico del 33 %.
 - **Escenarios y endpoints adicionales.** El simulador incluye el escenario `TORMENTA_DE_SAL_Y_CALOR_EXTREMO`, además de los cuatro de la sección 5. La API expone también `GET /` y `GET /api/v1/health`, y los endpoints de análisis de robustez de la sección 3.3 (`POST /api/v1/analisis/barrido-salinidad` y `POST /api/v1/analisis/sensibilidad`).
-- **Valores de ejemplo.** Los valores numéricos de la respuesta de ejemplo de la sección 3.2 son ilustrativos. Los resultados calculados por el modelo para ese payload están en `docs/modelo_simulacion.md`, sección 5.1.
-- **Despliegue.** `render.yaml` define la API y el dashboard como servicios web de Render. La URL de la API se configura en el dashboard con `AXIOMA_API_URL`, y los orígenes CORS adicionales con `AXIOMA_CORS_ORIGINS`. El procedimiento está en `docs/despliegue.md`.
+- **Dashboard.** Los cuatro elementos de la sección 5 están implementados. El panel de telemetría, con las cuatro tarjetas y sus barras de nivel, está en la vista "Evaluación manual de nodo". El selector de escenarios, la consola de decisiones y los gráficos comparativos están en la vista "Simulación comparativa", que incluye además el escenario `TORMENTA_DE_SAL_Y_CALOR_EXTREMO`. El dashboard agrega dos vistas que la especificación no pedía: "Investigación y guía", con la pregunta, las conjeturas, las reglas y las perspectivas del estudio, y "Respuesta a la pregunta", que consume los endpoints de la sección 3.3. La descripción de cada vista está en `docs/03_Funcionamiento_General_AxiomaH.md`, sección 5.
+- **Valores de ejemplo.** Los valores numéricos de la respuesta de ejemplo de la sección 3.2 son ilustrativos. Los resultados calculados por el modelo para ese payload están en `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md`, sección 5.1.
+- **Despliegue.** La API y el dashboard están desplegados en Render, en el plan gratuito, como los servicios web `axioma-h-api` (https://axioma-h-api.onrender.com) y `axioma-h-dashboard` (https://axioma-h-dashboard.onrender.com), definidos en `render.yaml`. Render despliega desde `main` solo cuando las pruebas y la Quality Gate de SonarQube Cloud están en verde. El dashboard obtiene la URL de la API de la variable `AXIOMA_API_URL`; los orígenes CORS adicionales se configuran con `AXIOMA_CORS_ORIGINS`. La configuración, la verificación y la operación están en `docs/05_Despliegue_y_Operacion_AxiomaH.md`.
 
 ---
 
