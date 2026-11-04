@@ -308,3 +308,179 @@ def zonas_telemetria(telemetria: dict) -> dict:
         "reserva_calor_pct": telemetria["reserva_calor_pct"] < config.UMBRAL_RESERVA_CRITICA_PCT,
         "humedad_relativa_pct": telemetria["humedad_relativa_pct"] < config.UMBRAL_HUMEDAD_ECOLOGICA_PCT,
     }
+
+
+# ---------------------------------------------------------------------------
+# Análisis de robustez: barrido de salinidad y sensibilidad
+# ---------------------------------------------------------------------------
+VARIABLE_RECUPERACION = "Recuperación"
+CLAVE_CARGA = "carga_salina_ohm_l_m2"
+CLAVE_PUNTOS = "puntos"
+COLUMNA_VALOR = "valor"
+COLUMNA_RECUPERACION = "recuperacion"
+COLUMNA_TIEMPO_REGENERACION = "tiempo_regeneracion"
+COLUMNA_RENDIMIENTO = "rendimiento_nocturno"
+VARIABLE_DEGRADACION = "Degradación"
+COLUMNAS_BARRIDO = ["carga", "Modo", "Variable", "media", "desv", "inferior", "superior"]
+COLUMNAS_SENSIBILIDAD = [
+    COLUMNA_VALOR,
+    "C1",
+    "C2",
+    "C3",
+    COLUMNA_RECUPERACION,
+    COLUMNA_TIEMPO_REGENERACION,
+    COLUMNA_RENDIMIENTO,
+]
+MAXIMO_SEMILLAS = 5
+
+# Prefijo de los campos de PuntoBarrido para cada variable y sufijo para cada modo.
+_PREFIJOS_BARRIDO = {VARIABLE_RECUPERACION: COLUMNA_RECUPERACION, VARIABLE_DEGRADACION: "degradacion"}
+_SUFIJOS_MODO = {"neuro": NOMBRES_MODO["neuro"], "temporizador": NOMBRES_MODO["temporizador"]}
+
+# Valores predefinidos y el indicador que se grafica para cada parámetro sensible:
+# (columna de sensibilidad_a_dataframe, etiqueta del eje, umbral de la conjetura).
+VALORES_SENSIBILIDAD = {
+    "EFICACIA_MAXIMA_PULSO": [0.85, 0.90, 0.94, 0.97, 1.00],
+    "FLUJO_NIEBLA_MAXIMO": [3.0, 4.5, 6.0, 7.5],
+}
+NOMBRES_PARAMETRO = {
+    "EFICACIA_MAXIMA_PULSO": "Eficacia máxima del pulso",
+    "FLUJO_NIEBLA_MAXIMO": "Flujo máximo de niebla (L/m²/h)",
+}
+# Encabezados legibles de la tabla de sensibilidad.
+ETIQUETAS_SENSIBILIDAD = dict(
+    zip(
+        COLUMNAS_SENSIBILIDAD,
+        [
+            "Valor",
+            "C1 Eficiencia",
+            "C2 Autorreparación",
+            "C3 Saber territorial",
+            "Recuperación (%)",
+            "Regeneración (s)",
+            "Rendimiento nocturno (L/m²/noche)",
+        ],
+    )
+)
+INDICADOR_SENSIBILIDAD = {
+    "EFICACIA_MAXIMA_PULSO": (COLUMNA_RECUPERACION, "Recuperación tras pulso (%)", config.RECUPERACION_MINIMA_PCT),
+    "FLUJO_NIEBLA_MAXIMO": (
+        COLUMNA_RENDIMIENTO,
+        "Rendimiento nocturno (L/m²/noche)",
+        config.RENDIMIENTO_MINIMO_L_M2_NOCHE,
+    ),
+}
+
+
+def configuracion_barrido(humedad: float, numero_semillas: int) -> dict:
+    """Carga del barrido con semillas consecutivas desde 1, acotadas entre 1 y 5."""
+    cantidad = max(1, min(MAXIMO_SEMILLAS, int(numero_semillas)))
+    return {"humedad_ambiente_inicial_pct": float(humedad), "semillas": list(range(1, cantidad + 1))}
+
+
+def configuracion_sensibilidad(parametro: str, escenario: str, humedad: float, tasa: str = "ALTA") -> dict:
+    """Carga del análisis de sensibilidad con los valores predefinidos del parámetro."""
+    return {
+        "escenario": escenario,
+        "humedad_ambiente_inicial_pct": float(humedad),
+        "tasa_salinizacion": tasa,
+        "parametro": parametro,
+        "valores": VALORES_SENSIBILIDAD[parametro],
+    }
+
+
+def barrido_a_dataframe(resultado: dict) -> pd.DataFrame:
+    """Barrido en formato largo: una fila por carga, modo y variable.
+
+    Incluye la media, la desviación y los límites de la banda media +/- desviación.
+    Se omiten las combinaciones sin datos, por ejemplo la recuperación de un modo
+    que no ejecutó pulsos.
+    """
+    filas = []
+    for punto in resultado.get(CLAVE_PUNTOS, []):
+        for variable, prefijo in _PREFIJOS_BARRIDO.items():
+            for sufijo, modo in _SUFIJOS_MODO.items():
+                media = punto.get(f"{prefijo}_{sufijo}_media")
+                if media is None:
+                    continue
+                desv = punto.get(f"{prefijo}_{sufijo}_desv") or 0.0
+                filas.append(
+                    {
+                        "carga": punto[CLAVE_CARGA],
+                        "Modo": modo,
+                        "Variable": variable,
+                        "media": media,
+                        "desv": desv,
+                        "inferior": media - desv,
+                        "superior": media + desv,
+                    }
+                )
+    return pd.DataFrame(filas, columns=COLUMNAS_BARRIDO)
+
+
+def sensibilidad_a_dataframe(resultado: dict) -> pd.DataFrame:
+    """Una fila por valor del parámetro con el estado de las conjeturas y sus indicadores."""
+    filas = [
+        {
+            COLUMNA_VALOR: punto[COLUMNA_VALOR],
+            "C1": punto["conjeturas_validadas"]["conjetura_1_eficiencia"],
+            "C2": punto["conjeturas_validadas"]["conjetura_2_autorreparacion"],
+            "C3": punto["conjeturas_validadas"]["conjetura_3_saber_territorial"],
+            COLUMNA_RECUPERACION: punto.get("recuperacion_caudal_promedio_pct"),
+            COLUMNA_TIEMPO_REGENERACION: punto.get("tiempo_regeneracion_promedio_seg"),
+            COLUMNA_RENDIMIENTO: punto.get("rendimiento_nocturno_l_m2_noche"),
+        }
+        for punto in resultado.get(CLAVE_PUNTOS, [])
+    ]
+    return pd.DataFrame(filas, columns=COLUMNAS_SENSIBILIDAD)
+
+
+def carga_cruce_recuperacion(resultado: dict) -> float | None:
+    """Carga salina desde la cual la recuperación neuro-simbólica supera a la del temporizador.
+
+    Recorre los puntos por carga creciente y devuelve el inicio del último tramo
+    en que el neuro-simbólico supera al temporizador hasta la carga más alta.
+    Los puntos sin datos de recuperación no interrumpen el tramo. Devuelve None
+    si en la carga más alta con datos el neuro-simbólico no supera al temporizador.
+    """
+    cruce = None
+    for punto in sorted(resultado.get(CLAVE_PUNTOS, []), key=lambda p: p[CLAVE_CARGA]):
+        neuro = punto.get("recuperacion_neuro_media")
+        temporizador = punto.get("recuperacion_temporizador_media")
+        if neuro is None or temporizador is None:
+            continue
+        if neuro <= temporizador:
+            cruce = None
+        elif cruce is None:
+            cruce = punto[CLAVE_CARGA]
+    return cruce
+
+
+def lectura_barrido(resultado: dict) -> list[str]:
+    """Frases de lectura calculadas desde los datos del barrido."""
+    puntos = resultado.get(CLAVE_PUNTOS, [])
+    if not puntos:
+        return ["El barrido no devolvió puntos."]
+    cruce = carga_cruce_recuperacion(resultado)
+    if cruce is None:
+        frase_recuperacion = (
+            "En el rango evaluado, la recuperación del neuro-simbólico no supera a la del temporizador."
+        )
+    else:
+        frase_recuperacion = (
+            f"Desde una carga salina de {cruce:g} Ohm por L/m², la recuperación del neuro-simbólico "
+            "supera a la del temporizador."
+        )
+    reducciones = [p["reduccion_desgaste_pct"] for p in puntos if p.get("reduccion_desgaste_pct") is not None]
+    if reducciones:
+        frase_desgaste = (
+            f"La reducción del desgaste del neuro-simbólico frente al temporizador va de "
+            f"{min(reducciones):.1f} % a {max(reducciones):.1f} %."
+        )
+    else:
+        frase_desgaste = "No hay datos para calcular la reducción del desgaste."
+    semillas = puntos[0].get("n_semillas", 1)
+    frase_semillas = (
+        f"Cada punto es la media de {semillas} semilla(s); la banda muestra +/- una desviación estándar."
+    )
+    return [frase_recuperacion, frase_desgaste, frase_semillas]

@@ -121,6 +121,17 @@ streamlit run frontend/app.py
 
 El dashboard queda disponible en http://localhost:8501. Streamlit escucha por defecto en todas las interfaces de red; para limitarlo al equipo local, agregue `--server.address 127.0.0.1`.
 
+### Vistas del dashboard
+
+La barra lateral ofrece un recorrido de cuatro vistas, con un botón "Siguiente" al final de cada una, salvo la última:
+
+1. **Investigación y guía:** pregunta, hipótesis, conjeturas, reglas, perspectivas y alcance. No requiere la API.
+2. **Evaluación manual de nodo:** decisión del motor para una telemetría ajustable.
+3. **Simulación comparativa:** ambos modos sobre un escenario, con gráficos, conjeturas y bitácora.
+4. **Respuesta a la pregunta:** barrido de salinidad con 1 a 5 semillas (media y banda de +/- una desviación) y sensibilidad a la eficacia del pulso o al flujo de niebla. Usa los endpoints de `/api/v1/analisis` y no modifica la configuración del modelo.
+
+El detalle de cada vista está en [docs/funcionamiento.md](docs/funcionamiento.md), sección 5.
+
 ### Variable AXIOMA_API_URL
 
 El dashboard se conecta por defecto a `http://127.0.0.1:8000`. Para usar otra dirección, defina la variable antes de iniciar Streamlit:

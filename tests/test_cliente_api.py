@@ -163,3 +163,33 @@ def test_api_url_se_toma_del_entorno(monkeypatch):
     finally:
         monkeypatch.delenv("AXIOMA_API_URL")
         importlib.reload(config)
+
+
+@pytest.mark.parametrize(
+    ("funcion", "ruta"),
+    [
+        (cliente_api.ejecutar_barrido, "/api/v1/analisis/barrido-salinidad"),
+        (cliente_api.ejecutar_sensibilidad, "/api/v1/analisis/sensibilidad"),
+    ],
+)
+def test_analisis_usa_su_ruta_y_timeout(request_simulado, funcion, ruta):
+    cuerpo = {"puntos": []}
+    request_simulado.return_value = respuesta_simulada(200, cuerpo)
+    carga = {"semillas": [1, 2]}
+    assert funcion(carga) == cuerpo
+    request_simulado.assert_called_once_with(
+        "POST", f"{config.API_URL}{ruta}", json=carga, timeout=config.TIMEOUT_ANALISIS_SEG
+    )
+
+
+def test_analisis_con_semillas_repetidas_reporta_422(request_simulado):
+    detalle = [{"loc": ["body", "semillas"], "msg": "Value error, Las semillas no deben repetirse."}]
+    request_simulado.return_value = respuesta_simulada(422, {"detail": detalle})
+    with pytest.raises(cliente_api.ErrorApiAxioma) as error:
+        cliente_api.ejecutar_barrido({"semillas": [1, 1]})
+    assert error.value.codigo_estado == 422
+    assert error.value.detalle == ["semillas: Value error, Las semillas no deben repetirse."]
+
+
+def test_timeout_de_analisis_mayor_que_el_de_simulacion():
+    assert config.TIMEOUT_ANALISIS_SEG > config.TIMEOUT_SIMULACION_SEG

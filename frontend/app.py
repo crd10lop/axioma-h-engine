@@ -37,6 +37,7 @@ ESCENARIOS = {
 VISTA_EVALUACION = "Evaluación manual de nodo"
 VISTA_SIMULACION = "Simulación comparativa"
 VISTA_INVESTIGACION = contenido.VISTAS[0]
+VISTA_RESPUESTA = contenido.VISTAS[3]
 
 # Clave de session_state de cada control de telemetría.
 CONTROLES = {
@@ -120,6 +121,10 @@ def inicializar_estado() -> None:
         "sim_semilla": 42,
         "velocidad_reproduccion": "Media",
         "minuto_reproduccion": 0,
+        "resp_humedad": 85.0,
+        "resp_semillas": 1,
+        "sens_parametro": "EFICACIA_MAXIMA_PULSO",
+        "sens_escenario": "DIA_NORMAL",
     }
     widgets.update({CONTROLES[campo]: valor for campo, valor in TELEMETRIA_PRD.items()})
     for clave, valor in widgets.items():
@@ -135,6 +140,10 @@ def inicializar_estado() -> None:
         "error_simulacion": None,
         "reproduciendo": False,
         "indice_reproduccion": 0,
+        "resultado_barrido": None,
+        "error_barrido": None,
+        "resultado_sensibilidad": None,
+        "error_sensibilidad": None,
     }
     for clave, valor in valores.items():
         st.session_state.setdefault(clave, valor)
@@ -219,7 +228,7 @@ def tabla_textos(filas: list[dict], columnas: dict[str, str]) -> None:
 def vista_investigacion() -> None:
     """Pregunta, conjeturas, reglas, perspectivas y alcance del estudio. No depende de la API."""
     st.header(VISTA_INVESTIGACION)
-    st.caption("Contexto del estudio antes de usar el simulador. Las vistas 2 y 3 requieren la API.")
+    st.caption("Contexto del estudio antes de usar el simulador. Las vistas 2 a 4 requieren la API.")
 
     st.subheader("Pregunta de investigación")
     st.info(contenido.PREGUNTA_INVESTIGACION)
@@ -765,6 +774,125 @@ def vista_simulacion(api_disponible: bool) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Vista C: respuesta a la pregunta (análisis de robustez)
+# ---------------------------------------------------------------------------
+def ejecutar_analisis(funcion, carga: dict, clave: str, mensaje: str) -> None:
+    """Llama a un endpoint de análisis y guarda el resultado o el error en session_state."""
+    with st.spinner(mensaje):
+        try:
+            st.session_state[f"resultado_{clave}"] = funcion(carga)
+            st.session_state[f"error_{clave}"] = None
+        except cliente_api.ErrorApiAxioma as error:
+            st.session_state[f"error_{clave}"] = error
+
+
+def grafico_barrido(df: pd.DataFrame, variable: str, titulo: str, eje_y: str, referencia=None):
+    """Media por modo frente a la carga salina, con una banda de +/- una desviación estándar."""
+    datos = df[df["Variable"] == variable]
+    base = alt.Chart(datos).encode(
+        x=alt.X("carga:Q", title="Carga salina (Ohm por L/m²)"),
+        color=alt.Color(CAMPO_MODO, scale=COLORES_MODO, legend=alt.Legend(orient="bottom")),
+    )
+    banda = base.mark_area(opacity=0.2).encode(y=alt.Y("inferior:Q", title=eje_y, scale=alt.Scale(zero=False)), y2="superior:Q")
+    lineas = base.mark_line(point=True).encode(
+        y=alt.Y("media:Q", title=eje_y),
+        tooltip=[
+            alt.Tooltip(CAMPO_MODO),
+            alt.Tooltip("carga:Q", title="Carga salina"),
+            alt.Tooltip("media:Q", title="Media", format=".3f"),
+            alt.Tooltip("desv:Q", title="Desviación", format=".3f"),
+        ],
+    )
+    return _con_referencia(alt.layer(banda, lineas), referencia).properties(title=titulo, height=300)
+
+
+def seccion_barrido(api_disponible: bool) -> None:
+    """Barrido de salinidad con varias semillas: gráficos de recuperación y degradación y su lectura."""
+    st.subheader("Barrido de salinidad")
+    columnas = st.columns(3)
+    humedad = columnas[0].slider("Humedad inicial (%)", 0.0, 100.0, step=0.5, key="resp_humedad")
+    semillas = columnas[1].slider(
+        "Número de semillas", 1, tr.MAXIMO_SEMILLAS, key="resp_semillas",
+        help="Se usan semillas consecutivas desde 1. Cada semilla genera un clima de referencia distinto.",
+    )
+    columnas[2].write("")
+    if columnas[2].button("Ejecutar barrido", disabled=not api_disponible, type="primary", width="stretch"):
+        ejecutar_analisis(
+            cliente_api.ejecutar_barrido, tr.configuracion_barrido(humedad, semillas), "barrido",
+            "Ejecutando el barrido de salinidad...",
+        )
+    if st.session_state.error_barrido is not None:
+        mostrar_error(st.session_state.error_barrido)
+    resultado = st.session_state.resultado_barrido
+    if resultado is None:
+        st.info("Ejecute el barrido para comparar ambos modos en seis niveles de carga salina.")
+        return
+
+    df = tr.barrido_a_dataframe(resultado)
+    graficos = st.columns(2)
+    graficos[0].altair_chart(
+        grafico_barrido(df, tr.VARIABLE_RECUPERACION, "Recuperación tras pulso (referencia 90 %)", "%",
+                        config.RECUPERACION_MINIMA_PCT),
+        width="stretch",
+    )
+    graficos[1].altair_chart(
+        grafico_barrido(df, tr.VARIABLE_DEGRADACION, "Degradación acumulada de la membrana", "%"),
+        width="stretch",
+    )
+    st.markdown(contenido.lista_markdown(tr.lectura_barrido(resultado)))
+
+
+def seccion_sensibilidad(api_disponible: bool) -> None:
+    """Sensibilidad a un parámetro supuesto: indicador frente al valor y estado de las conjeturas."""
+    st.subheader("Sensibilidad a un parámetro supuesto")
+    columnas = st.columns(3)
+    parametro = columnas[0].selectbox(
+        "Parámetro", list(tr.VALORES_SENSIBILIDAD), format_func=tr.NOMBRES_PARAMETRO.get, key="sens_parametro"
+    )
+    escenario = columnas[1].selectbox("Escenario", list(ESCENARIOS), format_func=ESCENARIOS.get, key="sens_escenario")
+    columnas[2].write("")
+    if columnas[2].button("Ejecutar sensibilidad", disabled=not api_disponible, width="stretch"):
+        carga = tr.configuracion_sensibilidad(parametro, escenario, st.session_state.resp_humedad)
+        ejecutar_analisis(cliente_api.ejecutar_sensibilidad, carga, "sensibilidad", "Ejecutando la sensibilidad...")
+    valores = ", ".join(f"{valor:g}" for valor in tr.VALORES_SENSIBILIDAD[parametro])
+    st.caption(f"Valores evaluados: {valores}. Humedad inicial del barrido y tasa de salinización ALTA.")
+    if st.session_state.error_sensibilidad is not None:
+        mostrar_error(st.session_state.error_sensibilidad)
+    resultado = st.session_state.resultado_sensibilidad
+    if resultado is None:
+        st.info("Ejecute la sensibilidad para ver cómo cambia el estado de las conjeturas con el parámetro.")
+        return
+
+    parametro_resultado = resultado["parametro"]
+    df = tr.sensibilidad_a_dataframe(resultado)
+    columna, etiqueta, umbral = tr.INDICADOR_SENSIBILIDAD[parametro_resultado]
+    lineas = (
+        alt.Chart(df)
+        .mark_line(point=True, color="#1f6f8b")
+        .encode(
+            x=alt.X(f"{tr.COLUMNA_VALOR}:Q", title=tr.NOMBRES_PARAMETRO[parametro_resultado], scale=alt.Scale(zero=False)),
+            y=alt.Y(f"{columna}:Q", title=etiqueta, scale=alt.Scale(zero=False)),
+            tooltip=[alt.Tooltip(f"{tr.COLUMNA_VALOR}:Q", title="Valor"), alt.Tooltip(f"{columna}:Q", format=".2f")],
+        )
+    )
+    st.altair_chart(
+        _con_referencia(lineas, umbral, "Umbral de la conjetura").properties(title=etiqueta, height=280),
+        width="stretch",
+    )
+    st.dataframe(df.rename(columns=tr.ETIQUETAS_SENSIBILIDAD), hide_index=True, width="stretch")
+
+
+def vista_respuesta(api_disponible: bool) -> None:
+    """Respuesta a la pregunta de investigación con el barrido de salinidad y la sensibilidad."""
+    st.header(VISTA_RESPUESTA)
+    st.info(contenido.PREGUNTA_INVESTIGACION)
+    st.markdown(f"**Hipótesis de trabajo.** {contenido.HIPOTESIS}")
+    st.warning(contenido.AVISO_EXPLORATORIO)
+    seccion_barrido(api_disponible)
+    seccion_sensibilidad(api_disponible)
+
+
+# ---------------------------------------------------------------------------
 # Punto de entrada
 # ---------------------------------------------------------------------------
 def main() -> None:
@@ -781,8 +909,12 @@ def main() -> None:
         vista_investigacion()
     elif vista == VISTA_EVALUACION:
         vista_evaluacion(api_disponible)
+    elif vista == VISTA_RESPUESTA:
+        vista_respuesta(api_disponible)
     else:
         vista_simulacion(api_disponible)
+        # La simulación puede terminar antes de mostrar resultados, por eso el botón se dibuja aquí.
+        boton_siguiente_vista(VISTA_SIMULACION)
 
 
 main()

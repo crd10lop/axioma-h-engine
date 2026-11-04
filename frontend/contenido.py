@@ -306,7 +306,18 @@ REFERENCIAS: list[str] = [
 # ---------------------------------------------------------------------------
 # Recorrido guiado
 # ---------------------------------------------------------------------------
-VISTAS: list[str] = ["Investigación y guía", "Evaluación manual de nodo", "Simulación comparativa"]
+VISTAS: list[str] = [
+    "Investigación y guía",
+    "Evaluación manual de nodo",
+    "Simulación comparativa",
+    "Respuesta a la pregunta",
+]
+
+AVISO_EXPLORATORIO = (
+    "Análisis exploratorio. Cada corrida usa su propia copia de los parámetros: la configuración del "
+    "modelo no cambia y ningún valor se ajusta para validar una conjetura (decisión D5). Los parámetros "
+    "supuestos, como la eficacia del pulso y el flujo de niebla, siguen pendientes de medición."
+)
 
 
 def _posicion_vista(vista: str) -> int:

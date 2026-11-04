@@ -92,11 +92,16 @@ Ninguno de los dos análisis cambia la configuración del modelo, de modo que va
 
 ## 5. Uso del dashboard
 
-La barra lateral presenta un recorrido de tres vistas numeradas, en el orden recomendado de lectura. Al final de las dos primeras, un botón "Siguiente" lleva a la vista siguiente; también se puede saltar directamente a cualquiera desde la barra lateral.
+La barra lateral presenta un recorrido de cuatro vistas numeradas, en el orden recomendado de lectura. Al final de las tres primeras, un botón "Siguiente" lleva a la vista siguiente; también se puede saltar directamente a cualquiera desde la barra lateral.
 
 - **Investigación y guía:** es la vista inicial y no requiere la API. Presenta la pregunta de investigación, su versión divulgativa, la hipótesis de trabajo y la respuesta preliminar del simulador; la tabla de conjeturas con su criterio y la lectura de su resultado; las reglas de control; las perspectivas social, ética, cultural y humana; y el alcance y la madurez del artefacto. En secciones desplegables muestra los supuestos clave y las limitaciones, un glosario y las referencias. Los textos resumen el README y el plan del Ciclo 2 y están en `frontend/contenido.py`.
 - **Evaluación manual de nodo:** se ajustan la impedancia, la temperatura, la energía y la humedad, y se observa al instante qué regla se activa y por qué.
 - **Simulación comparativa:** se ejecuta un escenario y se comparan lado a lado el control neuro-simbólico y el temporizador. Incluye gráficos en el tiempo, el estado de cada conjetura y una reproducción paso a paso de la corrida.
+- **Respuesta a la pregunta:** usa los dos análisis de robustez de la API (sección 4). Muestra la pregunta y la hipótesis, y un aviso de que se trata de un análisis exploratorio que no cambia la configuración del modelo (decisión D5). Tiene dos bloques:
+  - **Barrido de salinidad.** Se elige la humedad inicial y de 1 a 5 semillas (consecutivas desde 1) y se presiona "Ejecutar barrido". Dos gráficos muestran, en función de la carga salina, la recuperación tras el pulso (con la referencia de 90 %) y la degradación de la membrana de ambos modos, con su media y una banda de más o menos una desviación estándar. Debajo aparecen frases calculadas con los datos: la carga desde la cual el neuro-simbólico recupera más que el temporizador y el rango de reducción del desgaste.
+  - **Sensibilidad.** Se elige el parámetro (eficacia del pulso, con 0.85, 0.90, 0.94, 0.97 y 1.00; o flujo de niebla, con 3, 4.5, 6 y 7.5 L/m²/h) y el escenario. Un gráfico muestra el indicador correspondiente frente al valor, con su umbral: la recuperación (90 %) para la eficacia y el rendimiento nocturno (12 L/m²/noche) para el flujo. Una tabla indica qué conjeturas se validan con cada valor.
+
+  Con 5 semillas el barrido ejecuta 60 simulaciones y puede tardar más que una simulación individual; el dashboard espera hasta 120 s (`TIMEOUT_ANALISIS_SEG`).
 
 ## 6. Conjeturas que se verifican
 

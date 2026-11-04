@@ -12,6 +12,7 @@ RUTA_APP = Path(__file__).resolve().parent.parent / "frontend" / "app.py"
 VISTA_INVESTIGACION = "Investigación y guía"
 VISTA_EVALUACION = "Evaluación manual de nodo"
 VISTA_SIMULACION = "Simulación comparativa"
+VISTA_RESPUESTA = "Respuesta a la pregunta"
 REGLA_03 = "REGLA_03_DESPRENDIMIENTO_SAL_POR_IMPEDANCIA"
 REGLA_04 = "REGLA_04_PROTECCION_RESERVA_CRITICA"
 
@@ -55,7 +56,13 @@ def _texto_reglas() -> str:
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize(
     "texto",
-    [contenido.PREGUNTA_INVESTIGACION, contenido.VERSION_DIVULGATIVA, contenido.HIPOTESIS, contenido.MADUREZ],
+    [
+        contenido.PREGUNTA_INVESTIGACION,
+        contenido.VERSION_DIVULGATIVA,
+        contenido.HIPOTESIS,
+        contenido.MADUREZ,
+        contenido.AVISO_EXPLORATORIO,
+    ],
 )
 def test_textos_principales_no_vacios(texto):
     assert texto.strip()
@@ -162,7 +169,7 @@ def test_constantes_de_pulso_y_tope():
 # Recorrido guiado
 # ---------------------------------------------------------------------------
 def test_vistas_en_orden():
-    assert contenido.VISTAS == [VISTA_INVESTIGACION, VISTA_EVALUACION, VISTA_SIMULACION]
+    assert contenido.VISTAS == [VISTA_INVESTIGACION, VISTA_EVALUACION, VISTA_SIMULACION, VISTA_RESPUESTA]
 
 
 def test_vistas_coinciden_con_app():
@@ -177,6 +184,7 @@ def test_vistas_coinciden_con_app():
         (VISTA_INVESTIGACION, "1. Investigación y guía"),
         (VISTA_EVALUACION, "2. Evaluación manual de nodo"),
         (VISTA_SIMULACION, "3. Simulación comparativa"),
+        (VISTA_RESPUESTA, "4. Respuesta a la pregunta"),
     ],
 )
 def test_etiqueta_vista(vista, esperada):
@@ -188,6 +196,7 @@ def test_etiqueta_vista(vista, esperada):
     [
         (VISTA_INVESTIGACION, VISTA_EVALUACION),
         (VISTA_EVALUACION, VISTA_SIMULACION),
+        (VISTA_SIMULACION, VISTA_RESPUESTA),
     ],
 )
 def test_siguiente_vista(vista, esperada):
@@ -195,7 +204,11 @@ def test_siguiente_vista(vista, esperada):
 
 
 def test_siguiente_vista_de_la_ultima_es_none():
-    assert contenido.siguiente_vista(VISTA_SIMULACION) is None
+    assert contenido.siguiente_vista(VISTA_RESPUESTA) is None
+
+
+def test_aviso_exploratorio_cita_la_decision_d5():
+    assert "decisión D5" in contenido.AVISO_EXPLORATORIO
 
 
 @pytest.mark.parametrize("funcion", [contenido.etiqueta_vista, contenido.siguiente_vista])

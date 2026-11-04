@@ -88,3 +88,13 @@ def evaluar_nodo(telemetria: dict) -> dict:
 def ejecutar_simulacion(configuracion: dict) -> dict:
     """Ejecuta una simulación comparativa en POST /api/v1/simulacion/ejecutar."""
     return _solicitar("POST", "/api/v1/simulacion/ejecutar", config.TIMEOUT_SIMULACION_SEG, configuracion)
+
+
+def ejecutar_barrido(configuracion: dict) -> dict:
+    """Ejecuta el barrido de salinidad en POST /api/v1/analisis/barrido-salinidad."""
+    return _solicitar("POST", "/api/v1/analisis/barrido-salinidad", config.TIMEOUT_ANALISIS_SEG, configuracion)
+
+
+def ejecutar_sensibilidad(configuracion: dict) -> dict:
+    """Ejecuta el análisis de sensibilidad en POST /api/v1/analisis/sensibilidad."""
+    return _solicitar("POST", "/api/v1/analisis/sensibilidad", config.TIMEOUT_ANALISIS_SEG, configuracion)

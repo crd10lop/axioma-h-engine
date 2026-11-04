@@ -5,8 +5,10 @@ import copy
 import pandas as pd
 import pytest
 
-from backend.schemas import CausaNoValidacion, Escenario, SimulationConfig, TasaSalinizacion
+from backend.analisis import ejecutar_barrido
+from backend.schemas import BarridoConfig, CausaNoValidacion, Escenario, SimulationConfig, TasaSalinizacion
 from backend.simulador import ejecutar_simulacion
+from frontend import config
 from frontend import transformaciones as tr
 
 
@@ -290,3 +292,189 @@ def test_texto_modo_referencia():
 
 def test_texto_modo_referencia_sin_modo():
     assert tr.texto_modo_referencia(_respuesta_minima(81.652, 120.408)) is None
+
+
+# ---------------------------------------------------------------------------
+# Análisis de robustez: barrido y sensibilidad
+# ---------------------------------------------------------------------------
+TEMPORIZADOR = "Temporizador fijo"
+
+
+def _punto_barrido(carga, rec_neuro, rec_temp, reduccion=95.0, desv=0.5):
+    """Punto de barrido con el formato de PuntoBarrido de la API."""
+    return {
+        "escenario": "DIA_NORMAL",
+        "tasa_salinizacion": "BAJA",
+        tr.CLAVE_CARGA: carga,
+        "n_semillas": 3,
+        "recuperacion_neuro_media": rec_neuro,
+        "recuperacion_neuro_desv": None if rec_neuro is None else desv,
+        "recuperacion_temporizador_media": rec_temp,
+        "recuperacion_temporizador_desv": None if rec_temp is None else desv,
+        "degradacion_neuro_media": 0.1,
+        "degradacion_neuro_desv": desv,
+        "degradacion_temporizador_media": 2.0,
+        "degradacion_temporizador_desv": desv,
+        "reduccion_desgaste_pct": reduccion,
+    }
+
+
+def _barrido(*puntos):
+    """Respuesta de barrido con los puntos indicados."""
+    return {tr.CLAVE_PUNTOS: list(puntos)}
+
+
+@pytest.fixture(scope="module")
+def barrido_real():
+    """Barrido real con semilla 42 y humedad inicial de 85 %, serializado como lo entrega la API."""
+    return ejecutar_barrido(BarridoConfig()).model_dump(mode="json")
+
+
+def test_configuracion_barrido_usa_semillas_consecutivas():
+    carga = tr.configuracion_barrido(85, 3)
+    assert carga["semillas"] == [1, 2, 3]
+    assert carga["humedad_ambiente_inicial_pct"] == pytest.approx(85.0)
+
+
+@pytest.mark.parametrize(("solicitadas", "esperadas"), [(0, [1]), (9, [1, 2, 3, 4, 5])])
+def test_configuracion_barrido_acota_las_semillas(solicitadas, esperadas):
+    assert tr.configuracion_barrido(85.0, solicitadas)["semillas"] == esperadas
+
+
+@pytest.mark.parametrize("parametro", list(tr.VALORES_SENSIBILIDAD))
+def test_configuracion_sensibilidad_usa_valores_predefinidos(parametro):
+    carga = tr.configuracion_sensibilidad(parametro, "DIA_NORMAL", 85)
+    assert carga["valores"] == tr.VALORES_SENSIBILIDAD[parametro]
+    assert carga["tasa_salinizacion"] == "ALTA"
+
+
+def test_valores_predefinidos_de_sensibilidad():
+    assert tr.VALORES_SENSIBILIDAD["EFICACIA_MAXIMA_PULSO"] == pytest.approx([0.85, 0.90, 0.94, 0.97, 1.00])
+    assert tr.VALORES_SENSIBILIDAD["FLUJO_NIEBLA_MAXIMO"] == pytest.approx([3.0, 4.5, 6.0, 7.5])
+
+
+def test_indicadores_de_sensibilidad_usan_umbrales_de_config():
+    umbral_eficacia = tr.INDICADOR_SENSIBILIDAD["EFICACIA_MAXIMA_PULSO"][2]
+    umbral_flujo = tr.INDICADOR_SENSIBILIDAD["FLUJO_NIEBLA_MAXIMO"][2]
+    assert umbral_eficacia == pytest.approx(config.RECUPERACION_MINIMA_PCT)
+    assert umbral_flujo == pytest.approx(config.RENDIMIENTO_MINIMO_L_M2_NOCHE)
+
+
+def test_barrido_a_dataframe(barrido_real):
+    df = tr.barrido_a_dataframe(barrido_real)
+    assert list(df.columns) == tr.COLUMNAS_BARRIDO
+    # 6 cargas, 2 modos y 2 variables.
+    assert len(df) == 24
+    recuperacion = df[df["Variable"] == tr.VARIABLE_RECUPERACION]
+    temporizador = recuperacion[recuperacion["Modo"] == TEMPORIZADOR]
+    assert temporizador.iloc[0]["media"] == pytest.approx(95.84, abs=0.01)
+
+
+def test_barrido_a_dataframe_calcula_la_banda():
+    fila = tr.barrido_a_dataframe(_barrido(_punto_barrido(20.0, 88.0, 95.0, desv=0.5))).iloc[0]
+    assert fila["inferior"] == pytest.approx(87.5)
+    assert fila["superior"] == pytest.approx(88.5)
+
+
+def test_barrido_a_dataframe_omite_combinaciones_sin_datos():
+    df = tr.barrido_a_dataframe(_barrido(_punto_barrido(20.0, None, 95.0)))
+    recuperacion = df[df["Variable"] == tr.VARIABLE_RECUPERACION]
+    assert list(recuperacion["Modo"]) == [TEMPORIZADOR]
+    assert len(df) == 3
+
+
+def test_barrido_a_dataframe_desviacion_ausente_es_cero():
+    punto = _punto_barrido(20.0, 88.0, 95.0)
+    punto["recuperacion_neuro_desv"] = None
+    fila = tr.barrido_a_dataframe(_barrido(punto)).iloc[0]
+    assert fila["desv"] == pytest.approx(0.0)
+
+
+def test_barrido_a_dataframe_vacio():
+    df = tr.barrido_a_dataframe({})
+    assert df.empty
+    assert list(df.columns) == tr.COLUMNAS_BARRIDO
+
+
+def test_carga_cruce_con_datos_reales(barrido_real):
+    assert tr.carga_cruce_recuperacion(barrido_real) == pytest.approx(60.0)
+
+
+def test_carga_cruce_sin_cruce():
+    resultado = _barrido(_punto_barrido(20.0, 88.0, 95.0), _punto_barrido(40.0, 88.0, 90.0))
+    assert tr.carga_cruce_recuperacion(resultado) is None
+
+
+def test_carga_cruce_se_reinicia_si_el_neuro_vuelve_a_quedar_debajo():
+    # Puntos desordenados: por carga, el neuro supera en 20, queda debajo en 40 y vuelve a superar en 80.
+    resultado = _barrido(
+        _punto_barrido(80.0, 90.0, 85.0),
+        _punto_barrido(20.0, 89.0, 88.0),
+        _punto_barrido(40.0, 87.0, 88.0),
+    )
+    assert tr.carga_cruce_recuperacion(resultado) == pytest.approx(80.0)
+
+
+def test_carga_cruce_ignora_puntos_sin_datos():
+    resultado = _barrido(_punto_barrido(20.0, 90.0, 85.0), _punto_barrido(40.0, None, 80.0))
+    assert tr.carga_cruce_recuperacion(resultado) == pytest.approx(20.0)
+
+
+def test_lectura_barrido_con_datos_reales(barrido_real):
+    frases = tr.lectura_barrido(barrido_real)
+    assert frases[0] == (
+        "Desde una carga salina de 60 Ohm por L/m², la recuperación del neuro-simbólico "
+        "supera a la del temporizador."
+    )
+    assert frases[1] == (
+        "La reducción del desgaste del neuro-simbólico frente al temporizador va de 73.9 % a 99.0 %."
+    )
+    assert "1 semilla(s)" in frases[2]
+
+
+def test_lectura_barrido_sin_cruce_ni_reduccion():
+    frases = tr.lectura_barrido(_barrido(_punto_barrido(20.0, 88.0, 95.0, reduccion=None)))
+    assert frases[0].startswith("En el rango evaluado")
+    assert frases[1] == "No hay datos para calcular la reducción del desgaste."
+
+
+def test_lectura_barrido_sin_puntos():
+    assert tr.lectura_barrido(_barrido()) == ["El barrido no devolvió puntos."]
+
+
+def test_sensibilidad_a_dataframe():
+    resultado = {
+        "parametro": "EFICACIA_MAXIMA_PULSO",
+        tr.CLAVE_PUNTOS: [
+            {
+                "valor": 0.94,
+                "conjeturas_validadas": {
+                    "conjetura_1_eficiencia": True,
+                    "conjetura_2_autorreparacion": False,
+                    "conjetura_3_saber_territorial": True,
+                },
+                "recuperacion_caudal_promedio_pct": 90.1218,
+                "tiempo_regeneracion_promedio_seg": None,
+                "rendimiento_nocturno_l_m2_noche": 17.04,
+                "litros_neuro": 256.139,
+            }
+        ],
+    }
+    df = tr.sensibilidad_a_dataframe(resultado)
+    assert list(df.columns) == tr.COLUMNAS_SENSIBILIDAD
+    fila = df.iloc[0]
+    assert bool(fila["C1"]) is True
+    assert bool(fila["C2"]) is False
+    assert fila[tr.COLUMNA_RECUPERACION] == pytest.approx(90.1218)
+    assert fila[tr.COLUMNA_TIEMPO_REGENERACION] is None
+
+
+def test_sensibilidad_a_dataframe_vacio():
+    df = tr.sensibilidad_a_dataframe({})
+    assert df.empty
+    assert list(df.columns) == tr.COLUMNAS_SENSIBILIDAD
+
+
+def test_etiquetas_cubren_parametros_y_columnas():
+    assert set(tr.NOMBRES_PARAMETRO) == set(tr.VALORES_SENSIBILIDAD)
+    assert set(tr.ETIQUETAS_SENSIBILIDAD) == set(tr.COLUMNAS_SENSIBILIDAD)
