@@ -31,7 +31,8 @@ La aplicación tiene dos partes que se ejecutan por separado.
 - el motor de reglas, que decide qué debe hacer un nodo;
 - el modelo físico, que describe cómo se acumula la sal, cómo se calienta la membrana, cuánta energía se gasta y cuánta agua se capta;
 - el simulador, que ejecuta uno a tres días con ambos tipos de control;
-- la verificación de las tres conjeturas del proyecto.
+- la verificación de las tres conjeturas del proyecto;
+- el análisis de robustez, que repite las simulaciones con varias semillas o con distintos valores de un parámetro supuesto.
 
 **Frontend o dashboard (Streamlit).** Es la página web que usa la persona. No calcula nada: solicita los resultados a la API y los presenta en tarjetas, tablas y gráficos.
 
@@ -81,6 +82,13 @@ Al final, la simulación entrega para cada tipo de control:
 - desgaste acumulado de la membrana.
 
 También entrega las series de tiempo para los gráficos y una bitácora de las decisiones.
+
+**Análisis de robustez.** La API ofrece dos análisis adicionales, pensados para comprobar qué tan firmes son los resultados:
+
+- **Barrido de salinidad** (`/api/v1/analisis/barrido-salinidad`): compara ambos tipos de control en seis niveles de sal, repitiendo cada caso con hasta cinco climas distintos (semillas). Entrega el promedio y la variación entre climas. Con cinco semillas, la variación resulta pequeña y las conclusiones del barrido se mantienen.
+- **Sensibilidad** (`/api/v1/analisis/sensibilidad`): repite una simulación con varios valores de un parámetro que todavía no se ha medido, la eficacia del pulso o la cantidad de niebla disponible, y muestra cómo cambia el estado de cada conjetura.
+
+Ninguno de los dos análisis cambia la configuración del modelo, de modo que varias personas pueden usarlos al mismo tiempo sin afectarse entre sí.
 
 ## 5. Uso del dashboard
 

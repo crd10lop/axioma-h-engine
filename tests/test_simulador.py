@@ -3,7 +3,7 @@
 import pytest
 
 from backend import config
-from backend.modelo_fisico import energia_pulso_wh, tiempo_hasta_impedancia
+from backend.modelo_fisico import ParametrosModelo, energia_pulso_wh, tiempo_hasta_impedancia
 from backend.schemas import (
     CausaNoValidacion,
     Escenario,
@@ -213,10 +213,10 @@ def test_recuperacion_nula_sin_pulsos():
     assert resultado.comparativa.modo_temporizador_fijo.recuperacion_caudal_promedio_pct is not None
 
 
-def test_pulsos_se_regeneran_con_eficacia_suficiente(monkeypatch):
+def test_pulsos_se_regeneran_con_eficacia_suficiente():
     # Según el análisis de sensibilidad, eta_max >= 0.97 basta para regenerar cada pulso.
-    monkeypatch.setattr(config, "EFICACIA_MAXIMA_PULSO", 0.97)
-    _, neuro, _ = ejecutar_simulacion_detallada(configuracion())
+    parametros = ParametrosModelo(eficacia_maxima_pulso=0.97)
+    _, neuro, _ = ejecutar_simulacion_detallada(configuracion(), parametros=parametros)
     assert neuro.pulsos > 0
     assert neuro.pulsos_regenerados == neuro.pulsos
     assert neuro.pulsos_no_regenerados == 0

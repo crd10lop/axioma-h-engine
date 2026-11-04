@@ -142,6 +142,8 @@ def calcular_metricas(
     pulso: bool,
     caudal_pct: float,
     fraccion_base: float,
+    *,
+    parametros: modelo_fisico.ParametrosModelo = modelo_fisico.PARAMETROS_BASE,
 ) -> MetricasConjeturas:
     """Calcula los indicadores de conjeturas para una decisión individual.
 
@@ -161,7 +163,9 @@ def calcular_metricas(
     if pulso:
         temperatura = temperatura_alcanzada_pulso(telemetria.temperatura_celsius)
         z_sal = max(0.0, z_actual - config.IMPEDANCIA_NOMINAL_OHMS)
-        z_tras = config.IMPEDANCIA_NOMINAL_OHMS + modelo_fisico.impedancia_sal_tras_pulso(temperatura, z_sal)
+        z_tras = config.IMPEDANCIA_NOMINAL_OHMS + modelo_fisico.impedancia_sal_tras_pulso(
+            temperatura, z_sal, parametros=parametros
+        )
         energia = modelo_fisico.energia_pulso_wh(temperatura - telemetria.temperatura_celsius)
         consumo_pct = energia / config.CAPACIDAD_RESERVA_WH * 100.0
     else:
@@ -187,13 +191,19 @@ def calcular_metricas(
     )
 
 
-def evaluar_telemetria(telemetria: TelemetryInput, instante: Optional[datetime] = None) -> ControlDecision:
+def evaluar_telemetria(
+    telemetria: TelemetryInput,
+    instante: Optional[datetime] = None,
+    *,
+    parametros: modelo_fisico.ParametrosModelo = modelo_fisico.PARAMETROS_BASE,
+) -> ControlDecision:
     """Evalúa una lectura de telemetría y devuelve la decisión de control.
 
     En modo TEMPORIZADOR_FIJO no se evalúan reglas: el control tradicional
     filtra de forma continua con su fracción fija de extracción. El parámetro
     `instante` permite fijar la marca de tiempo; si se omite se usa la hora UTC
-    actual.
+    actual. `parametros` solo afecta las métricas de conjeturas; la regla
+    activada no depende de los parámetros supuestos del modelo.
     """
     marca = instante or datetime.now(timezone.utc)
 
@@ -216,7 +226,7 @@ def evaluar_telemetria(telemetria: TelemetryInput, instante: Optional[datetime] 
         accion = _seleccionar_regla(telemetria)
         fraccion_base = config.FRACCION_MAXIMA_EXTRACCION
 
-    metricas = calcular_metricas(telemetria, accion.pulso, accion.caudal_pct, fraccion_base)
+    metricas = calcular_metricas(telemetria, accion.pulso, accion.caudal_pct, fraccion_base, parametros=parametros)
 
     return ControlDecision(
         nodo_id=telemetria.nodo_id,

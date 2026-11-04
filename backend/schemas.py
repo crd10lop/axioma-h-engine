@@ -9,7 +9,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class ModoOperacion(str, Enum):
@@ -276,3 +276,163 @@ class SimulationResult(BaseModel):
     detalle_verificacion: DetalleVerificacion
     series_temporales: List[PuntoSerieTemporal]
     bitacora: List[EventoBitacora]
+
+
+# ---------------------------------------------------------------------------
+# Análisis de robustez: barrido de salinidad y sensibilidad
+# ---------------------------------------------------------------------------
+MAXIMO_SEMILLAS = 5
+MAXIMO_VALORES_SENSIBILIDAD = 11
+
+
+class BarridoConfig(BaseModel):
+    """Parámetros del barrido de salinidad con una o varias semillas."""
+
+    model_config = ConfigDict(
+        json_schema_extra={"examples": [{"humedad_ambiente_inicial_pct": 85.0, "semillas": [42]}]}
+    )
+
+    humedad_ambiente_inicial_pct: float = Field(
+        default=85.0, ge=0, le=100, description="Humedad relativa al inicio de cada corrida (18:00 hora local)."
+    )
+    duracion_horas: int = Field(default=24, ge=1, le=72, description="Horas simuladas en cada corrida.")
+    numero_nodos: int = Field(default=8, ge=1, le=8, description="Cantidad de nodos simulados.")
+    semillas: List[int] = Field(
+        default_factory=lambda: [42],
+        min_length=1,
+        max_length=MAXIMO_SEMILLAS,
+        description="Semillas del entorno, sin repetir; cada combinación se simula una vez por semilla.",
+    )
+
+    @field_validator("semillas")
+    @classmethod
+    def _semillas_sin_duplicados(cls, semillas: List[int]) -> List[int]:
+        """Rechaza semillas repetidas, que duplicarían corridas idénticas en la estadística."""
+        if len(set(semillas)) != len(semillas):
+            raise ValueError("Las semillas no deben repetirse.")
+        return semillas
+
+
+class PuntoBarrido(BaseModel):
+    """Resultado agregado de una combinación de escenario y tasa de salinización."""
+
+    escenario: Escenario
+    tasa_salinizacion: TasaSalinizacion
+    carga_salina_ohm_l_m2: float = Field(..., description="Aumento de impedancia por litro captado por m².")
+    n_semillas: int = Field(..., ge=1, description="Corridas promediadas, una por semilla.")
+    recuperacion_neuro_media: float | None = Field(
+        default=None, description="Media de la recuperación tras pulso del neuro-simbólico (%); nula sin pulsos."
+    )
+    recuperacion_neuro_desv: float | None = Field(
+        default=None, description="Desviación estándar muestral de la recuperación del neuro-simbólico."
+    )
+    recuperacion_temporizador_media: float | None = Field(
+        default=None, description="Media de la recuperación tras pulso del temporizador (%); nula sin pulsos."
+    )
+    recuperacion_temporizador_desv: float | None = Field(
+        default=None, description="Desviación estándar muestral de la recuperación del temporizador."
+    )
+    degradacion_neuro_media: float | None = Field(
+        default=None, description="Media de la degradación acumulada del neuro-simbólico (%)."
+    )
+    degradacion_neuro_desv: float | None = Field(
+        default=None, description="Desviación estándar muestral de la degradación del neuro-simbólico."
+    )
+    degradacion_temporizador_media: float | None = Field(
+        default=None, description="Media de la degradación acumulada del temporizador (%)."
+    )
+    degradacion_temporizador_desv: float | None = Field(
+        default=None, description="Desviación estándar muestral de la degradación del temporizador."
+    )
+    reduccion_desgaste_pct: float | None = Field(
+        default=None,
+        description="(D_temp - D_neuro) / D_temp * 100 con las medias; nula si el temporizador no se degrada.",
+    )
+
+
+class BarridoResultado(BaseModel):
+    """Barrido de salinidad ordenado por carga salina creciente."""
+
+    puntos: List[PuntoBarrido]
+
+
+class ParametroSensible(str, Enum):
+    """Parámetros supuestos del modelo que admite el análisis de sensibilidad."""
+
+    EFICACIA_MAXIMA_PULSO = "EFICACIA_MAXIMA_PULSO"
+    FLUJO_NIEBLA_MAXIMO = "FLUJO_NIEBLA_MAXIMO"
+
+
+# Intervalo admitido (mínimo excluido, máximo incluido) para cada parámetro sensible.
+LIMITES_PARAMETRO_SENSIBLE = {
+    ParametroSensible.EFICACIA_MAXIMA_PULSO: (0.0, 1.0),
+    ParametroSensible.FLUJO_NIEBLA_MAXIMO: (0.0, 20.0),
+}
+
+
+class SensibilidadConfig(BaseModel):
+    """Parámetros de un análisis de sensibilidad sobre un parámetro supuesto."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "escenario": "DIA_NORMAL",
+                    "humedad_ambiente_inicial_pct": 85.0,
+                    "tasa_salinizacion": "ALTA",
+                    "parametro": "EFICACIA_MAXIMA_PULSO",
+                    "valores": [0.90, 0.94, 0.97],
+                }
+            ]
+        }
+    )
+
+    escenario: Escenario = Field(..., description="Escenario ambiental.")
+    humedad_ambiente_inicial_pct: float = Field(
+        ..., ge=0, le=100, description="Humedad relativa al inicio de la simulación (18:00 hora local)."
+    )
+    tasa_salinizacion: TasaSalinizacion = Field(..., description="Velocidad de incrustación salina.")
+    duracion_horas: int = Field(default=24, ge=1, le=72, description="Horas simuladas.")
+    semilla: int = Field(default=42, description="Semilla del generador aleatorio del entorno.")
+    parametro: ParametroSensible = Field(..., description="Parámetro supuesto que se varía.")
+    valores: List[float] = Field(
+        ...,
+        min_length=1,
+        max_length=MAXIMO_VALORES_SENSIBILIDAD,
+        description="Valores del parámetro: eficacia en (0, 1]; flujo de niebla en (0, 20] L/m²/h.",
+    )
+
+    @model_validator(mode="after")
+    def _valores_en_rango(self) -> "SensibilidadConfig":
+        """Rechaza valores fuera del intervalo físico admitido para el parámetro elegido."""
+        minimo, maximo = LIMITES_PARAMETRO_SENSIBLE[self.parametro]
+        fuera = [valor for valor in self.valores if not minimo < valor <= maximo]
+        if fuera:
+            raise ValueError(
+                f"Valores fuera de ({minimo:g}, {maximo:g}] para {self.parametro.value}: {fuera}"
+            )
+        return self
+
+
+class PuntoSensibilidad(BaseModel):
+    """Resultado de una simulación con un valor del parámetro sensible."""
+
+    valor: float = Field(..., description="Valor del parámetro en esta corrida.")
+    conjeturas_validadas: ConjeturasValidadas
+    recuperacion_caudal_promedio_pct: float | None = Field(
+        default=None, description="Indicador de la Conjetura 1; nulo sin pulsos."
+    )
+    tiempo_regeneracion_promedio_seg: float | None = Field(
+        default=None, description="Indicador de la Conjetura 2; nulo sin pulsos."
+    )
+    rendimiento_nocturno_l_m2_noche: float | None = Field(
+        default=None, description="Indicador de la Conjetura 3; nulo sin horas nocturnas."
+    )
+    litros_neuro: float = Field(..., ge=0, description="Agua captada por el modo neuro-simbólico en litros.")
+
+
+class SensibilidadResultado(BaseModel):
+    """Resultados del análisis de sensibilidad en el orden de los valores solicitados."""
+
+    parametro: ParametroSensible
+    puntos: List[PuntoSensibilidad]

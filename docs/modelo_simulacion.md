@@ -335,6 +335,8 @@ El tiempo de regeneración se medía al principio hasta que la impedancia volví
 
 Por esa razón, el criterio se endureció a 1100 Ohm (`FACTOR_IMPEDANCIA_REGENERADA = 1.10`, al menos 91 % de la conductancia nominal). Después de ese cambio, el criterio, la eficacia del pulso (0.90) y los demás parámetros se mantuvieron fijos. Ningún valor se ajustó para cambiar el resultado de una conjetura (decisión D5). Los análisis de sensibilidad de 5.6, 5.7 y 6.2 varían `eta_max` solo en memoria, con fines exploratorios, y no modifican la configuración del modelo.
 
+La API expone ese análisis en `POST /api/v1/analisis/sensibilidad`, para la eficacia máxima del pulso y el flujo máximo de niebla. Cada valor se simula con una copia inmutable de los parámetros (`ParametrosModelo` en `backend/modelo_fisico.py`) en lugar de modificar `backend/config.py`, de modo que solicitudes simultáneas no se afectan entre sí. Con DIA_NORMAL, humedad inicial de 85 % y tasa ALTA, el endpoint reproduce los valores de 5.6 y 5.7: con 0.94 la recuperación es 90.12 % y la Conjetura 1 se valida; con 0.97 el tiempo de regeneración es 84.5 s y la Conjetura 2 se valida.
+
 ## 7. Barrido de salinidad: respuesta a la pregunta de investigación
 
 La pregunta de investigación está en [01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2. Compara los dos modos de control en dos variables de respuesta a medida que aumenta la salinidad.
@@ -379,7 +381,18 @@ Con humedad inicial de 45 % hay menos agua captada y, por tanto, menos sal. El m
 
 - La recuperación tras pulso compara momentos distintos en cada modo: el neuro-simbólico mide justo después de un pulso disparado por impedancia alta, y el temporizador mide después de pulsos a intervalos fijos. Por eso, con salinidad baja, un valor alto del temporizador no indica una membrana mejor mantenida, sino una membrana que no necesitaba limpieza.
 - Los valores absolutos dependen de parámetros supuestos, en especial la eficacia máxima del pulso (0.90), la fatiga por pulso y la degradación térmica (sección 3.4). La dirección de los resultados se explica por la lógica de control (pulsar por demanda frente a pulsar por horario, y el límite de 45 °C), pero su magnitud debe calibrarse con mediciones.
-- Las cifras corresponden a una semilla. Para el informe final se recomienda repetir el barrido con varias semillas y reportar media y dispersión.
+- Las cifras de 7.3 corresponden a una semilla. El barrido con varias semillas ya está disponible en la API (`POST /api/v1/analisis/barrido-salinidad`, de 1 a 5 semillas), que reporta la media y la desviación estándar muestral de cada variable. La tabla siguiente es el resultado con las semillas 1 a 5, con las demás condiciones de 7.2 (media +/- desviación).
+
+| Carga salina (Ohm por L/m²) | Escenario y tasa | Recuperación neuro (%) | Recuperación temporizador (%) | Degradación neuro (%) | Degradación temporizador (%) | Reducción del desgaste |
+|---|---|---|---|---|---|---|
+| 20 | DIA_NORMAL, BAJA | 88.86 +/- 0.01 | 95.92 +/- 0.14 | 0.020 +/- 0.000 | 2.151 +/- 0.021 | 99.1 % |
+| 40 | DIA_NORMAL, MEDIA | 88.83 +/- 0.01 | 91.95 +/- 0.24 | 0.052 +/- 0.004 | 2.151 +/- 0.021 | 97.6 % |
+| 60 | INCRUSTACION_SALINA_RAPIDA, BAJA | 88.80 +/- 0.01 | 88.15 +/- 0.32 | 0.086 +/- 0.002 | 2.183 +/- 0.016 | 96.1 % |
+| 80 | DIA_NORMAL, ALTA | 88.77 +/- 0.01 | 84.59 +/- 0.39 | 0.117 +/- 0.002 | 2.495 +/- 0.022 | 95.3 % |
+| 120 | INCRUSTACION_SALINA_RAPIDA, MEDIA | 88.01 +/- 0.08 | 78.13 +/- 0.48 | 0.419 +/- 0.021 | 3.159 +/- 0.024 | 86.7 % |
+| 240 | INCRUSTACION_SALINA_RAPIDA, ALTA | 85.89 +/- 0.07 | 63.24 +/- 0.58 | 1.082 +/- 0.013 | 4.210 +/- 0.014 | 74.3 % |
+
+  La reducción del desgaste se calcula con las medias. La dispersión entre semillas es pequeña frente a las diferencias entre modos, y las conclusiones de 7.4 se mantienen: el neuro-simbólico degrada menos la membrana en los seis niveles (reducción de 74.3 % a 99.1 %), y las curvas de recuperación se cruzan entre 40 y 60 Ohm por L/m². En 60 Ohm por L/m² la ventaja del neuro-simbólico (0.65 puntos) equivale a unas dos desviaciones del temporizador, por lo que el punto de cruce es el resultado menos robusto del barrido. Las semillas solo varían el clima de referencia; la incertidumbre de los parámetros supuestos no está incluida en esta dispersión.
 
 ## 8. Lectura crítica de las conjeturas
 

@@ -60,9 +60,11 @@ axioma-h-engine/
 │   ├── modelo_fisico.py    Ecuaciones compartidas: pulso, energía y captación
 │   ├── motor_reglas.py     Reglas neuro-simbólicas en orden de prioridad
 │   ├── simulador.py        Simulación comparativa y verificación de conjeturas
+│   ├── analisis.py         Barrido de salinidad y sensibilidad con parámetros inmutables
 │   └── routers/
 │       ├── nodo.py         POST /api/v1/nodo/evaluar
-│       └── simulacion.py   POST /api/v1/simulacion/ejecutar
+│       ├── simulacion.py   POST /api/v1/simulacion/ejecutar
+│       └── analisis.py     POST /api/v1/analisis/barrido-salinidad y /sensibilidad
 ├── frontend/
 │   ├── app.py              Dashboard Streamlit
 │   ├── config.py           URL de la API y tiempos de espera
@@ -148,6 +150,10 @@ Render crea dos servicios web gratuitos: la API y el dashboard. Como alternativa
 | GET | `/api/v1/health` | Salud del servicio y tiempo de actividad |
 | POST | `/api/v1/nodo/evaluar` | Evalúa la telemetría de un nodo y devuelve la acción de control |
 | POST | `/api/v1/simulacion/ejecutar` | Ejecuta la simulación comparativa entre ambos modos |
+| POST | `/api/v1/analisis/barrido-salinidad` | Barrido de salinidad en seis niveles de carga, con media y desviación entre 1 y 5 semillas |
+| POST | `/api/v1/analisis/sensibilidad` | Repite la simulación con varios valores de la eficacia del pulso o del flujo de niebla |
+
+Los dos endpoints de análisis no modifican la configuración global del modelo: cada solicitud usa su propia copia inmutable de los parámetros, de modo que solicitudes simultáneas no se afectan entre sí. Los payloads de ejemplo están en [docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md](docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md), sección 3.3.
 
 Los datos que no cumplen la validación devuelven `422` con el detalle de cada campo, por ejemplo un `nodo_id` fuera de `NODO_01` a `NODO_08` o una humedad mayor que 100.
 

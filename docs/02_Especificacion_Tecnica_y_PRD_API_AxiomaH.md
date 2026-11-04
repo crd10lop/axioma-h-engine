@@ -109,6 +109,101 @@ Este documento sirve como **Documento de Requerimientos de Producto (PRD) y Espe
 
 ---
 
+### 3.3 Endpoints: Análisis de Robustez
+
+Estos endpoints se agregaron en la implementación del Ciclo 2 y no forman parte de la especificación original. Ninguno modifica la configuración global del modelo: cada solicitud construye su propia copia inmutable de los parámetros (`ParametrosModelo`), por lo que solicitudes simultáneas no comparten estado. Las corridas individuales se guardan en una caché de hasta 64 resultados.
+
+#### Barrido de salinidad
+* **Ruta:** `POST /api/v1/analisis/barrido-salinidad`
+* **Descripción:** Simula `DIA_NORMAL` e `INCRUSTACION_SALINA_RAPIDA` con las tasas BAJA, MEDIA y ALTA (cargas de 20 a 240 Ohm por L/m²), una vez por semilla, y entrega la media y la desviación estándar muestral de la recuperación tras pulso y de la degradación de ambos modos, ordenadas por carga salina.
+
+##### Request Payload (`BarridoConfig`):
+Todos los campos son opcionales. `semillas` admite de 1 a 5 valores sin repetir; con una sola semilla la desviación es 0.
+```json
+{
+  "humedad_ambiente_inicial_pct": 85.0,
+  "duracion_horas": 24,
+  "numero_nodos": 8,
+  "semillas": [42]
+}
+```
+
+##### Response Payload (`BarridoResultado`), primer punto de seis:
+```json
+{
+  "puntos": [
+    {
+      "escenario": "DIA_NORMAL",
+      "tasa_salinizacion": "BAJA",
+      "carga_salina_ohm_l_m2": 20.0,
+      "n_semillas": 1,
+      "recuperacion_neuro_media": 88.8549,
+      "recuperacion_neuro_desv": 0.0,
+      "recuperacion_temporizador_media": 95.8389,
+      "recuperacion_temporizador_desv": 0.0,
+      "degradacion_neuro_media": 0.02,
+      "degradacion_neuro_desv": 0.0,
+      "degradacion_temporizador_media": 2.0707,
+      "degradacion_temporizador_desv": 0.0,
+      "reduccion_desgaste_pct": 99.0341
+    }
+  ]
+}
+```
+
+#### Sensibilidad a un parámetro supuesto
+* **Ruta:** `POST /api/v1/analisis/sensibilidad`
+* **Descripción:** Repite la simulación con cada valor del parámetro elegido, manteniendo los demás en su valor base, y entrega el estado de las tres conjeturas y sus indicadores principales.
+
+##### Request Payload (`SensibilidadConfig`):
+`parametro` es `EFICACIA_MAXIMA_PULSO` (valores en (0, 1]) o `FLUJO_NIEBLA_MAXIMO` (valores en (0, 20] L/m²/h). `valores` admite de 1 a 11 elementos. `duracion_horas` (por defecto 24) y `semilla` (por defecto 42) son opcionales.
+```json
+{
+  "escenario": "DIA_NORMAL",
+  "humedad_ambiente_inicial_pct": 85.0,
+  "tasa_salinizacion": "ALTA",
+  "parametro": "EFICACIA_MAXIMA_PULSO",
+  "valores": [0.90, 0.94, 0.97]
+}
+```
+
+##### Response Payload (`SensibilidadResultado`):
+```json
+{
+  "parametro": "EFICACIA_MAXIMA_PULSO",
+  "puntos": [
+    {
+      "valor": 0.9,
+      "conjeturas_validadas": {"conjetura_1_eficiencia": false, "conjetura_2_autorreparacion": false, "conjetura_3_saber_territorial": true},
+      "recuperacion_caudal_promedio_pct": 88.7829,
+      "tiempo_regeneracion_promedio_seg": 11934.7826,
+      "rendimiento_nocturno_l_m2_noche": 16.9708,
+      "litros_neuro": 254.603
+    },
+    {
+      "valor": 0.94,
+      "conjeturas_validadas": {"conjetura_1_eficiencia": true, "conjetura_2_autorreparacion": false, "conjetura_3_saber_territorial": true},
+      "recuperacion_caudal_promedio_pct": 90.1218,
+      "tiempo_regeneracion_promedio_seg": 12200.0,
+      "rendimiento_nocturno_l_m2_noche": 17.0404,
+      "litros_neuro": 256.139
+    },
+    {
+      "valor": 0.97,
+      "conjeturas_validadas": {"conjetura_1_eficiencia": true, "conjetura_2_autorreparacion": true, "conjetura_3_saber_territorial": true},
+      "recuperacion_caudal_promedio_pct": 91.1441,
+      "tiempo_regeneracion_promedio_seg": 84.4935,
+      "rendimiento_nocturno_l_m2_noche": 17.0973,
+      "litros_neuro": 257.131
+    }
+  ]
+}
+```
+
+Los valores de ambos ejemplos son los que calcula el modelo y coinciden con `docs/modelo_simulacion.md`, secciones 5.6, 5.7 y 7.3. Una configuración inválida (semillas repetidas, más de 5 semillas, eficacia igual a 0 o mayor que 1) devuelve `422`.
+
+---
+
 ## 4. Matriz de Reglas Neuro-Simbólicas (Lógica del Core)
 
 1. **REGLA 01 — Límite Térmico Absoluto (Seguridad de la Matriz):**
@@ -161,7 +256,7 @@ La API y el dashboard están implementados en `backend/` (FastAPI) y `frontend/`
 - **Campos opcionales en la solicitud.** `SimulationConfig` admite `numero_nodos` (por defecto 8), `paso_minutos` (por defecto 5) y `semilla` (por defecto 42). El payload de la sección 3.2 sigue siendo válido sin cambios.
 - **Temperatura objetivo del pulso.** Es 44.0 °C. Con 45.0 °C el pulso activaría el corte térmico de la REGLA_01 (`>= 45.0`). El ejemplo de la sección 3.1 se actualizó en consecuencia.
 - **Orden de evaluación.** La REGLA_04 se evalúa antes que la REGLA_03, porque ambas comparten la condición de impedancia alta. El caudal se expresa como porcentaje del tope ecológico del 33 %.
-- **Escenarios y endpoints adicionales.** El simulador incluye el escenario `TORMENTA_DE_SAL_Y_CALOR_EXTREMO`, además de los cuatro de la sección 5. La API expone también `GET /` y `GET /api/v1/health`.
+- **Escenarios y endpoints adicionales.** El simulador incluye el escenario `TORMENTA_DE_SAL_Y_CALOR_EXTREMO`, además de los cuatro de la sección 5. La API expone también `GET /` y `GET /api/v1/health`, y los endpoints de análisis de robustez de la sección 3.3 (`POST /api/v1/analisis/barrido-salinidad` y `POST /api/v1/analisis/sensibilidad`).
 - **Valores de ejemplo.** Los valores numéricos de la respuesta de ejemplo de la sección 3.2 son ilustrativos. Los resultados calculados por el modelo para ese payload están en `docs/modelo_simulacion.md`, sección 5.1.
 - **Despliegue.** `render.yaml` define la API y el dashboard como servicios web de Render. La URL de la API se configura en el dashboard con `AXIOMA_API_URL`, y los orígenes CORS adicionales con `AXIOMA_CORS_ORIGINS`. El procedimiento está en `docs/despliegue.md`.
 

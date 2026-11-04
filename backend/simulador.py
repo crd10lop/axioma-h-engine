@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
 from backend import config, modelo_fisico
+from backend.modelo_fisico import PARAMETROS_BASE, ParametrosModelo
 from backend.motor_reglas import evaluar_telemetria, temperatura_alcanzada_pulso
 from backend.schemas import (
     CausaNoValidacion,
@@ -88,7 +89,7 @@ def _ciclo_humedad(hora: float) -> float:
     return math.cos(2.0 * math.pi * (hora - config.HORA_MAXIMA_HUMEDAD) / 24.0)
 
 
-def _tasa_incrustacion_base(escenario: Escenario, tasa: TasaSalinizacion) -> float:
+def tasa_incrustacion_base(escenario: Escenario, tasa: TasaSalinizacion) -> float:
     """Ohm por litro captado por m² según el escenario y la tasa elegida."""
     if escenario == Escenario.TORMENTA_DE_SAL_Y_CALOR_EXTREMO:
         return config.INCRUSTACION_OHM_POR_L_M2["ALTA"] * config.MULTIPLICADOR_INCRUSTACION_SAL_Y_CALOR
@@ -96,6 +97,11 @@ def _tasa_incrustacion_base(escenario: Escenario, tasa: TasaSalinizacion) -> flo
     if escenario == Escenario.INCRUSTACION_SALINA_RAPIDA:
         return base * config.MULTIPLICADOR_INCRUSTACION_RAPIDA
     return base
+
+
+def _tasa_incrustacion_base(escenario: Escenario, tasa: TasaSalinizacion) -> float:
+    """Alias interno de `tasa_incrustacion_base`, que también usa el análisis de robustez."""
+    return tasa_incrustacion_base(escenario, tasa)
 
 
 def _humedad_base(cfg: SimulationConfig, hora: float, referencia_humedad: float) -> float:
@@ -291,6 +297,8 @@ def _decidir_accion(
     t_matriz: float,
     impedancia_inicial: float,
     fraccion_temporizador: float,
+    *,
+    parametros: ParametrosModelo = PARAMETROS_BASE,
 ) -> Tuple[float, bool, float]:
     """Decide la fracción de extracción, si se ordena un pulso y su temperatura objetivo.
 
@@ -308,7 +316,9 @@ def _decidir_accion(
             flujo_actual_ml_min=estado.flujo_ml_min,
             modo_operacion=ModoOperacion.NEURO_SIMBOLICO,
         )
-        decision = evaluar_telemetria(telemetria, _INSTANTE_REFERENCIA + timedelta(minutes=minuto))
+        decision = evaluar_telemetria(
+            telemetria, _INSTANTE_REFERENCIA + timedelta(minutes=minuto), parametros=parametros
+        )
         if decision.regla_activada != estado.regla_previa:
             diag.bitacora.append(
                 EventoBitacora(
@@ -338,6 +348,8 @@ def _registrar_regeneracion(
     sal_antes: float,
     impedancia_inicial: float,
     minuto: int,
+    *,
+    parametros: ParametrosModelo = PARAMETROS_BASE,
 ) -> None:
     """Registra el tiempo de regeneración de un pulso aplicado (ver `simular_modo`)."""
     # Un pulso previo no regenerado se cierra al iniciar el siguiente.
@@ -350,7 +362,7 @@ def _registrar_regeneracion(
             - config.IMPEDANCIA_NOMINAL_OHMS
             - estado.impedancia_polvo
         )
-        segundos = modelo_fisico.tiempo_hasta_impedancia(t_pulso, sal_antes, objetivo_sal)
+        segundos = modelo_fisico.tiempo_hasta_impedancia(t_pulso, sal_antes, objetivo_sal, parametros=parametros)
         if segundos is not None:
             diag.tiempos_regeneracion_seg.append(segundos)
             diag.pulsos_regenerados += 1
@@ -367,6 +379,8 @@ def _ejecutar_pulso(
     impedancia_inicial: float,
     minuto: int,
     duracion_pulso_min: float,
+    *,
+    parametros: ParametrosModelo = PARAMETROS_BASE,
 ) -> Tuple[float, float]:
     """Aplica el pulso resistivo si la reserva alcanza.
 
@@ -376,7 +390,7 @@ def _ejecutar_pulso(
     energia = modelo_fisico.energia_pulso_wh(t_pulso - t_matriz)
     if energia <= estado.reserva_wh:
         sal_antes = estado.impedancia_sal
-        estado.impedancia_sal = modelo_fisico.impedancia_sal_tras_pulso(t_pulso, sal_antes)
+        estado.impedancia_sal = modelo_fisico.impedancia_sal_tras_pulso(t_pulso, sal_antes, parametros=parametros)
         estado.reserva_wh -= energia
         diag.energia_pulsos_wh += energia
         diag.pulsos += 1
@@ -397,7 +411,7 @@ def _ejecutar_pulso(
         desprendimiento = modelo_fisico.tiempo_fraccion_remocion(t_pulso)
         if desprendimiento is not None:
             diag.tiempos_desprendimiento_seg.append(desprendimiento)
-        _registrar_regeneracion(estado, diag, t_pulso, sal_antes, impedancia_inicial, minuto)
+        _registrar_regeneracion(estado, diag, t_pulso, sal_antes, impedancia_inicial, minuto, parametros=parametros)
         return energia, perdida_pulso
     diag.pulsos_omitidos_por_energia += 1
     return 0.0, 0.0
@@ -462,14 +476,19 @@ def _cerrar_regeneraciones_pendientes(nodos: List[_EstadoNodo], diag: Diagnostic
 
 
 def simular_modo(
-    entorno: Entorno, modo: ModoOperacion, fraccion_temporizador: float | None = None
+    entorno: Entorno,
+    modo: ModoOperacion,
+    fraccion_temporizador: float | None = None,
+    *,
+    parametros: ParametrosModelo = PARAMETROS_BASE,
 ) -> DiagnosticoModo:
     """Simula la red completa bajo una estrategia de control.
 
     En modo temporizador, `fraccion_temporizador` fija la fracción de
     extracción; si se omite, se usa FRACCION_EXTRACCION_TEMPORIZADOR. El
     temporizador conserva su programación (pulso cada intervalo fijo, sin corte
-    térmico ni pausa ecológica) con cualquier fracción.
+    térmico ni pausa ecológica) con cualquier fracción. `parametros` define la
+    eficacia del pulso y el flujo de niebla sin modificar `backend.config`.
 
     En cada paso y para cada nodo: se decide la acción (motor de reglas o
     programación fija), se ejecuta el pulso si corresponde, se calcula el
@@ -510,14 +529,30 @@ def simular_modo(
 
             # Decisión de control.
             fraccion, ordena_pulso, t_pulso = _decidir_accion(
-                neuro, estado, diag, nodo_id, minuto, humedad, t_matriz, impedancia_inicial, fraccion_fija
+                neuro,
+                estado,
+                diag,
+                nodo_id,
+                minuto,
+                humedad,
+                t_matriz,
+                impedancia_inicial,
+                fraccion_fija,
+                parametros=parametros,
             )
 
             # Ejecución del pulso resistivo.
             energia_paso = consumo_base_w * dt_h
             if ordena_pulso:
                 energia_pulso, perdida_pulso = _ejecutar_pulso(
-                    estado, diag, t_pulso, t_matriz, impedancia_inicial, minuto, duracion_pulso_min
+                    estado,
+                    diag,
+                    t_pulso,
+                    t_matriz,
+                    impedancia_inicial,
+                    minuto,
+                    duracion_pulso_min,
+                    parametros=parametros,
                 )
                 energia_paso += energia_pulso
                 perdida_pulso_total += perdida_pulso
@@ -525,7 +560,7 @@ def simular_modo(
             # Captación de agua con la impedancia posterior al pulso.
             impedancia_operacion = estado.impedancia
             litros = (
-                modelo_fisico.flujo_niebla_disponible_l_m2_h(humedad)
+                modelo_fisico.flujo_niebla_disponible_l_m2_h(humedad, parametros=parametros)
                 * entorno.factor_captacion[i]
                 * fraccion
                 * modelo_fisico.conductancia_relativa(impedancia_operacion)
@@ -796,22 +831,27 @@ def _resultado_modo(diag: DiagnosticoModo) -> ResultadoModo:
     )
 
 
-def ejecutar_simulacion_detallada(cfg: SimulationConfig) -> Tuple[Entorno, DiagnosticoModo, DiagnosticoModo]:
+def ejecutar_simulacion_detallada(
+    cfg: SimulationConfig, *, parametros: ParametrosModelo = PARAMETROS_BASE
+) -> Tuple[Entorno, DiagnosticoModo, DiagnosticoModo]:
     """Ejecuta ambos modos sobre el mismo entorno y devuelve los diagnósticos completos."""
     entorno = generar_entorno(cfg)
-    neuro = simular_modo(entorno, ModoOperacion.NEURO_SIMBOLICO)
-    temporizador = simular_modo(entorno, ModoOperacion.TEMPORIZADOR_FIJO)
+    neuro = simular_modo(entorno, ModoOperacion.NEURO_SIMBOLICO, parametros=parametros)
+    temporizador = simular_modo(entorno, ModoOperacion.TEMPORIZADOR_FIJO, parametros=parametros)
     return entorno, neuro, temporizador
 
 
-def ejecutar_simulacion(cfg: SimulationConfig) -> SimulationResult:
+def ejecutar_simulacion(cfg: SimulationConfig, *, parametros: ParametrosModelo = PARAMETROS_BASE) -> SimulationResult:
     """Ejecuta la simulación comparativa y arma la respuesta de la API."""
-    entorno, neuro, temporizador = ejecutar_simulacion_detallada(cfg)
+    entorno, neuro, temporizador = ejecutar_simulacion_detallada(cfg, parametros=parametros)
     detalle = verificar_conjeturas(neuro, temporizador, entorno.numero_nodos)
     # Referencia: el temporizador con el tope ecológico del modo neuro-simbólico separa el
     # efecto del tope del de la lógica de control. No se agrega a las series temporales.
     referencia = simular_modo(
-        entorno, ModoOperacion.TEMPORIZADOR_FIJO, fraccion_temporizador=config.FRACCION_MAXIMA_EXTRACCION
+        entorno,
+        ModoOperacion.TEMPORIZADOR_FIJO,
+        fraccion_temporizador=config.FRACCION_MAXIMA_EXTRACCION,
+        parametros=parametros,
     )
 
     series = [

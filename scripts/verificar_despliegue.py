@@ -35,6 +35,21 @@ TIMEOUT_POR_DEFECTO_SEG = 90.0
 RUTA_SALUD = "/api/v1/health"
 RUTA_EVALUAR = "/api/v1/nodo/evaluar"
 RUTA_SIMULACION = "/api/v1/simulacion/ejecutar"
+RUTA_BARRIDO = "/api/v1/analisis/barrido-salinidad"
+RUTA_SENSIBILIDAD = "/api/v1/analisis/sensibilidad"
+
+# Una sola semilla mantiene el barrido (12 simulaciones) dentro del tiempo de espera.
+BARRIDO_EJEMPLO = {"humedad_ambiente_inicial_pct": 85.0, "semillas": [42]}
+PUNTOS_BARRIDO = 6
+
+# Ejemplo del esquema SensibilidadConfig en backend/schemas.py.
+SENSIBILIDAD_EJEMPLO = {
+    "escenario": "DIA_NORMAL",
+    "humedad_ambiente_inicial_pct": 85.0,
+    "tasa_salinizacion": "ALTA",
+    "parametro": "EFICACIA_MAXIMA_PULSO",
+    "valores": [0.90, 0.94],
+}
 
 # Valores de backend/schemas.py (enum Escenario).
 ESCENARIOS = [
@@ -202,7 +217,9 @@ def probar_documentacion_api(cliente: httpx.Client, api: str) -> str:
     respuesta = cliente.get(f"{api}/openapi.json")
     _verificar_codigo(respuesta)
     rutas = respuesta.json()["paths"]
-    faltantes = [ruta for ruta in (RUTA_EVALUAR, RUTA_SIMULACION) if ruta not in rutas]
+    faltantes = [
+        ruta for ruta in (RUTA_EVALUAR, RUTA_SIMULACION, RUTA_BARRIDO, RUTA_SENSIBILIDAD) if ruta not in rutas
+    ]
     _verificar(not faltantes, f"Rutas ausentes en openapi.json: {', '.join(faltantes)}")
     return f"/docs 200; openapi.json con {len(rutas)} rutas"
 
@@ -289,6 +306,38 @@ def probar_simulacion(cliente: httpx.Client, api: str, configuracion: dict, nomb
     return comprobar()
 
 
+@prueba("API: barrido de salinidad")
+def probar_barrido(cliente: httpx.Client, api: str) -> str:
+    respuesta = cliente.post(f"{api}{RUTA_BARRIDO}", json=BARRIDO_EJEMPLO)
+    _verificar_codigo(respuesta)
+    puntos = respuesta.json()["puntos"]
+    cargas = [punto["carga_salina_ohm_l_m2"] for punto in puntos]
+    _verificar(len(cargas) == PUNTOS_BARRIDO, f"Se esperaban {PUNTOS_BARRIDO} puntos y llegaron {len(cargas)}")
+    _verificar(all(a < b for a, b in zip(cargas, cargas[1:])), f"Cargas salinas no ordenadas: {cargas}")
+    _verificar(all(punto["n_semillas"] == 1 for punto in puntos), "n_semillas distinto de 1")
+    primero, ultimo = puntos[0], puntos[-1]
+    return (
+        f"{len(puntos)} puntos; recuperación neuro {primero['recuperacion_neuro_media']:.2f} % a "
+        f"{ultimo['recuperacion_neuro_media']:.2f} %"
+    )
+
+
+@prueba("API: sensibilidad de la eficacia del pulso")
+def probar_sensibilidad(cliente: httpx.Client, api: str) -> str:
+    respuesta = cliente.post(f"{api}{RUTA_SENSIBILIDAD}", json=SENSIBILIDAD_EJEMPLO)
+    _verificar_codigo(respuesta)
+    resultado = respuesta.json()
+    puntos = resultado["puntos"]
+    _verificar(resultado["parametro"] == SENSIBILIDAD_EJEMPLO["parametro"], "Parámetro distinto del solicitado")
+    esperados = len(SENSIBILIDAD_EJEMPLO["valores"])
+    _verificar(len(puntos) == esperados, f"Se esperaban {esperados} puntos y llegaron {len(puntos)}")
+    estados = [punto["conjeturas_validadas"]["conjetura_1_eficiencia"] for punto in puntos]
+    _verificar(all(isinstance(estado, bool) for estado in estados), f"Estados no booleanos: {estados}")
+    return "C1 con eficacia " + ", ".join(
+        f"{punto['valor']:g}: {'V' if estado else 'F'}" for punto, estado in zip(puntos, estados)
+    )
+
+
 # ---------------------------------------------------------------------------
 # Comprobaciones del dashboard
 # ---------------------------------------------------------------------------
@@ -352,6 +401,8 @@ def ejecutar_pruebas(api: str, dashboard: str, timeout: float) -> List[Resultado
         for escenario in ESCENARIOS:
             configuracion = {**SIMULACION_EJEMPLO, "escenario": escenario}
             resultados.append(probar_simulacion(cliente, api, configuracion, f"API: simulación - {escenario}"))
+        resultados.append(probar_barrido(cliente, api))
+        resultados.append(probar_sensibilidad(cliente, api))
         resultados.append(probar_salud_dashboard(cliente, dashboard))
         resultados.append(probar_inicio_dashboard(cliente, dashboard))
     resultados.append(probar_integracion_cliente(api))

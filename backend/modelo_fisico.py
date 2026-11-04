@@ -6,8 +6,26 @@ que la evaluación individual de un nodo y la simulación usen el mismo modelo.
 """
 
 import math
+from dataclasses import dataclass
 
 from backend import config
+
+
+@dataclass(frozen=True)
+class ParametrosModelo:
+    """Parámetros supuestos del modelo que se pueden variar en un análisis de sensibilidad.
+
+    Es inmutable: cada análisis construye su propia instancia con
+    `dataclasses.replace`, en lugar de modificar `backend.config`. Así, dos
+    solicitudes simultáneas no comparten estado. Los valores por defecto son
+    los de `backend/config.py`.
+    """
+
+    eficacia_maxima_pulso: float = config.EFICACIA_MAXIMA_PULSO
+    flujo_niebla_maximo_l_m2_h: float = config.FLUJO_NIEBLA_MAXIMO_L_M2_H
+
+
+PARAMETROS_BASE = ParametrosModelo()
 
 
 def conductancia_relativa(impedancia_ohms: float) -> float:
@@ -32,7 +50,12 @@ def factor_temperatura_pulso(temperatura_alcanzada_c: float) -> float:
     return max(0.0, min(1.0, g))
 
 
-def eficacia_pulso(temperatura_alcanzada_c: float, impedancia_sal_ohms: float) -> float:
+def eficacia_pulso(
+    temperatura_alcanzada_c: float,
+    impedancia_sal_ohms: float,
+    *,
+    parametros: ParametrosModelo = PARAMETROS_BASE,
+) -> float:
     """Fracción de la impedancia salina que remueve un pulso completo.
 
     eta = eta_max * g(T) * Z_ref / (Z_ref + Z_sal). A mayor carga salina, menor
@@ -40,12 +63,17 @@ def eficacia_pulso(temperatura_alcanzada_c: float, impedancia_sal_ohms: float) -
     """
     carga = max(0.0, impedancia_sal_ohms)
     factor_carga = config.CARGA_SALINA_REFERENCIA_OHMS / (config.CARGA_SALINA_REFERENCIA_OHMS + carga)
-    return config.EFICACIA_MAXIMA_PULSO * factor_temperatura_pulso(temperatura_alcanzada_c) * factor_carga
+    return parametros.eficacia_maxima_pulso * factor_temperatura_pulso(temperatura_alcanzada_c) * factor_carga
 
 
-def impedancia_sal_tras_pulso(temperatura_alcanzada_c: float, impedancia_sal_ohms: float) -> float:
+def impedancia_sal_tras_pulso(
+    temperatura_alcanzada_c: float,
+    impedancia_sal_ohms: float,
+    *,
+    parametros: ParametrosModelo = PARAMETROS_BASE,
+) -> float:
     """Impedancia salina remanente al terminar el pulso: Z_sal * (1 - eta)."""
-    eta = eficacia_pulso(temperatura_alcanzada_c, impedancia_sal_ohms)
+    eta = eficacia_pulso(temperatura_alcanzada_c, impedancia_sal_ohms, parametros=parametros)
     return max(0.0, impedancia_sal_ohms) * (1.0 - eta)
 
 
@@ -53,6 +81,8 @@ def tiempo_hasta_impedancia(
     temperatura_alcanzada_c: float,
     impedancia_sal_ohms: float,
     impedancia_sal_objetivo_ohms: float,
+    *,
+    parametros: ParametrosModelo = PARAMETROS_BASE,
 ) -> float | None:
     """Segundos de pulso necesarios para bajar la impedancia salina al objetivo.
 
@@ -67,7 +97,7 @@ def tiempo_hasta_impedancia(
     if impedancia_sal_objetivo_ohms < 0:
         return None
     g = factor_temperatura_pulso(temperatura_alcanzada_c)
-    eta = eficacia_pulso(temperatura_alcanzada_c, impedancia_sal_ohms)
+    eta = eficacia_pulso(temperatura_alcanzada_c, impedancia_sal_ohms, parametros=parametros)
     if g <= 0 or eta <= 0:
         return None
     fraccion_requerida = (impedancia_sal_ohms - impedancia_sal_objetivo_ohms) / impedancia_sal_ohms
@@ -115,7 +145,9 @@ def energia_pulso_wh(incremento_temperatura_c: float) -> float:
     return joules / 3600.0
 
 
-def flujo_niebla_disponible_l_m2_h(humedad_relativa_pct: float) -> float:
+def flujo_niebla_disponible_l_m2_h(
+    humedad_relativa_pct: float, *, parametros: ParametrosModelo = PARAMETROS_BASE
+) -> float:
     """Recurso hídrico atmosférico disponible por m² y hora.
 
     Q = Q_max * ((HR - HR_min) / (100 - HR_min))^n para HR > HR_min, y 0 en
@@ -126,4 +158,4 @@ def flujo_niebla_disponible_l_m2_h(humedad_relativa_pct: float) -> float:
     relativo = (humedad_relativa_pct - config.HUMEDAD_MINIMA_CAPTACION_PCT) / rango
     if relativo <= 0:
         return 0.0
-    return config.FLUJO_NIEBLA_MAXIMO_L_M2_H * min(1.0, relativo) ** config.EXPONENTE_CAPTACION
+    return parametros.flujo_niebla_maximo_l_m2_h * min(1.0, relativo) ** config.EXPONENTE_CAPTACION

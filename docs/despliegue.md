@@ -65,13 +65,14 @@ Argumentos opcionales:
 Comprobaciones realizadas:
 
 1. `GET /api/v1/health` responde 200 con `"estado": "SALUDABLE"`.
-2. `GET /docs` y `GET /openapi.json` responden 200 y el esquema publica `/api/v1/nodo/evaluar` y `/api/v1/simulacion/ejecutar`.
+2. `GET /docs` y `GET /openapi.json` responden 200 y el esquema publica `/api/v1/nodo/evaluar`, `/api/v1/simulacion/ejecutar`, `/api/v1/analisis/barrido-salinidad` y `/api/v1/analisis/sensibilidad`.
 3. `POST /api/v1/nodo/evaluar` aplica cada regla del motor (REGLA_01 a REGLA_05) con la acción y el estado esperados, respetando el orden de prioridad.
 4. `POST /api/v1/nodo/evaluar` rechaza una telemetría inválida con código 422.
 5. `POST /api/v1/simulacion/ejecutar` responde para el ejemplo del esquema y para cada escenario, con comparativa entre modos (incluido `modo_temporizador_tope_ecologico`), conjeturas validadas, `causas_no_validacion` como lista en cada conjetura y serie temporal no vacía.
-6. `GET /_stcore/health` del dashboard responde 200 con el cuerpo `ok`.
-7. `GET /` del dashboard responde 200.
-8. Las funciones de `frontend/cliente_api.py` funcionan contra la URL pública de la API.
+6. `POST /api/v1/analisis/barrido-salinidad` responde, con una sola semilla para no exceder el tiempo de espera, seis puntos ordenados por carga salina; y `POST /api/v1/analisis/sensibilidad` responde un punto por cada valor de eficacia solicitado, con el estado de la Conjetura 1.
+7. `GET /_stcore/health` del dashboard responde 200 con el cuerpo `ok`.
+8. `GET /` del dashboard responde 200.
+9. Las funciones de `frontend/cliente_api.py` funcionan contra la URL pública de la API.
 
 El script imprime una tabla con el resultado, la duración y el detalle de cada comprobación, y termina con código 0 si todas pasan o 1 si alguna falla. Ejemplo contra un despliegue alternativo:
 

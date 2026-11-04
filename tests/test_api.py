@@ -156,3 +156,53 @@ def test_simulacion_payload_prd_estructura_completa():
 def test_ejecutar_simulacion_escenario_invalido_devuelve_422():
     payload = {**PAYLOAD_SIMULACION_PRD, "escenario": "HURACAN"}
     assert cliente.post("/api/v1/simulacion/ejecutar", json=payload).status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Análisis de robustez
+# ---------------------------------------------------------------------------
+RUTA_BARRIDO = "/api/v1/analisis/barrido-salinidad"
+RUTA_SENSIBILIDAD = "/api/v1/analisis/sensibilidad"
+PAYLOAD_SENSIBILIDAD = {
+    "escenario": "DIA_NORMAL",
+    "humedad_ambiente_inicial_pct": 85.0,
+    "tasa_salinizacion": "ALTA",
+    "parametro": "EFICACIA_MAXIMA_PULSO",
+    "valores": [0.90, 0.94],
+}
+
+
+def test_barrido_salinidad():
+    respuesta = cliente.post(RUTA_BARRIDO, json={"semillas": [42]})
+    assert respuesta.status_code == 200
+    puntos = respuesta.json()["puntos"]
+    cargas = [punto["carga_salina_ohm_l_m2"] for punto in puntos]
+    assert cargas == sorted(cargas)
+    assert len(puntos) == 6
+    assert puntos[0]["recuperacion_neuro_media"] == pytest.approx(88.85, abs=0.01)
+
+
+def test_sensibilidad():
+    respuesta = cliente.post(RUTA_SENSIBILIDAD, json=PAYLOAD_SENSIBILIDAD)
+    assert respuesta.status_code == 200
+    datos = respuesta.json()
+    assert datos["parametro"] == "EFICACIA_MAXIMA_PULSO"
+    estados = [punto["conjeturas_validadas"]["conjetura_1_eficiencia"] for punto in datos["puntos"]]
+    assert estados == [False, True]
+
+
+@pytest.mark.parametrize("semillas", [[1, 1], [1, 2, 3, 4, 5, 6], []])
+def test_barrido_rechaza_semillas_invalidas(semillas):
+    assert cliente.post(RUTA_BARRIDO, json={"semillas": semillas}).status_code == 422
+
+
+@pytest.mark.parametrize("valor", [0.0, 1.2])
+def test_sensibilidad_rechaza_eficacia_fuera_de_rango(valor):
+    payload = {**PAYLOAD_SENSIBILIDAD, "valores": [valor]}
+    assert cliente.post(RUTA_SENSIBILIDAD, json=payload).status_code == 422
+
+
+def test_endpoints_de_analisis_publicados_en_openapi():
+    rutas = cliente.get("/openapi.json").json()["paths"]
+    assert RUTA_BARRIDO in rutas
+    assert RUTA_SENSIBILIDAD in rutas
