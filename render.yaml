@@ -1,13 +1,13 @@
 # Blueprint de Render: despliega la API y el dashboard como dos servicios web.
 # Uso: en Render, New > Blueprint, seleccionar este repositorio y confirmar.
-# Cada push a la rama main vuelve a desplegar ambos servicios de forma automática.
+# Cada push a la rama main despliega ambos servicios solo cuando el workflow CI de GitHub Actions termina en verde.
 services:
   - type: web
     name: axioma-h-api
     runtime: python
     plan: free
     branch: main
-    autoDeployTrigger: commit
+    autoDeployTrigger: checksPass
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/v1/health
@@ -20,7 +20,7 @@ services:
     runtime: python
     plan: free
     branch: main
-    autoDeployTrigger: commit
+    autoDeployTrigger: checksPass
     buildCommand: pip install -r requirements.txt
     startCommand: streamlit run frontend/app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true
     envVars:

@@ -1,5 +1,6 @@
 """Pruebas de los endpoints de la API."""
 
+import pytest
 from fastapi.testclient import TestClient
 
 from backend.main import app
@@ -56,7 +57,7 @@ def test_evaluar_nodo_valido():
     assert respuesta.status_code == 200
     datos = respuesta.json()
     assert datos["regla_activada"] == "REGLA_03_DESPRENDIMIENTO_SAL_POR_IMPEDANCIA"
-    assert datos["temperatura_objetivo_c"] == 44.0
+    assert datos["temperatura_objetivo_c"] == pytest.approx(44.0)
     assert datos["pulso_termico_activo"] is True
     assert set(datos["metricas_conjeturas"]) == {
         "eficiencia_energetica_pct",

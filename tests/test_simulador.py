@@ -41,7 +41,7 @@ def test_semilla_distinta_cambia_el_entorno():
 def test_neuro_simbolico_nunca_supera_45_por_pulso(corridas, escenario):
     _, neuro, _ = corridas[escenario]
     assert all(t < config.UMBRAL_TEMPERATURA_CORTE_C for t in neuro.temperaturas_pulso_c)
-    assert neuro.perdida_termica_pulso_pct == 0.0
+    assert neuro.perdida_termica_pulso_pct == pytest.approx(0.0)
 
 
 @pytest.mark.parametrize("escenario", list(Escenario))

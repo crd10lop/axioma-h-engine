@@ -9,7 +9,7 @@ Este documento describe cómo publicar la API y el dashboard en servicios gratui
 | A (recomendada) | Render | Render | Despliegue más rápido: un solo Blueprint crea los dos servicios. |
 | B | Render | Streamlit Community Cloud | Si se prefiere que el dashboard tenga una URL `*.streamlit.app`. |
 
-Ambas opciones son gratuitas y se despliegan desde el repositorio de GitHub. Cada `git push` a `main` vuelve a desplegar los servicios.
+Ambas opciones son gratuitas y se despliegan desde el repositorio de GitHub. En la opción A, cada `git push` a `main` vuelve a desplegar los servicios cuando el workflow CI (pruebas y análisis) termina bien (`autoDeployTrigger: checksPass`); si una prueba falla, Render no despliega.
 
 ## 2. Antes de desplegar
 
@@ -26,7 +26,7 @@ Ambas opciones son gratuitas y se despliegan desde el repositorio de GitHub. Cad
 4. Render solicita el valor de `AXIOMA_API_URL` para el dashboard. Ingresar la URL pública de la API, por ejemplo `https://axioma-h-api.onrender.com`. Si Render asigna otro nombre a la API (porque el nombre ya está en uso), corregir el valor en **axioma-h-dashboard > Environment** y volver a desplegar.
 5. Confirmar con **Apply**. La primera construcción tarda entre 3 y 6 minutos.
 
-`render.yaml` fija `branch: main` y `autoDeployTrigger: commit` en ambos servicios, por lo que cada push a `main` vuelve a desplegar la API y el dashboard sin intervención manual en el panel de Render.
+`render.yaml` fija `branch: main` y `autoDeployTrigger: checksPass` en ambos servicios. Cada push a `main` vuelve a desplegar la API y el dashboard sin intervención manual en el panel de Render, pero el despliegue espera a que el workflow CI (pruebas y análisis) termine bien. Si una prueba falla, Render no despliega y los servicios conservan la versión anterior.
 
 ## 4. Opción B: dashboard en Streamlit Community Cloud
 
@@ -81,7 +81,15 @@ La aplicación está desplegada en Render con el Blueprint de `render.yaml` (opc
 
 Si Render cambia alguna de estas URL (por ejemplo, al recrear un servicio), se debe actualizar en `README.md` (sección Enlaces), en el encabezado de `docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md`, `docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md` y `docs/funcionamiento.md`, y en la variable `AXIOMA_API_URL` del servicio `axioma-h-dashboard` (**Environment** en el panel de Render), sin barra final.
 
-## 9. Verificación automatizada del despliegue
+## 9. Integración continua
+
+El workflow `.github/workflows/ci.yml` se ejecuta en GitHub Actions en cada push a `main` y en cada pull request. Instala `requirements-dev.txt`, ejecuta la suite de `pytest` con cobertura de líneas y ramas (`coverage.xml`) y envía el resultado a SonarQube Cloud.
+
+1. En SonarQube Cloud, el proyecto `crd10lop_axioma-h-engine` (organización `cristian-diez`) tiene desactivado el análisis automático (**Administration > Analysis Method**). El análisis se hace desde CI, que es la única forma de incluir la cobertura. La configuración está en `sonar-project.properties`.
+2. En GitHub, el secreto `SONAR_TOKEN` (**Settings > Secrets and variables > Actions**) contiene el token generado en SonarQube Cloud. Si el secreto no existe, el workflow ejecuta las pruebas y omite el análisis.
+3. En el panel de Render, cada servicio debe mostrar **Auto-Deploy** en **After CI Checks Pass** (**Settings > Build & Deploy**). Así, un push a `main` solo se despliega cuando el workflow CI termina en verde.
+
+## 10. Verificación automatizada del despliegue
 
 El script `scripts/verificar_despliegue.py` ejecuta contra los servicios publicados las comprobaciones de la sección 6 y algunas adicionales. Solo requiere las dependencias de `requirements.txt` y no forma parte de la suite de `pytest`, porque depende de la red.
 

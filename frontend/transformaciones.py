@@ -4,6 +4,7 @@ Las funciones de este módulo son puras y no dependen de Streamlit, de modo
 que se pueden probar de forma aislada.
 """
 
+import math
 from typing import Iterable, List, Optional
 
 import pandas as pd
@@ -65,7 +66,7 @@ def etiqueta_tiempo(minuto: int, hora_inicio: int = config.HORA_INICIO_SIMULACIO
 
 def diferencia_porcentual(valor: Optional[float], referencia: Optional[float]) -> Optional[float]:
     """Diferencia relativa (valor - referencia) / referencia * 100, o None si no es calculable."""
-    if valor is None or referencia is None or referencia == 0:
+    if valor is None or referencia is None or math.isclose(referencia, 0.0, abs_tol=1e-12):
         return None
     return (valor - referencia) / referencia * 100.0
 

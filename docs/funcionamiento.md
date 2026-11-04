@@ -116,3 +116,19 @@ Todos los resultados provienen de una simulación, no de mediciones de campo. Va
 | [02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md](02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md) | Datos que recibe y entrega la API. |
 | [modelo_simulacion.md](modelo_simulacion.md) | Ecuaciones, parámetros, resultados detallados y análisis. |
 | [despliegue.md](despliegue.md) | Publicación de la aplicación en internet. |
+
+## 10. Calidad del código y cobertura
+
+El código se analiza en SonarQube Cloud: [tablero del proyecto](https://sonarcloud.io/summary/new_code?id=crd10lop_axioma-h-engine) `crd10lop_axioma-h-engine`, organización `cristian-diez`. El análisis se ejecuta en GitHub Actions en cada push a `main` y en cada pull request, y usa la Quality Gate Sonar way:
+
+- calificación A en fiabilidad, seguridad y mantenibilidad;
+- cobertura de al menos 80 % en el código nuevo;
+- duplicación de 3 % como máximo en el código nuevo.
+
+**Alcance de la cobertura.** Las pruebas de `tests/` cubren todo `backend/` y la lógica del frontend: `frontend/cliente_api.py`, `frontend/transformaciones.py` y `frontend/config.py`. La cobertura medida localmente con el criterio de Sonar (líneas y ramas) es de alrededor del 96 %.
+
+**Exclusión de `frontend/app.py`.** Es la capa de presentación de Streamlit y no tiene lógica de negocio propia. Toda la lógica que usa, la transformación de datos y las llamadas a la API, está separada en `transformaciones.py` y `cliente_api.py`, que sí tienen pruebas. Su comportamiento se valida al ejecutar el dashboard y con `scripts/verificar_despliegue.py`. Probarla en CI exigiría simular la interfaz completa sin aportar verificación adicional de las reglas del motor.
+
+**Exclusión de `scripts/`.** Contiene una herramienta operativa que se ejecuta contra el despliegue real, no código de la aplicación.
+
+**Trabajo futuro.** Si se quiere cubrir la interfaz, se puede usar `streamlit.testing.v1.AppTest` con `cliente_api` simulado mediante `monkeypatch`.

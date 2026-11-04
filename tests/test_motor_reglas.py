@@ -42,7 +42,7 @@ def test_regla_01_corte_termico():
     assert decision.pulso_termico_activo is False
     assert decision.temperatura_objetivo_c is None
     assert decision.duracion_pulso_seg == 0
-    assert decision.ajuste_caudal_pct == 0.0
+    assert decision.ajuste_caudal_pct == pytest.approx(0.0)
 
 
 def test_regla_02_pausa_ecologica():
@@ -51,7 +51,7 @@ def test_regla_02_pausa_ecologica():
     assert decision.estado_nodo == EstadoNodo.PAUSA_ECOLOGICA
     assert decision.accion_recomendada == AccionControl.PAUSA_ECOLOGICA
     assert decision.pulso_termico_activo is False
-    assert decision.ajuste_caudal_pct == 0.0
+    assert decision.ajuste_caudal_pct == pytest.approx(0.0)
     assert decision.metricas_conjeturas.preservacion_ecologica_ok is True
 
 
@@ -61,7 +61,7 @@ def test_regla_04_reserva_critica():
     assert decision.estado_nodo == EstadoNodo.RESERVA_CRITICA
     assert decision.accion_recomendada == AccionControl.REDUCIR_CAUDAL_SIN_PULSO
     assert decision.pulso_termico_activo is False
-    assert decision.ajuste_caudal_pct == 50.0
+    assert decision.ajuste_caudal_pct == pytest.approx(50.0)
 
 
 def test_regla_03_pulso_resistivo():
@@ -70,9 +70,9 @@ def test_regla_03_pulso_resistivo():
     assert decision.estado_nodo == EstadoNodo.CRISTALIZACION_DETECTADA
     assert decision.accion_recomendada == AccionControl.APLICAR_PULSO_RESISTIVO
     assert decision.pulso_termico_activo is True
-    assert decision.temperatura_objetivo_c == 44.0
+    assert decision.temperatura_objetivo_c == pytest.approx(44.0)
     assert decision.duracion_pulso_seg == 90
-    assert decision.ajuste_caudal_pct == 80.0
+    assert decision.ajuste_caudal_pct == pytest.approx(80.0)
 
 
 def test_regla_05_operacion_nominal():
@@ -81,7 +81,7 @@ def test_regla_05_operacion_nominal():
     assert decision.estado_nodo == EstadoNodo.NOMINAL
     assert decision.accion_recomendada == AccionControl.FILTRACION_PASIVA_CONTINUA
     assert decision.pulso_termico_activo is False
-    assert decision.ajuste_caudal_pct == 100.0
+    assert decision.ajuste_caudal_pct == pytest.approx(100.0)
 
 
 # ---------------------------------------------------------------------------
@@ -146,7 +146,7 @@ def test_payload_prd_activa_regla_03():
     )
     decision = evaluar_telemetria(telemetria)
     assert decision.regla_activada == REGLA_03
-    assert decision.temperatura_objetivo_c == 44.0
+    assert decision.temperatura_objetivo_c == pytest.approx(44.0)
     assert decision.nodo_id == "NODO_04"
 
 
@@ -156,7 +156,7 @@ def test_modo_temporizador_no_evalua_reglas():
     )
     assert decision.regla_activada == SIN_REGLAS_TEMPORIZADOR
     assert decision.accion_recomendada == AccionControl.FILTRACION_PASIVA_CONTINUA
-    assert decision.ajuste_caudal_pct == 100.0
+    assert decision.ajuste_caudal_pct == pytest.approx(100.0)
     assert decision.pulso_termico_activo is False
     assert "no evalúa sensores" in decision.motivo
     assert decision.metricas_conjeturas.preservacion_ecologica_ok is False
@@ -175,13 +175,13 @@ def test_metricas_acotadas_y_pulso_mejora_recuperacion():
     assert con_pulso.metricas_conjeturas.recuperacion_hidraulica_pct > (
         sin_pulso.metricas_conjeturas.recuperacion_hidraulica_pct
     )
-    assert sin_pulso.metricas_conjeturas.eficiencia_energetica_pct == 100.0
+    assert sin_pulso.metricas_conjeturas.eficiencia_energetica_pct == pytest.approx(100.0)
     assert con_pulso.metricas_conjeturas.eficiencia_energetica_pct < 100.0
 
 
 def test_membrana_limpia_tiene_recuperacion_completa():
     decision = evaluar(impedancia_ohms=config.IMPEDANCIA_NOMINAL_OHMS)
-    assert decision.metricas_conjeturas.recuperacion_hidraulica_pct == 100.0
+    assert decision.metricas_conjeturas.recuperacion_hidraulica_pct == pytest.approx(100.0)
 
 
 def test_evaluacion_determinista_con_instante_fijo():

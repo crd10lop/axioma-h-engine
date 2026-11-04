@@ -1,5 +1,10 @@
 # Axioma-H Engine
 
+[![CI](https://github.com/crd10lop/axioma-h-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/crd10lop/axioma-h-engine/actions/workflows/ci.yml)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=crd10lop_axioma-h-engine&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=crd10lop_axioma-h-engine)
+[![Cobertura](https://sonarcloud.io/api/project_badges/measure?project=crd10lop_axioma-h-engine&metric=coverage)](https://sonarcloud.io/summary/new_code?id=crd10lop_axioma-h-engine)
+[![Fiabilidad](https://sonarcloud.io/api/project_badges/measure?project=crd10lop_axioma-h-engine&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=crd10lop_axioma-h-engine)
+
 Axioma-H Engine es un motor de control neuro-simbólico para nodos de captación pasiva de agua atmosférica. A partir de la telemetría de cada nodo (impedancia de la membrana, temperatura de la matriz, reserva de calor y humedad relativa), el motor decide si filtrar de forma continua, aplicar un pulso resistivo para desprender la sal cristalizada, reducir el caudal o detener la extracción para proteger la membrana y el ecosistema.
 
 El proyecto incluye una API REST y un dashboard simulador. El simulador compara el control neuro-simbólico con un temporizador fijo tradicional bajo cinco escenarios ambientales de referencia de Cabo de la Vela (La Guajira). Con esa comparación se verifican las tres conjeturas de investigación del Ciclo 2.
@@ -16,6 +21,7 @@ Para una explicación general de qué hace la aplicación y cómo funciona, ver 
 | Dashboard desplegado | [Abrir dashboard](https://axioma-h-dashboard.onrender.com) |
 | API desplegada (documentación interactiva) | [Abrir API](https://axioma-h-api.onrender.com/docs) |
 | Salud de la API | [Verificar estado](https://axioma-h-api.onrender.com/api/v1/health) |
+| Calidad del código (SonarQube Cloud) | [Abrir tablero](https://sonarcloud.io/summary/new_code?id=crd10lop_axioma-h-engine) |
 
 ## Pregunta de investigación
 
@@ -260,6 +266,21 @@ pytest -v
 ```
 
 La suite cubre el motor de reglas (cada regla, casos límite y prioridad), el simulador (reproducibilidad, límites térmico y ecológico, criterio de regeneración), la API, el cliente HTTP del dashboard (con `requests` simulado) y las transformaciones de datos.
+
+### Integración continua y calidad
+
+El workflow [.github/workflows/ci.yml](.github/workflows/ci.yml) se ejecuta en GitHub Actions en cada push a `main` y en cada pull request. Instala las dependencias, ejecuta la suite de pruebas con medición de cobertura de líneas y ramas, y envía los resultados a SonarQube Cloud para el análisis de calidad.
+
+Para medir la cobertura localmente con el mismo criterio del workflow:
+
+```powershell
+pip install -r requirements-dev.txt
+pytest --cov=backend --cov=frontend --cov-branch --cov-report=xml --cov-report=term
+```
+
+Render despliega la API y el dashboard solo cuando el workflow CI termina en verde (`autoDeployTrigger: checksPass` en `render.yaml`).
+
+`frontend/app.py` y `scripts/` están excluidos de la cobertura; la justificación está en [docs/funcionamiento.md](docs/funcionamiento.md), sección 10.
 
 ## Resultados
 
