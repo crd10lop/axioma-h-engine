@@ -84,6 +84,9 @@ También entrega las series de tiempo para los gráficos y una bitácora de las 
 
 ## 5. Uso del dashboard
 
+La barra lateral presenta un recorrido de tres vistas numeradas, en el orden recomendado de lectura. Al final de las dos primeras, un botón "Siguiente" lleva a la vista siguiente; también se puede saltar directamente a cualquiera desde la barra lateral.
+
+- **Investigación y guía:** es la vista inicial y no requiere la API. Presenta la pregunta de investigación, su versión divulgativa, la hipótesis de trabajo y la respuesta preliminar del simulador; la tabla de conjeturas con su criterio y la lectura de su resultado; las reglas de control; las perspectivas social, ética, cultural y humana; y el alcance y la madurez del artefacto. En secciones desplegables muestra los supuestos clave y las limitaciones, un glosario y las referencias. Los textos resumen el README y el plan del Ciclo 2 y están en `frontend/contenido.py`.
 - **Evaluación manual de nodo:** se ajustan la impedancia, la temperatura, la energía y la humedad, y se observa al instante qué regla se activa y por qué.
 - **Simulación comparativa:** se ejecuta un escenario y se comparan lado a lado el control neuro-simbólico y el temporizador. Incluye gráficos en el tiempo, el estado de cada conjetura y una reproducción paso a paso de la corrida.
 

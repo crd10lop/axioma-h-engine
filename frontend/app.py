@@ -20,7 +20,7 @@ RAIZ_PROYECTO = Path(__file__).resolve().parent.parent
 if str(RAIZ_PROYECTO) not in sys.path:
     sys.path.insert(0, str(RAIZ_PROYECTO))
 
-from frontend import cliente_api, config  # noqa: E402
+from frontend import cliente_api, config, contenido  # noqa: E402
 from frontend import transformaciones as tr  # noqa: E402
 
 st.set_page_config(page_title="Axioma-H Engine - Simulador", layout="wide")
@@ -36,6 +36,7 @@ ESCENARIOS = {
 }
 VISTA_EVALUACION = "Evaluación manual de nodo"
 VISTA_SIMULACION = "Simulación comparativa"
+VISTA_INVESTIGACION = contenido.VISTAS[0]
 
 # Clave de session_state de cada control de telemetría.
 CONTROLES = {
@@ -190,6 +191,73 @@ def panel_conexion() -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Recorrido guiado
+# ---------------------------------------------------------------------------
+def ir_a_siguiente_vista(actual: str) -> None:
+    """Selecciona en la barra lateral la vista que sigue a la actual."""
+    st.session_state.vista = contenido.siguiente_vista(actual)
+
+
+def boton_siguiente_vista(actual: str) -> None:
+    """Dibuja el botón hacia la vista siguiente del recorrido; la última vista no lo lleva."""
+    siguiente = contenido.siguiente_vista(actual)
+    if siguiente is None:
+        return
+    st.divider()
+    st.button(f"Siguiente: {siguiente}", on_click=ir_a_siguiente_vista, args=(actual,), type="primary")
+
+
+def tabla_textos(filas: list[dict], columnas: dict[str, str]) -> None:
+    """Muestra una tabla de textos con encabezados legibles, indexada por la primera columna."""
+    df = pd.DataFrame(filas).rename(columns=columnas)
+    st.table(df.set_index(df.columns[0]))
+
+
+# ---------------------------------------------------------------------------
+# Vista de investigación y guía
+# ---------------------------------------------------------------------------
+def vista_investigacion() -> None:
+    """Pregunta, conjeturas, reglas, perspectivas y alcance del estudio. No depende de la API."""
+    st.header(VISTA_INVESTIGACION)
+    st.caption("Contexto del estudio antes de usar el simulador. Las vistas 2 y 3 requieren la API.")
+
+    st.subheader("Pregunta de investigación")
+    st.info(contenido.PREGUNTA_INVESTIGACION)
+    st.markdown(f"**Versión divulgativa.** {contenido.VERSION_DIVULGATIVA}")
+    st.markdown(f"**Hipótesis de trabajo.** {contenido.HIPOTESIS}")
+
+    st.subheader("Respuesta preliminar del simulador")
+    st.markdown(contenido.lista_markdown(contenido.RESPUESTA_PRELIMINAR))
+
+    st.subheader("Conjeturas")
+    tabla_textos(contenido.CONJETURAS, contenido.COLUMNAS_CONJETURAS)
+
+    st.subheader("Reglas de control")
+    tabla_textos(contenido.REGLAS, contenido.COLUMNAS_REGLAS)
+    st.caption(contenido.NOTA_REGLAS)
+
+    st.subheader("Perspectivas del estudio")
+    columnas = st.columns(len(contenido.PERSPECTIVAS))
+    for columna, (clave, texto) in zip(columnas, contenido.PERSPECTIVAS.items()):
+        columna.markdown(f"**{contenido.TITULOS_PERSPECTIVAS[clave]}**")
+        columna.write(texto)
+
+    st.subheader("Alcance y madurez")
+    st.markdown(contenido.MADUREZ)
+
+    with st.expander("Supuestos clave y limitaciones"):
+        tabla_textos(contenido.SUPUESTOS_CLAVE, contenido.COLUMNAS_SUPUESTOS)
+        st.markdown(contenido.lista_markdown(contenido.LIMITACIONES))
+    with st.expander("Glosario"):
+        for termino, definicion in contenido.glosario_ordenado():
+            st.markdown(f"**{termino}:** {definicion}")
+    with st.expander("Referencias"):
+        st.markdown(contenido.lista_markdown(contenido.REFERENCIAS))
+
+    boton_siguiente_vista(VISTA_INVESTIGACION)
+
+
+# ---------------------------------------------------------------------------
 # Vista A: evaluación manual de nodo
 # ---------------------------------------------------------------------------
 def tarjeta_indicador(columna, titulo: str, valor: str, nivel: float, alerta: bool, normal: str, critico: str):
@@ -335,6 +403,8 @@ def vista_evaluacion(api_disponible: bool) -> None:
     st.subheader("Historial de decisiones")
     st.caption("Últimas 20 decisiones de la sesión, de la más reciente a la más antigua.")
     st.code(tr.historial_a_texto(reversed(st.session_state.historial)), language=None, wrap_lines=True)
+
+    boton_siguiente_vista(VISTA_EVALUACION)
 
 
 # ---------------------------------------------------------------------------
@@ -695,9 +765,11 @@ def main() -> None:
 
     api_disponible = panel_conexion()
     st.sidebar.divider()
-    vista = st.sidebar.radio("Vista", [VISTA_EVALUACION, VISTA_SIMULACION], key="vista")
+    vista = st.sidebar.radio("Recorrido", contenido.VISTAS, format_func=contenido.etiqueta_vista, key="vista")
 
-    if vista == VISTA_EVALUACION:
+    if vista == VISTA_INVESTIGACION:
+        vista_investigacion()
+    elif vista == VISTA_EVALUACION:
         vista_evaluacion(api_disponible)
     else:
         vista_simulacion(api_disponible)

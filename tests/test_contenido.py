@@ -1,0 +1,241 @@
+"""Pruebas del contenido de la vista de investigación y del recorrido guiado."""
+
+import ast
+from pathlib import Path
+
+import pytest
+
+from frontend import config
+from frontend import contenido
+
+RUTA_APP = Path(__file__).resolve().parent.parent / "frontend" / "app.py"
+VISTA_INVESTIGACION = "Investigación y guía"
+VISTA_EVALUACION = "Evaluación manual de nodo"
+VISTA_SIMULACION = "Simulación comparativa"
+REGLA_03 = "REGLA_03_DESPRENDIMIENTO_SAL_POR_IMPEDANCIA"
+REGLA_04 = "REGLA_04_PROTECCION_RESERVA_CRITICA"
+
+
+def _constantes_app() -> dict[str, str]:
+    """Lee las asignaciones de texto de nivel de módulo de app.py sin ejecutar Streamlit."""
+    arbol = ast.parse(RUTA_APP.read_text(encoding="utf-8"))
+    constantes = {}
+    for nodo in arbol.body:
+        if isinstance(nodo, ast.Assign) and isinstance(nodo.value, ast.Constant):
+            for destino in nodo.targets:
+                if isinstance(destino, ast.Name):
+                    constantes[destino.id] = nodo.value.value
+    return constantes
+
+
+def _campo_regla(nombre: str, campo: str) -> str:
+    """Devuelve un campo de la regla con el nombre indicado."""
+    reglas = {regla["regla"]: regla for regla in contenido.REGLAS}
+    return reglas[nombre][campo]
+
+
+def _condicion(nombre: str) -> str:
+    """Condición de la regla con el nombre indicado."""
+    return _campo_regla(nombre, "condicion")
+
+
+def _accion(nombre: str) -> str:
+    """Acción de la regla con el nombre indicado."""
+    return _campo_regla(nombre, "accion")
+
+
+def _texto_reglas() -> str:
+    """Une condiciones y acciones de todas las reglas en un solo texto."""
+    nombres = [regla["regla"] for regla in contenido.REGLAS]
+    return " ".join(f"{_condicion(nombre)} {_accion(nombre)}" for nombre in nombres)
+
+
+# ---------------------------------------------------------------------------
+# Textos
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize(
+    "texto",
+    [contenido.PREGUNTA_INVESTIGACION, contenido.VERSION_DIVULGATIVA, contenido.HIPOTESIS, contenido.MADUREZ],
+)
+def test_textos_principales_no_vacios(texto):
+    assert texto.strip()
+
+
+def test_pregunta_y_version_divulgativa_son_preguntas():
+    assert contenido.PREGUNTA_INVESTIGACION.endswith("?")
+    assert contenido.VERSION_DIVULGATIVA.endswith("?")
+
+
+@pytest.mark.parametrize(
+    "lista",
+    [contenido.RESPUESTA_PRELIMINAR, contenido.LIMITACIONES, contenido.REFERENCIAS],
+)
+def test_listas_de_texto_no_vacias(lista):
+    assert lista
+    for elemento in lista:
+        assert elemento.strip()
+
+
+def test_respuesta_preliminar_conserva_las_cifras():
+    texto = " ".join(contenido.RESPUESTA_PRELIMINAR)
+    for cifra in ("74 %", "99 %", "85.9 %", "88.9 %", "95.8 %", "63.2 %", "22.7 puntos"):
+        assert cifra in texto
+
+
+def test_conjeturas_completas():
+    assert len(contenido.CONJETURAS) == 3
+    for conjetura in contenido.CONJETURAS:
+        assert set(conjetura) == set(contenido.COLUMNAS_CONJETURAS)
+        for valor in conjetura.values():
+            assert valor.strip()
+
+
+@pytest.mark.parametrize("indice", [0, 1])
+def test_conjeturas_1_y_2_aclaran_que_no_validada_no_es_refutada(indice):
+    assert "no equivale a que quede refutada" in contenido.CONJETURAS[indice]["lectura"]
+
+
+def test_supuestos_clave():
+    valores = [supuesto["valor"] for supuesto in contenido.SUPUESTOS_CLAVE]
+    assert "0.90" in valores
+    assert any(valor.startswith("6.0 L/m²/h") for valor in valores)
+    for supuesto in contenido.SUPUESTOS_CLAVE:
+        assert set(supuesto) == set(contenido.COLUMNAS_SUPUESTOS)
+        assert "sin fuente" in supuesto["origen"]
+
+
+def test_perspectivas_y_titulos():
+    assert set(contenido.PERSPECTIVAS) == {"social", "etica", "cultural", "humana"}
+    assert set(contenido.TITULOS_PERSPECTIVAS) == set(contenido.PERSPECTIVAS)
+    for texto in contenido.PERSPECTIVAS.values():
+        assert texto.strip()
+
+
+def test_perspectiva_etica_declara_consulta_previa_no_realizada():
+    assert "no se ha realizado" in contenido.PERSPECTIVAS["etica"]
+
+
+def test_referencias_incluyen_repositorio_y_documento():
+    texto = " ".join(contenido.REFERENCIAS)
+    assert contenido.URL_REPOSITORIO in texto
+    assert "docs/referencias.md" in texto
+
+
+# ---------------------------------------------------------------------------
+# Reglas
+# ---------------------------------------------------------------------------
+def test_reglas_en_orden_de_prioridad():
+    prioridades = [regla["prioridad"] for regla in contenido.REGLAS]
+    assert prioridades == [1, 2, 3, 4, 5]
+    for regla in contenido.REGLAS:
+        assert set(regla) == set(contenido.COLUMNAS_REGLAS)
+
+
+def test_reglas_usan_los_umbrales_de_config():
+    assert config.UMBRAL_TEMPERATURA_CORTE_C == pytest.approx(45.0)
+    assert config.UMBRAL_HUMEDAD_ECOLOGICA_PCT == pytest.approx(30.0)
+    assert config.UMBRAL_RESERVA_CRITICA_PCT == pytest.approx(30.0)
+    assert config.UMBRAL_IMPEDANCIA_OHMS == pytest.approx(1500.0)
+    assert _condicion("REGLA_01_LIMITE_TERMICO_ABSOLUTO").endswith(">= 45 °C")
+    assert _condicion("REGLA_02_LIMITE_ECOLOGICO_TERRITORIAL").endswith("< 30 %")
+    assert "Reserva < 30 %" in _condicion(REGLA_04)
+    assert "impedancia > 1500 Ω" in _condicion(REGLA_04)
+    assert "Impedancia > 1500 Ω" in _condicion(REGLA_03)
+    assert "reserva >= 30 %" in _condicion(REGLA_03)
+
+
+def test_reglas_describen_pulso_reserva_critica_y_tope():
+    tope = "33 %"
+    assert "90 s hacia 44 °C" in _accion(REGLA_03)
+    assert "sin pulso" in _accion(REGLA_04)
+    assert tope in _texto_reglas()
+    assert tope in contenido.NOTA_REGLAS
+
+
+def test_constantes_de_pulso_y_tope():
+    assert contenido.TEMPERATURA_OBJETIVO_PULSO_C == pytest.approx(44.0)
+    assert contenido.DURACION_PULSO_SEG == 90
+    assert contenido.FRACCION_MAXIMA_EXTRACCION_PCT == pytest.approx(33.0)
+
+
+# ---------------------------------------------------------------------------
+# Recorrido guiado
+# ---------------------------------------------------------------------------
+def test_vistas_en_orden():
+    assert contenido.VISTAS == [VISTA_INVESTIGACION, VISTA_EVALUACION, VISTA_SIMULACION]
+
+
+def test_vistas_coinciden_con_app():
+    constantes = _constantes_app()
+    assert constantes["VISTA_EVALUACION"] == contenido.VISTAS[1]
+    assert constantes["VISTA_SIMULACION"] == contenido.VISTAS[2]
+
+
+@pytest.mark.parametrize(
+    ("vista", "esperada"),
+    [
+        (VISTA_INVESTIGACION, "1. Investigación y guía"),
+        (VISTA_EVALUACION, "2. Evaluación manual de nodo"),
+        (VISTA_SIMULACION, "3. Simulación comparativa"),
+    ],
+)
+def test_etiqueta_vista(vista, esperada):
+    assert contenido.etiqueta_vista(vista) == esperada
+
+
+@pytest.mark.parametrize(
+    ("vista", "esperada"),
+    [
+        (VISTA_INVESTIGACION, VISTA_EVALUACION),
+        (VISTA_EVALUACION, VISTA_SIMULACION),
+    ],
+)
+def test_siguiente_vista(vista, esperada):
+    assert contenido.siguiente_vista(vista) == esperada
+
+
+def test_siguiente_vista_de_la_ultima_es_none():
+    assert contenido.siguiente_vista(VISTA_SIMULACION) is None
+
+
+@pytest.mark.parametrize("funcion", [contenido.etiqueta_vista, contenido.siguiente_vista])
+def test_vista_desconocida_lanza_error(funcion):
+    with pytest.raises(ValueError, match="Vista desconocida"):
+        funcion("Vista inexistente")
+
+
+# ---------------------------------------------------------------------------
+# Glosario y utilidades
+# ---------------------------------------------------------------------------
+def test_glosario_ordenado_alfabeticamente():
+    terminos = [termino for termino, _ in contenido.glosario_ordenado()]
+    assert terminos == sorted(contenido.GLOSARIO, key=str.casefold)
+    assert terminos[0] == "conductancia relativa"
+    assert terminos[-1] == "tope ecológico"
+
+
+def test_glosario_contiene_los_terminos_requeridos():
+    requeridos = {
+        "impedancia",
+        "conductancia relativa",
+        "pulso resistivo",
+        "tope ecológico",
+        "humedad relativa",
+        "integridad de la membrana",
+        "control neuro-simbólico",
+        "temporizador fijo",
+        "semilla",
+    }
+    assert set(contenido.GLOSARIO) == requeridos
+    for definicion in contenido.GLOSARIO.values():
+        assert definicion.strip()
+
+
+def test_lista_markdown():
+    resultado = contenido.lista_markdown(["uno", "dos"])
+    assert resultado == "- uno\n- dos"
+
+
+def test_lista_markdown_vacia():
+    resultado = contenido.lista_markdown([])
+    assert resultado == ""
