@@ -10,7 +10,7 @@ API_URL = os.environ.get("AXIOMA_API_URL", "http://127.0.0.1:8000").rstrip("/")
 TIMEOUT_SALUD_SEG = int(os.environ.get("AXIOMA_TIMEOUT_SALUD_SEG", "75"))  # s. Verificación de salud.
 TIMEOUT_EVALUACION_SEG = 10  # s. Evaluación de nodos.
 TIMEOUT_SIMULACION_SEG = 60  # s. Simulación comparativa.
-TIMEOUT_ANALISIS_SEG = 120  # s. Barrido y sensibilidad.
+TIMEOUT_ANALISIS_SEG = 120  # s. Barrido, sensibilidad e incertidumbre.
 
 COMANDO_BACKEND = "uvicorn backend.main:app --reload --port 8000"
 

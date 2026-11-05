@@ -75,8 +75,8 @@ El control neuro-simbólico mantiene una recuperación de caudal estable y una d
 
 El barrido de salinidad, con su método y su análisis, está en [04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 7. En síntesis, con humedad inicial de 85 %:
 
-- **Desgaste.** El control neuro-simbólico reduce la degradación acumulada entre 74 % y 99 % frente al temporizador en los seis niveles de salinidad. La reducción es mayor con salinidad baja, donde el temporizador aplica pulsos que no hacen falta.
-- **Recuperación.** El control neuro-simbólico mantiene la recuperación entre 85.9 % y 88.9 % en todos los niveles. La del temporizador cae de 95.8 % a 63.2 % a medida que aumenta la salinidad. Con salinidad baja el temporizador recupera más, porque limpia una membrana casi limpia. Desde una carga de 60 Ohm por L/m² el neuro-simbólico lo supera, y la diferencia llega a 22.7 puntos con la carga más alta.
+- **Desgaste.** El control basado en reglas (modo neuro-simbólico en la API y el dashboard; ver la sección 4) reduce la degradación acumulada entre 74 % y 99 % frente al temporizador en los seis niveles de salinidad. La reducción es mayor con salinidad baja, donde el temporizador aplica pulsos que no hacen falta.
+- **Recuperación.** El control basado en reglas mantiene la recuperación entre 85.9 % y 88.9 % en todos los niveles. La del temporizador cae de 95.8 % a 63.2 % a medida que aumenta la salinidad. Con salinidad baja el temporizador recupera más, porque limpia una membrana casi limpia. Desde una carga de 60 Ohm por L/m² el control basado en reglas lo supera, y la diferencia llega a 22.7 puntos con la carga más alta.
 
 La respuesta a la pregunta es, por tanto, condicional: la ventaja en recuperación aparece y crece con la salinidad, mientras que la reducción del desgaste se observa en todos los niveles. Estos resultados dependen de parámetros físicos supuestos, en particular la eficacia del pulso, que deben medirse en laboratorio.
 
@@ -90,8 +90,8 @@ Esta sección se limita a lo que el repositorio implementa o documenta. Lo que n
 
 - El proyecto se orienta a Cabo de la Vela, en la Alta Guajira, un territorio árido con escasez hídrica.
 - El control es descentralizado por nodo: cada uno de los 8 nodos decide con su propia telemetría (sección 2.2), de modo que una condición local, como la cristalización de una membrana, se atiende sin detener los demás nodos.
-- Respetar el tope ecológico tiene un costo hídrico medible. Con humedad inicial de 85 %, el modo neuro-simbólico capta entre 23 % y 27 % menos agua que el temporizador ([04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 5.5). El estudio hace visible ese costo en lugar de ocultarlo.
-- Cada simulación estima el impacto comunitario del agua captada con estándares citados: el acceso básico de la OMS (20 L por persona al día) y el mínimo humanitario de Sphere (15 L por persona al día). Con humedad inicial de 85 %, la red de 8 m² del modo neuro-simbólico abastecería entre 7.5 y 12.7 personas al nivel de acceso básico, según el escenario. Con los rendimientos de proyectos reales (3 a 10 L/m² al día) harían falta de 2 a 6.7 m² de colector por persona ([04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 7.6). Es un indicador informativo: no interviene en la validación de las conjeturas.
+- Respetar el tope ecológico tiene un costo hídrico medible. Con humedad inicial de 85 %, el control basado en reglas capta entre 23 % y 27 % menos agua que el temporizador ([04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 5.5). El estudio hace visible ese costo en lugar de ocultarlo.
+- Cada simulación estima el impacto comunitario del agua captada con estándares citados: el acceso básico de la OMS (20 L por persona al día) y el mínimo humanitario de Sphere (15 L por persona al día). Con humedad inicial de 85 %, la red de 8 m² con el control basado en reglas abastecería entre 7.5 y 12.7 personas al nivel de acceso básico, según el escenario. Con los rendimientos de proyectos reales (3 a 10 L/m² al día) harían falta de 2 a 6.7 m² de colector por persona ([04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 7.6). Es un indicador informativo: no interviene en la validación de las conjeturas.
 
 **Perspectiva ética.**
 
@@ -147,7 +147,7 @@ Para el Ciclo 2, la investigación pasa de la conceptualización narrativa a la 
 Los indicadores de la matriz se calculan en el simulador del Ciclo 2. La definición de cada uno está en [04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 4.
 
 - **Conjetura 1.** La recuperación de caudal se mide como la conductancia relativa a la membrana limpia después de cada pulso. El ahorro de energía se mide como la reducción de la energía gastada en pulsos frente al temporizador fijo.
-- **Conjetura 2.** Una membrana se considera regenerada cuando la impedancia vuelve a 1100 Ohm o menos. La degradación térmica se registra cuando la matriz supera 45 °C. La frecuencia del pulso (Hz) no se modela: el pulso se representa como un calentamiento resistivo de 90 s hacia 44 °C.
+- **Conjetura 2.** Una membrana se considera regenerada cuando la impedancia vuelve a 1100 Ohm o menos. La degradación térmica se registra cuando la matriz supera 45 °C. El "pulso resonante" de la Matriz se implementa como un pulso resistivo: un calentamiento de la matriz de 90 s hacia 44 °C (acción `APLICAR_PULSO_RESISTIVO`). La frecuencia del pulso (Hz) no se modela.
 - **Conjetura 3.** La humedad del sotobosque no se simula de forma directa. Se usa como aproximación la regla de no extraer agua con humedad ambiente menor que 30 %, junto con el tope de extracción del 33 %. La orientación del colector (20° al norte) no se modela.
 
 ---

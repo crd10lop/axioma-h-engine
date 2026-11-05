@@ -324,6 +324,7 @@ def test_glosario_contiene_los_terminos_requeridos():
         "tope ecológico",
         "humedad relativa",
         "integridad de la membrana",
+        "control basado en reglas",
         "control neuro-simbólico",
         "temporizador fijo",
         "supervisión humana",
@@ -342,3 +343,26 @@ def test_lista_markdown():
 def test_lista_markdown_vacia():
     resultado = contenido.lista_markdown([])
     assert resultado == ""
+
+
+@pytest.mark.parametrize(
+    "texto",
+    [
+        " ".join(contenido.RESPUESTA_PRELIMINAR),
+        contenido.CONJETURAS[2]["lectura"],
+        contenido.PERSPECTIVAS["social"],
+    ],
+)
+def test_resultados_se_atribuyen_al_control_basado_en_reglas(texto):
+    assert "control basado en reglas" in texto
+
+
+def test_glosario_aclara_la_equivalencia_con_el_modo_neuro_simbolico():
+    assert "NEURO_SIMBOLICO" in contenido.GLOSARIO["control neuro-simbólico"]
+    assert "primera etapa de una arquitectura neuro-simbólica" in contenido.GLOSARIO["control basado en reglas"]
+
+
+def test_pregunta_de_investigacion_conserva_la_formulacion_del_equipo():
+    assert contenido.PREGUNTA_INVESTIGACION.startswith(
+        "¿En qué medida un sistema de control neuro-simbólico, evaluado mediante simulación"
+    )

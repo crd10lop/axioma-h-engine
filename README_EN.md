@@ -2,7 +2,7 @@
 
 This is a summary of the main [README.md](README.md), which is written in Spanish and is the authoritative version. All figures below are copied from it.
 
-Axioma-H Engine is a rule-based control engine for passive atmospheric water harvesting nodes. From each node's telemetry (membrane impedance, matrix temperature, heat reserve and relative humidity), the engine decides whether to filter continuously, apply a resistive heat pulse to detach crystallized salt, reduce the flow, or stop extraction to protect the membrane and the ecosystem. A simulator compares this controller with a conventional fixed timer under five reference scenarios for Cabo de la Vela (La Guajira, Colombia).
+Axioma-H Engine is a rule-based control engine, designed as the first stage of a neuro-symbolic architecture, for passive atmospheric water harvesting nodes. From each node's telemetry (membrane impedance, matrix temperature, heat reserve and relative humidity), the engine decides whether to filter continuously, apply a resistive heat pulse to detach crystallized salt, reduce the flow, or stop extraction to protect the membrane and the ecosystem. A simulator compares this controller with a conventional fixed timer under five reference scenarios for Cabo de la Vela (La Guajira, Colombia).
 
 It is developed by team AXIOMA for the Research Fundamentals course at the University of Antioquia (UdeA), Cycle 2.
 
@@ -21,7 +21,7 @@ It is developed by team AXIOMA for the Research Fundamentals course at the Unive
 
 **Working hypothesis.** The neuro-symbolic control keeps a stable flow recovery and a lower accumulated degradation than the timer, and its advantage grows with salinity.
 
-**Nature of the control.** The implemented engine is symbolic: explicit rules evaluated by priority, plus an explicit physical model. The "neural module" of the target architecture is not implemented and is left as future work. "Neuro-symbolic" describes the target architecture, not the current implementation.
+**Nature of the control.** The implemented engine is symbolic: explicit rules evaluated by priority, plus an explicit physical model. The "neural module" of the target architecture is not implemented and is left as future work. "Neuro-symbolic" describes the target architecture, not the current implementation. For compatibility, the API and the dashboard keep the mode name neuro-symbolic (`NEURO_SIMBOLICO`, `modo_neuro_simbolico`) for the rule-based control; in the tables below, "Neuro-symbolic" refers to that mode.
 
 ## Control rules
 
@@ -42,7 +42,7 @@ REGLA_06 is human supervision, set with the optional `anulacion_manual` field of
 
 Two services run separately:
 
-- **Backend (FastAPI, port 8000):** rule engine, physical model, comparative simulator, conjecture verification and robustness analyses (salinity sweep with several seeds and parameter sensitivity).
+- **Backend (FastAPI, port 8000):** rule-based control engine (`backend/motor_reglas.py`, first stage of the neuro-symbolic architecture), physical model, comparative simulator, conjecture verification, community impact and robustness analyses (salinity sweep with several seeds, parameter sensitivity, fog flux calibration and uncertainty propagation).
 - **Frontend (Streamlit, port 8501):** dashboard that consumes the API over HTTP. It has four views: research guide, manual node evaluation, comparative simulation, and answer to the research question.
 
 | Method | Path | Description |
@@ -52,6 +52,7 @@ Two services run separately:
 | POST | `/api/v1/simulacion/ejecutar` | Runs the comparative simulation |
 | POST | `/api/v1/analisis/barrido-salinidad` | Salinity sweep with mean and standard deviation over 1 to 5 seeds |
 | POST | `/api/v1/analisis/sensibilidad` | Re-runs the simulation for several values of pulse efficacy or fog flux |
+| POST | `/api/v1/analisis/incertidumbre` | Samples pulse efficacy and fog flux together and estimates the probability of validating each conjecture |
 
 ## Installation and local use
 
@@ -105,7 +106,7 @@ None of the three conjectures is validated in this run: flow recovery is 88.81 %
 
 ### Conjecture status
 
-- **C3 (territorial knowledge):** the neuro-symbolic mode recorded no ecological violations in any scenario. It is validated in four scenarios with 85 % initial humidity. With 45 % it is not, because the atmospheric resource is insufficient: night yield stays between 4 and 6 L/m²/night, and the timer does not reach 12 L/m²/night either.
+- **C3 (territorial knowledge):** the rule-based control recorded no ecological violations in any scenario. It is validated in four scenarios with 85 % initial humidity. With 45 % it is not, because the atmospheric resource is insufficient: night yield stays between 4 and 6 L/m²/night, and the timer does not reach 12 L/m²/night either.
 - **C1 (efficiency):** energy savings meet the threshold in almost all cases, but flow recovery after the pulse stays below 90 %.
 - **C2 (self-repair):** the absence of thermal degradation holds in the model (0 % in all ten scenarios); dissolution efficacy cannot be verified by simulation because it depends on pulse efficacy, an assumed parameter.
 - **Required efficacy:** validating C1 requires a 90 s pulse at 44 °C to remove at least 78 % of the salt crust (`eta_max` >= 0.94); validating C2 requires at least 81 % (`eta_max` >= 0.97). This is the priority laboratory measurement for the next cycle.
@@ -121,7 +122,7 @@ None of the three conjectures is validated in this run: flow recovery is 88.81 %
 | 120 | 88.02 / 78.02 | 0.408 / 3.070 |
 | 240 | 85.92 / 63.21 | 1.073 / 4.117 |
 
-The neuro-symbolic control reduces accumulated degradation by 74 % to 99 % at every level. Its recovery stays stable, while the timer's falls with salinity: the timer recovers more at low salinity, because it cleans nearly clean membranes, and the neuro-symbolic control overtakes it from 60 Ohm per L/m².
+The rule-based control reduces accumulated degradation by 74 % to 99 % at every level. Its recovery stays stable, while the timer's falls with salinity: the timer recovers more at low salinity, because it cleans nearly clean membranes, and the neuro-symbolic control overtakes it from 60 Ohm per L/m².
 
 ### Ecological cap versus control logic
 
@@ -158,6 +159,15 @@ The 33 % cap comes from the team's formulation of Conjecture 3 (narrative of Cyc
 - The reference climate uses idealized daily cycles with Gaussian noise.
 - The assumed fog flux is optimistic compared with the literature (see references).
 - This is an analytical proof of concept, roughly TRL 2-3, with no physical prototype. Prior consultation with Wayuu communities (ILO Convention 169, Colombian Law 21 of 1991) is required before any pilot in their territory and has not been carried out.
+
+## Version history
+
+| Version | Content |
+|---|---|
+| 0.1.0 | Rule-based control engine, comparative simulation against the fixed timer, verification of the three conjectures, Streamlit dashboard and deployment on Render. |
+| 0.2.0 | Robustness analyses (salinity sweep with several seeds and sensitivity), causes of non-validation, timer with ecological cap, community impact, conservative human supervision (REGLA_06) and uncertainty propagation with the calibrated fog flux. |
+
+The 0.2.0 features were added incrementally while the service still reported 0.1.0; the version number was updated when the set was closed.
 
 ## Documentation
 

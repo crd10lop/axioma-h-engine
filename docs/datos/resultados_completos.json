@@ -1,6 +1,6 @@
 {
   "condiciones": {
-    "version_servicio": "0.1.0",
+    "version_servicio": "0.2.0",
     "escenarios": {
       "duracion_horas": 24,
       "tasa_salinizacion": "ALTA",

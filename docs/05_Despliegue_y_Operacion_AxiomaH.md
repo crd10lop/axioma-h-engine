@@ -108,6 +108,7 @@ El script imprime una tabla con el resultado, la duración y el detalle de cada 
 | Fecha | Estado del repositorio | Resultado |
 |---|---|---|
 | 2026-11-04 | `main` en el commit `f89a294`; la API reporta la versión 0.1.0 | 19 de 19 comprobaciones exitosas, incluidos los endpoints de análisis. El barrido de salinidad con una semilla respondió en 2.3 s. |
+| 2026-11-04 | Commit "docs: alinear terminología, versión 0.2.0 y cifras con la verificación integral", sobre `902a4d6`; la API reporta la versión 0.2.0 | Verificación local, con la API y el dashboard en el equipo: 22 de 22 comprobaciones exitosas, y recorrido de las cuatro vistas del dashboard con `streamlit.testing.v1.AppTest` (simulación, barrido, sensibilidad e incertidumbre) sin excepciones. La verificación contra los servicios publicados se completa después del despliegue de este commit. |
 
 Después de cada despliegue relevante se recomienda repetir el script y actualizar esta tabla.
 

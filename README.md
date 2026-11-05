@@ -5,9 +5,9 @@
 [![Cobertura](https://sonarcloud.io/api/project_badges/measure?project=crd10lop_axioma-h-engine&metric=coverage)](https://sonarcloud.io/summary/new_code?id=crd10lop_axioma-h-engine)
 [![Fiabilidad](https://sonarcloud.io/api/project_badges/measure?project=crd10lop_axioma-h-engine&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=crd10lop_axioma-h-engine)
 
-Axioma-H Engine es un motor de control neuro-simbólico para nodos de captación pasiva de agua atmosférica. A partir de la telemetría de cada nodo (impedancia de la membrana, temperatura de la matriz, reserva de calor y humedad relativa), el motor decide si filtrar de forma continua, aplicar un pulso resistivo para desprender la sal cristalizada, reducir el caudal o detener la extracción para proteger la membrana y el ecosistema.
+Axioma-H Engine es un motor de control basado en reglas, diseñado como primera etapa de una arquitectura neuro-simbólica, para nodos de captación pasiva de agua atmosférica. A partir de la telemetría de cada nodo (impedancia de la membrana, temperatura de la matriz, reserva de calor y humedad relativa), el motor decide si filtrar de forma continua, aplicar un pulso resistivo para desprender la sal cristalizada, reducir el caudal o detener la extracción para proteger la membrana y el ecosistema.
 
-El proyecto incluye una API REST y un dashboard simulador. El simulador compara el control neuro-simbólico con un temporizador fijo tradicional bajo cinco escenarios ambientales de referencia de Cabo de la Vela (La Guajira). Con esa comparación se verifican las tres conjeturas de investigación del Ciclo 2.
+El proyecto incluye una API REST y un dashboard simulador. El simulador compara el control basado en reglas con un temporizador fijo tradicional bajo cinco escenarios ambientales de referencia de Cabo de la Vela (La Guajira). Con esa comparación se verifican las tres conjeturas de investigación del Ciclo 2.
 
 Lo desarrolla el equipo AXIOMA en el curso Fundamentos de Investigación de la Universidad de Antioquia (UdeA), Ciclo 2.
 
@@ -58,13 +58,13 @@ Se recomienda recorrer el proyecto en este orden:
 
 ## Naturaleza del control
 
-El motor implementado es simbólico: aplica reglas explícitas en orden de prioridad (`backend/motor_reglas.py`) y se apoya en un modelo físico explícito (`backend/modelo_fisico.py`). El "Módulo Neuronal" del diagrama de arquitectura del plan no está implementado y queda como trabajo futuro, en particular para distinguir la impedancia causada por sal de la causada por polvo. El término neuro-simbólico describe la arquitectura objetivo del sistema, no la implementación actual. El detalle está en [docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 4.
+El motor implementado es simbólico: aplica reglas explícitas en orden de prioridad (`backend/motor_reglas.py`) y se apoya en un modelo físico explícito (`backend/modelo_fisico.py`). El "Módulo Neuronal" del diagrama de arquitectura del plan no está implementado y queda como trabajo futuro, en particular para distinguir la impedancia causada por sal de la causada por polvo. El término neuro-simbólico describe la arquitectura objetivo del sistema, no la implementación actual. Por compatibilidad, la API y el dashboard conservan para el control basado en reglas el nombre de modo neuro-simbólico (`NEURO_SIMBOLICO`, `modo_neuro_simbolico`): en las tablas de este documento, "Neuro-simbólico" designa ese modo. El detalle está en [docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 4.
 
 ## Arquitectura
 
 El sistema se compone de dos servicios que se ejecutan por separado:
 
-- **Backend (FastAPI, puerto 8000):** contiene el motor de reglas, el modelo físico, el simulador comparativo, la verificación de conjeturas y el análisis de robustez (barrido de salinidad y sensibilidad).
+- **Backend (FastAPI, puerto 8000):** contiene el motor de reglas, el modelo físico, el simulador comparativo, la verificación de conjeturas, el impacto comunitario y el análisis de robustez (barrido de salinidad, sensibilidad, calibración e incertidumbre).
 - **Frontend (Streamlit, puerto 8501):** dashboard que consume la API por HTTP. No importa código del backend, de modo que ambos servicios pueden desplegarse en máquinas distintas.
 
 ```
@@ -74,20 +74,31 @@ axioma-h-engine/
 │   ├── config.py           Umbrales de control y parámetros físicos del modelo
 │   ├── schemas.py          Modelos Pydantic v2 y enumerados
 │   ├── modelo_fisico.py    Ecuaciones compartidas: pulso, energía y captación
-│   ├── motor_reglas.py     Reglas neuro-simbólicas en orden de prioridad
+│   ├── motor_reglas.py     Motor de control basado en reglas (primera etapa de la arquitectura neuro-simbólica)
 │   ├── simulador.py        Simulación comparativa y verificación de conjeturas
 │   ├── analisis.py         Barrido, sensibilidad, calibración e incertidumbre con parámetros inmutables
 │   ├── impacto.py          Impacto comunitario estimado con estándares de la OMS y Sphere
 │   └── routers/
 │       ├── nodo.py         POST /api/v1/nodo/evaluar
 │       ├── simulacion.py   POST /api/v1/simulacion/ejecutar
-│       └── analisis.py     POST /api/v1/analisis/barrido-salinidad y /sensibilidad
+│       └── analisis.py     POST /api/v1/analisis/barrido-salinidad, /sensibilidad e /incertidumbre
 ├── frontend/
 │   ├── app.py              Dashboard Streamlit
 │   ├── config.py           URL de la API y tiempos de espera
 │   ├── cliente_api.py      Cliente HTTP con manejo de errores
-│   └── transformaciones.py Conversión de respuestas en DataFrames
+│   ├── contenido.py        Textos de la vista de investigación, glosario y recorrido guiado
+│   └── transformaciones.py Conversión de respuestas en DataFrames y textos
 ├── tests/                  Pruebas con pytest
+│   ├── test_motor_reglas.py      Reglas, prioridad y supervisión humana
+│   ├── test_modelo_fisico.py     Ecuaciones del modelo físico
+│   ├── test_simulador.py         Simulación, modos de control y verificación de conjeturas
+│   ├── test_analisis.py          Barrido, sensibilidad, calibración e incertidumbre
+│   ├── test_impacto.py           Impacto comunitario
+│   ├── test_api.py               Endpoints de la API
+│   ├── test_cliente_api.py       Cliente HTTP con requests simulado
+│   ├── test_transformaciones.py  Transformaciones del dashboard
+│   ├── test_contenido.py         Textos de la vista de investigación
+│   └── test_scripts.py           Funciones de los scripts de scripts/
 ├── docs/                                            Documentación, en orden de lectura
 │   ├── 01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md   Pregunta, conjeturas, variables, perspectivas e hitos
 │   ├── 02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md        Especificación de la API y estado de la implementación
@@ -99,10 +110,14 @@ axioma-h-engine/
 ├── scripts/
 │   ├── verificar_despliegue.py         Comprobaciones contra el despliegue publicado
 │   └── generar_resultados_referencia.py Datos de referencia sin red ni API
+├── .github/workflows/ci.yml  Pruebas, cobertura y análisis de SonarQube Cloud
 ├── README_EN.md            Resumen en inglés
+├── LICENSE                 Licencia MIT
 ├── pytest.ini
 ├── render.yaml             Blueprint de despliegue en Render
-└── requirements.txt
+├── sonar-project.properties Configuración del análisis de SonarQube Cloud
+├── requirements.txt
+└── requirements-dev.txt    Dependencias de pruebas y cobertura
 ```
 
 ## Requisitos
@@ -173,7 +188,7 @@ $env:AXIOMA_API_URL = "http://192.168.1.50:8000"
 streamlit run frontend/app.py
 ```
 
-Los tiempos de espera son de 75 s para la verificación de salud (para tolerar la reactivación de un servicio suspendido; configurable con `AXIOMA_TIMEOUT_SALUD_SEG`), 10 s para la evaluación de nodos y 60 s para la simulación (`frontend/config.py`).
+Los tiempos de espera son de 75 s para la verificación de salud (para tolerar la reactivación de un servicio suspendido; configurable con `AXIOMA_TIMEOUT_SALUD_SEG`), 10 s para la evaluación de nodos, 60 s para la simulación y 120 s para los análisis de robustez (`TIMEOUT_ANALISIS_SEG`; barrido, sensibilidad e incertidumbre), definidos en `frontend/config.py`.
 
 ## Despliegue
 
@@ -210,7 +225,7 @@ Los datos que no cumplen la validación devuelven `422` con el detalle de cada c
 {
   "estado": "SALUDABLE",
   "servicio": "Axioma-H Engine",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "timestamp": "2026-10-28T03:01:23.035280+00:00",
   "tiempo_actividad_seg": 0.05
 }
@@ -420,7 +435,7 @@ Todas las corridas usan las mismas condiciones:
 
 ### Interpretación de los resultados
 
-- **C3 (saber territorial):** el modo neuro-simbólico no registró violaciones ecológicas en ningún escenario. La conjetura se valida en cuatro escenarios con 85 % de humedad inicial. Con 45 % no se valida, porque el recurso atmosférico no alcanza: el rendimiento nocturno queda entre 4 y 6 L/m²/noche, y el temporizador tampoco llega a 12 L/m²/noche.
+- **C3 (saber territorial):** el control basado en reglas no registró violaciones ecológicas en ningún escenario. La conjetura se valida en cuatro escenarios con 85 % de humedad inicial. Con 45 % no se valida, porque el recurso atmosférico no alcanza: el rendimiento nocturno queda entre 4 y 6 L/m²/noche, y el temporizador tampoco llega a 12 L/m²/noche.
 - **C1 (eficiencia):** el ahorro de energía cumple en casi todos los casos, pero la recuperación de caudal tras el pulso queda bajo el 90 %.
 - **C2 (autorreparación):**
   - la ausencia de degradación térmica se sostiene en el modelo: 0 % en los diez escenarios;
@@ -441,7 +456,7 @@ Responde la pregunta de investigación. Usa `DIA_NORMAL` e `INCRUSTACION_SALINA_
 | 120 | 88.02 / 78.02 | 0.408 / 3.070 |
 | 240 | 85.92 / 63.21 | 1.073 / 4.117 |
 
-El control neuro-simbólico reduce la degradación acumulada entre 74 % y 99 % en todos los niveles. Su recuperación se mantiene estable, mientras que la del temporizador cae con la salinidad: el temporizador recupera más con salinidad baja, porque limpia membranas casi limpias, y el neuro-simbólico lo supera desde 60 Ohm por L/m². El método y las limitaciones están en [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 7.
+El control basado en reglas reduce la degradación acumulada entre 74 % y 99 % en todos los niveles. Su recuperación se mantiene estable, mientras que la del temporizador cae con la salinidad: el temporizador recupera más con salinidad baja, porque limpia membranas casi limpias, y el neuro-simbólico lo supera desde 60 Ohm por L/m². El método y las limitaciones están en [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 7.
 
 ### Tope ecológico frente a lógica de control
 
@@ -483,7 +498,7 @@ El flujo de niebla supuesto, 6.0 L/m²/h, da 31.8 L/m²/día en Día normal con 
 | Tormenta de arena | 0.00 | 0.00 | 0.00 | 20 de 20 | 97.2 % a 98.6 % |
 | Tormenta de sal y calor extremo | 0.10 | 0.05 | 0.00 | 14 de 20 | 98.6 % a 100 % |
 
-Las probabilidades son proporciones del espacio de parámetros supuesto, no predicciones de campo. Con menos niebla hay menos sal y muchas corridas no aplican pulsos, de modo que C1 y C2 quedan sin datos en lugar de refutarse. La menor degradación del control neuro-simbólico se mantiene en todas las muestras. El método y la interpretación están en [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), secciones 8.6 y 8.7.
+Las probabilidades son proporciones del espacio de parámetros supuesto, no predicciones de campo. Con menos niebla hay menos sal y muchas corridas no aplican pulsos, de modo que C1 y C2 quedan sin datos en lugar de refutarse. La menor degradación del control basado en reglas se mantiene en todas las muestras. El método y la interpretación están en [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), secciones 8.6 y 8.7.
 
 ### Indicadores informativos y causas de no validación
 
@@ -513,6 +528,17 @@ El artefacto es una prueba de concepto analítica por simulación, equivalente d
 
 - Alcance y madurez: [docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2.8.
 - Perspectivas social, ética, cultural y humana, incluida la consulta previa pendiente antes de cualquier piloto en territorio Wayuu: [docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2.7.
+
+## Historial de versiones
+
+La versión del servicio se publica en `GET /` y `GET /api/v1/health` (`VERSION_SERVICIO` en `backend/main.py`) y se registra en `docs/datos/resultados_completos.json`.
+
+| Versión | Contenido |
+|---|---|
+| 0.1.0 | Motor de control basado en reglas, simulación comparativa con el temporizador fijo y verificación de las tres conjeturas, dashboard Streamlit y despliegue en Render. |
+| 0.2.0 | Análisis de robustez (barrido de salinidad con varias semillas y sensibilidad), causas de no validación e indicadores informativos, temporizador con tope ecológico, impacto comunitario, supervisión humana conservadora (REGLA_06) y propagación de la incertidumbre con el flujo de niebla calibrado. |
+
+Las funciones de 0.2.0 se incorporaron de forma incremental mientras el servicio todavía reportaba 0.1.0, como muestra el registro de verificaciones de [docs/05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md), sección 4.3. El número de versión se actualizó al cerrar el conjunto.
 
 ## Referencias y créditos
 

@@ -35,13 +35,13 @@ HIPOTESIS = (
 )
 
 RESPUESTA_PRELIMINAR: list[str] = [
-    "Desgaste. El control neuro-simbólico reduce la degradación acumulada entre 74 % y 99 % frente "
-    "al temporizador en los seis niveles de salinidad. La reducción es mayor con salinidad baja, "
+    "Desgaste. El control basado en reglas (modo neuro-simbólico en la API y el dashboard) reduce la "
+    "degradación acumulada entre 74 % y 99 % frente al temporizador en los seis niveles de salinidad. La reducción es mayor con salinidad baja, "
     "donde el temporizador aplica pulsos que no hacen falta.",
-    "Recuperación. El control neuro-simbólico mantiene la recuperación entre 85.9 % y 88.9 % en todos "
+    "Recuperación. El control basado en reglas mantiene la recuperación entre 85.9 % y 88.9 % en todos "
     "los niveles. La del temporizador cae de 95.8 % a 63.2 % a medida que aumenta la salinidad. Con "
     "salinidad baja el temporizador recupera más, porque limpia una membrana casi limpia. Desde una "
-    "carga de 60 Ohm por L/m² el neuro-simbólico lo supera, y la diferencia llega a 22.7 puntos con "
+    "carga de 60 Ohm por L/m² el control basado en reglas lo supera, y la diferencia llega a 22.7 puntos con "
     "la carga más alta.",
     "La respuesta es condicional: la ventaja en recuperación aparece y crece con la salinidad, "
     "mientras que la reducción del desgaste se observa en todos los niveles. Estos resultados "
@@ -89,7 +89,7 @@ CONJETURAS: list[dict[str, str]] = [
         "Limitar la captación al 33 % de la niebla circulante orientando el cubo 20° al norte "
         "preserva la humedad del suelo y la flora local.",
         "Cero violaciones ecológicas y rendimiento hídrico >= 12 L/m² por noche.",
-        "Validada en cuatro escenarios con 85 % de humedad inicial. El modo neuro-simbólico no "
+        "Validada en cuatro escenarios con 85 % de humedad inicial. El control basado en reglas no "
         "registró violaciones ecológicas en ningún escenario. Con 45 % no se valida porque el "
         "recurso atmosférico no alcanza: el rendimiento nocturno queda entre 4 y 6 L/m² por noche, "
         "y el temporizador tampoco llega a 12.",
@@ -228,7 +228,7 @@ PERSPECTIVAS: dict[str, str] = {
         "El proyecto se orienta a Cabo de la Vela, en la Alta Guajira, un territorio árido con "
         "escasez hídrica. El control es descentralizado: cada uno de los 8 nodos decide con su "
         "propia telemetría. Respetar el tope ecológico tiene un costo: con humedad inicial de 85 %, "
-        "el modo neuro-simbólico capta entre 23 % y 27 % menos agua que el temporizador. Cada "
+        "el control basado en reglas capta entre 23 % y 27 % menos agua que el temporizador. Cada "
         "simulación estima además el impacto comunitario: con humedad inicial de 85 %, la red de 8 m² "
         "abastecería entre 7.5 y 12.7 personas al nivel de acceso básico de la OMS (20 L por persona "
         "al día), según el escenario. Es un indicador informativo que no interviene en la validación."
@@ -321,9 +321,15 @@ GLOSARIO: dict[str, str] = {
         f"por la exposición a {config.UMBRAL_TEMPERATURA_CORTE_C:g} °C o más y por el tiempo con "
         "impedancia alta. Su complemento es la degradación acumulada."
     ),
+    "control basado en reglas": (
+        "Control que evalúa la telemetría de cada nodo con reglas explícitas en orden de prioridad. Es la "
+        "implementación del Ciclo 2 y la primera etapa de una arquitectura neuro-simbólica; el componente "
+        "neuronal queda como trabajo futuro."
+    ),
     "control neuro-simbólico": (
-        "Modo de control que evalúa la telemetría de cada nodo con reglas en orden de prioridad. En "
-        "el Ciclo 2 la implementación es simbólica; el componente neuronal queda como trabajo futuro."
+        "Arquitectura objetivo del proyecto, que combina reglas explícitas con un componente neuronal. Por "
+        "compatibilidad, la API y el dashboard usan este nombre (modo NEURO_SIMBOLICO) para el control "
+        "basado en reglas, que es su primera etapa."
     ),
     "temporizador fijo": (
         "Control tradicional de comparación: aplica un pulso cada 120 min sin leer sensores, con una "
