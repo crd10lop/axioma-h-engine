@@ -814,6 +814,26 @@ La sección 8.8 muestra que la reducción del desgaste no depende del flujo de n
 - **Magnitud.** Con el flujo supuesto, la reducción mínima va de 61.5 % a 83.7 % según los dos parámetros. Más fatiga reduce la ventaja (con 0.05 % por °C y min, 76.3 %, 73.9 % y 69.7 % con fatigas de 0.01, 0.02 y 0.04 %), porque el control basado en reglas también pulsa, y más en los niveles de salinidad altos. Más degradación térmica la aumenta (con fatiga de 0.02 %, 66.4 %, 73.9 % y 82.0 % con 0.025, 0.05 y 0.10), porque solo el temporizador lleva la matriz por encima de 45 °C (sección 7.4). La combinación menos favorable, fatiga doble con degradación térmica a la mitad, da el mínimo de 61.5 %.
 - **Flujo calibrado.** Con 1.83 L/m²/h la reducción es de 86.6 % a 100 %: el control basado en reglas aplica pocos pulsos, y en los niveles sin pulsos su membrana no se degrada.
 - **Alcance.** El análisis usa una semilla y un rango de mitad a doble que también es supuesto. No mide cuál es la fatiga real de un pulso: esa medición sigue pendiente (ciclos repetidos de pulso a 44 °C sobre una muestra de membrana). Lo que muestra es que la conclusión sobre el desgaste no depende de que esos dos valores sean exactos dentro de un factor de 2.
+- **Otras semillas.** Repetida con las semillas 1, 2 y 3 (media de las tres, `RobustezDesgasteConfig(semillas=[1, 2, 3])`), la robustez del desgaste da una reducción de 61.7 % a 100 % (61.74 % a 100 %), con menor desgaste del control basado en reglas en los seis puntos de las 18 combinaciones (108 de 108). La menor reducción aparece en la misma combinación que con la semilla 42: flujo de 6.0 L/m²/h, fatiga de 0.04 % por pulso y degradación térmica de 0.025 % por °C y minuto (61.7 % a 97.1 %). En el dashboard la robustez del desgaste se ejecuta con una semilla para no superar el tiempo de espera del plan gratuito; las semillas 1 a 3 se ejecutan desde la API o con `ejecutar_robustez_desgaste`.
+- **Fatiga de quiebre.** En la combinación menos favorable de la grilla (flujo de 6.0 L/m²/h y degradación térmica de 0.025 % por °C y minuto, con eficacia de 0.90, humedad inicial de 85 % y semilla 42), se buscó con `_combinacion_desgaste` y copias de `ParametrosModelo`, sin modificar `backend/config.py`, la menor fatiga por pulso con la que el control basado en reglas deja de degradarse menos que el temporizador en al menos uno de los seis puntos: empezando en `[0.04, 0.08]` %, duplicando el extremo superior hasta encontrar el quiebre o llegar a 2.0 % y refinando por bisección (tolerancia de 0.0005 puntos de fatiga, máximo 40 iteraciones). La conclusión no se invierte hasta 2.0 % por pulso, que es 100 veces el valor supuesto (0.02 %): incluso con 2.0 % de fatiga por pulso, el control basado en reglas se degrada menos en los seis niveles de salinidad, con una reducción de 10.2 % a 91.3 %, porque la pérdida de integridad reduce el caudal filtrado y la sal acumulada por paso (de 97 a 86 pulsos en el nivel de 240 Ohm por L/m², frente a los 88 del temporizador). Si la fatiga medida en el ensayo de ciclos a 44 °C superara el punto en que la reducción deja de ser positiva, la conclusión sobre el desgaste se invertiría; ese umbral es el criterio de refutación del ensayo de fatiga, y en el modelo está por encima de 2.0 % por pulso. Es un análisis exploratorio reproducible con las funciones del backend:
+
+  ```python
+  from backend.analisis import _combinacion_desgaste, ejecutar_robustez_desgaste
+  from backend.schemas import RobustezDesgasteConfig
+
+  semillas_1_a_3 = ejecutar_robustez_desgaste(RobustezDesgasteConfig(semillas=[1, 2, 3]))
+  cfg = RobustezDesgasteConfig()
+  inferior, superior = 0.04, 0.08
+  while superior < 2.0 and _combinacion_desgaste(cfg, 6.0, superior, 0.025).puntos_con_menor_desgaste == 6:
+      inferior, superior = superior, min(2.0, superior * 2.0)
+  if _combinacion_desgaste(cfg, 6.0, superior, 0.025).puntos_con_menor_desgaste < 6:
+      for _ in range(40):
+          if superior - inferior <= 0.0005:
+              break
+          medio = (inferior + superior) / 2.0
+          inferior, superior = (medio, superior) if _combinacion_desgaste(cfg, 6.0, medio, 0.025).puntos_con_menor_desgaste == 6 else (inferior, medio)
+  print(semillas_1_a_3.reduccion_desgaste_min_pct, _combinacion_desgaste(cfg, 6.0, superior, 0.025))
+  ```
 
 ### 8.12 Calibración del flujo para otro sitio
 

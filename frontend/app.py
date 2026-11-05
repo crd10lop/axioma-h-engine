@@ -1040,11 +1040,12 @@ def seccion_robustez_desgaste(api_disponible: bool) -> None:
     st.markdown("**Robustez del desgaste frente a la fatiga y la degradación térmica**")
     st.caption(
         "Repite el barrido con el flujo supuesto y el calibrado máximo, y con la mitad, el valor supuesto y el "
-        "doble de la fatiga por pulso y de la degradación térmica. Usa la humedad inicial y las semillas de la "
-        "robustez."
+        "doble de la fatiga por pulso y de la degradación térmica. Usa la humedad inicial de la robustez y una "
+        "semilla, para respetar el tiempo de espera del despliegue; las semillas 1 a 3 se pueden ejecutar con la "
+        "API (docs/04, sección 8.11)."
     )
     if st.button("Ejecutar robustez del desgaste", disabled=not api_disponible):
-        carga = tr.configuracion_robustez(st.session_state.rob_humedad, st.session_state.rob_semillas)
+        carga = tr.configuracion_robustez_desgaste(st.session_state.rob_humedad, st.session_state.rob_semillas)
         ejecutar_analisis(
             robustez_desgaste_en_cache, carga, "robustez_desgaste",
             "Repitiendo el barrido con 18 combinaciones de fatiga y degradación térmica...",

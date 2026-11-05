@@ -109,7 +109,7 @@ All figures come from model runs; their single source is [docs/04](docs/04_Model
 - **Conjectures.** Conjectures 1 and 2 depend on pulse efficacy, which must be measured (0.94 and 0.97 would validate them, section 6.2); Conjecture 3 is not validated with the calibrated flux (section 8.6).
 - **People.** Supplying 50 people with 20 L per day would take 32 nodes of 1 m² with the assumed flux and 100 to 332 with the calibrated flux, in line with the 100 to 333 m² from the literature (section 7.7).
 
-The answer is conditional: the wear reduction is robust, and the recovery advantage appears only above a daily incrustation of about 1633 to 1867 Ohm/day. This leads to the derived hypothesis H1-Cycle 3 (docs/04, section 8.9).
+The answer is conditional: the wear reduction is robust, and the recovery advantage appears only above a daily incrustation of about 1633 to 1867 Ohm/day (a range estimated by interpolation: each combination's crossing lies somewhere between 1171 and 2365 Ohm/day). This leads to the derived hypothesis H1-Cycle 3 (docs/04, section 8.9).
 
 The 33 % cap comes from the team's formulation of Conjecture 3 (narrative of Cycle 1, "El Axioma del Silencio"). It is neither documented Wayuu knowledge nor a criterion taken from the ecological literature, and it must be validated with the communities. A four-step co-creation protocol is proposed for Cycle 3: prior consultation, community validation of the cap and the ecological pause, translation of the interface with Wayuu translators, and governance rules for the device and the data (docs/01, section 2.7).
 

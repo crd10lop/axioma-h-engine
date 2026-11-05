@@ -42,7 +42,8 @@ TESIS = (
     "niveles de salinidad y con todos los valores evaluados de flujo de niebla y eficacia del pulso, entre "
     "73.3 % y 100 %, y también con la mitad y el doble de la fatiga por pulso y de la degradación térmica "
     "supuestas, entre 61.5 % y 100 %. Su ventaja en recuperación es condicional: no depende de la carga salina por litro "
-    "sino de la incrustación diaria, y aparece solo por encima de unos 1633 a 1867 Ohm por día, que con "
+    "sino de la incrustación diaria, y aparece solo por encima de unos 1633 a 1867 Ohm por día "
+    "(un rango estimado por interpolación: el cruce de cada combinación está en algún punto entre 1171 y 2365 Ohm por día), que con "
     "rendimientos de niebla como los de la literatura solo se alcanzan con la salinidad más alta."
 )
 
@@ -50,7 +51,8 @@ TESIS = (
 HIPOTESIS_DERIVADA = (
     "H1-Ciclo 3. La recuperación tras pulso del control basado en reglas supera a la del temporizador "
     "cuando la incrustación diaria de la membrana, el aumento de impedancia por sal en un día, supera un "
-    "umbral situado en el modelo entre 1633 y 1867 Ohm por día, cualquiera sea la combinación de flujo "
+    "umbral situado en el modelo entre 1633 y 1867 Ohm por día, rango que el modelo estima por interpolación "
+    "y que la medición debe precisar, cualquiera sea la combinación de flujo "
     "de niebla y carga salina por litro que la produzca. Se propone para ponerla a prueba en el Ciclo 3."
 )
 
@@ -288,7 +290,9 @@ SUPUESTOS_CLAVE: list[dict[str, str]] = [
         "los 108 puntos evaluados. Duplicar la fatiga baja la reducción mínima de 73.9 % a 69.7 % con el flujo "
         "supuesto, y a 61.5 % si además la degradación térmica es la mitad: la dirección no cambia, la "
         "magnitud sí (docs/04, sección 8.11)."),
-        "Pérdida de función de una membrana tras ciclos repetidos de pulso a 44 °C en laboratorio.",
+        ("Pérdida de función de una membrana tras ciclos repetidos de pulso a 44 °C en laboratorio. "
+        "La conclusión sobre el desgaste se mantiene hasta una fatiga de 2.0 % por pulso, 100 veces la "
+        "supuesta (docs/04, sección 8.11)."),
     ),
     _supuesto(
         "Tope ecológico de extracción",

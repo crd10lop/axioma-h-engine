@@ -12,6 +12,10 @@ TIMEOUT_EVALUACION_SEG = 10  # s. Evaluación de nodos.
 TIMEOUT_SIMULACION_SEG = 60  # s. Simulación comparativa.
 TIMEOUT_ANALISIS_SEG = 120  # s. Barrido, robustez, sensibilidad, incertidumbre, dimensionamiento y calibración.
 
+# Limita la robustez del desgaste del dashboard a una semilla para respetar TIMEOUT_ANALISIS_SEG
+# en el plan gratuito; la API acepta hasta 3 (backend/schemas.py, RobustezDesgasteConfig).
+MAXIMO_SEMILLAS_ROBUSTEZ_DESGASTE = 1
+
 COMANDO_BACKEND = "uvicorn backend.main:app --reload --port 8000"
 
 # Indica si el dashboard apunta a una API en el equipo local.

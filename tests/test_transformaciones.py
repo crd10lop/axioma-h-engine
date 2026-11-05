@@ -964,6 +964,13 @@ def _combinacion_desgaste(reduccion_min, puntos_menor=6):
     }
 
 
+@pytest.mark.parametrize("numero_semillas", [0, 1, 3])
+def test_configuracion_robustez_desgaste_acota_a_una_semilla(numero_semillas):
+    carga = tr.configuracion_robustez_desgaste(85, numero_semillas)
+    assert carga == {"humedad_ambiente_inicial_pct": 85.0, "semillas": [1]}
+    assert isinstance(carga["humedad_ambiente_inicial_pct"], float)
+
+
 def test_tabla_robustez_desgaste_con_datos_reales(robustez_desgaste_real):
     tabla = tr.tabla_robustez_desgaste(robustez_desgaste_real)
     assert list(tabla.columns) == tr.COLUMNAS_ROBUSTEZ_DESGASTE

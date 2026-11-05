@@ -36,7 +36,7 @@ Todas las cifras salen de ejecuciones del modelo y su fuente única es [docs/04]
 - **Conjeturas.** Las Conjeturas 1 y 2 dependen de la eficacia del pulso, que habría que medir (0.94 y 0.97 para validarlas, §6.2); la Conjetura 3 no se valida con el flujo calibrado (§8.6).
 - **Personas.** Para 50 personas con 20 L al día harían falta 32 nodos de 1 m² con el flujo supuesto, y entre 100 y 332 con el flujo calibrado, en línea con los 100 a 333 m² de la literatura (§7.7).
 
-La respuesta es condicional: la reducción del desgaste es robusta, y la ventaja en recuperación aparece solo por encima de una incrustación diaria de unos 1633 a 1867 Ohm por día. De ahí sale la hipótesis H1-Ciclo 3 ([docs/04](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), §8.9).
+La respuesta es condicional: la reducción del desgaste es robusta, y la ventaja en recuperación aparece solo por encima de una incrustación diaria de unos 1633 a 1867 Ohm por día (un rango estimado por interpolación: el cruce de cada combinación está en algún punto entre 1171 y 2365 Ohm por día). De ahí sale la hipótesis H1-Ciclo 3 ([docs/04](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), §8.9).
 
 ## Cómo leer este artefacto
 

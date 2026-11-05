@@ -423,10 +423,15 @@ INDICADOR_SENSIBILIDAD = {
 }
 
 
+def _configuracion_con_semillas(humedad: float, numero_semillas: int, maximo_semillas: int) -> dict:
+    """Carga con humedad inicial y semillas consecutivas desde 1, acotadas entre 1 y el máximo indicado."""
+    cantidad = max(1, min(maximo_semillas, int(numero_semillas)))
+    return {"humedad_ambiente_inicial_pct": float(humedad), "semillas": list(range(1, cantidad + 1))}
+
+
 def configuracion_barrido(humedad: float, numero_semillas: int) -> dict:
     """Carga del barrido con semillas consecutivas desde 1, acotadas entre 1 y 5."""
-    cantidad = max(1, min(MAXIMO_SEMILLAS, int(numero_semillas)))
-    return {"humedad_ambiente_inicial_pct": float(humedad), "semillas": list(range(1, cantidad + 1))}
+    return _configuracion_con_semillas(humedad, numero_semillas, MAXIMO_SEMILLAS)
 
 
 def configuracion_sensibilidad(parametro: str, escenario: str, humedad: float, tasa: str = "ALTA") -> dict:
@@ -895,8 +900,7 @@ COLUMNAS_ROBUSTEZ = [
 
 def configuracion_robustez(humedad: float, numero_semillas: int) -> dict:
     """Carga de la robustez con semillas consecutivas desde 1, acotadas entre 1 y 3."""
-    cantidad = max(1, min(MAXIMO_SEMILLAS_ROBUSTEZ, int(numero_semillas)))
-    return {"humedad_ambiente_inicial_pct": float(humedad), "semillas": list(range(1, cantidad + 1))}
+    return _configuracion_con_semillas(humedad, numero_semillas, MAXIMO_SEMILLAS_ROBUSTEZ)
 
 
 def _valores_no_nulos(puntos: list[dict], clave: str) -> list[float]:
@@ -1051,6 +1055,11 @@ COLUMNAS_ROBUSTEZ_DESGASTE = [
 CLAVE_FATIGA = "fatiga_por_pulso_pct"
 CLAVE_DEGRADACION_TERMICA = "degradacion_termica_pct_por_c_min"
 CLAVE_REDUCCION_MIN = "reduccion_desgaste_min_pct"
+
+
+def configuracion_robustez_desgaste(humedad: float, numero_semillas: int) -> dict:
+    """Carga de la robustez del desgaste con semillas consecutivas desde 1, acotadas al máximo del dashboard."""
+    return _configuracion_con_semillas(humedad, numero_semillas, config.MAXIMO_SEMILLAS_ROBUSTEZ_DESGASTE)
 
 
 def _fila_robustez_desgaste(combinacion: dict) -> dict:

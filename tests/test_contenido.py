@@ -110,6 +110,7 @@ def test_supuesto_de_fatiga_informa_el_efecto_observado():
     assert "108 puntos" in fatiga["efecto"]
     assert "de 73.9 % a 69.7 %" in fatiga["efecto"]
     assert "docs/04, sección 8.11" in fatiga["efecto"]
+    assert "2.0 % por pulso, 100 veces la supuesta" in fatiga["medicion"]
 
 
 def test_respuesta_preliminar_no_repite_la_tesis():
@@ -139,7 +140,9 @@ def test_recuperacion_coincide_con_docs_01():
     assert FRASE_CRUCE_FLUJO_SUPUESTO in documento
 
 
-@pytest.mark.parametrize("fragmento", ["H1-Ciclo 3", "incrustación diaria", "1633 y 1867 Ohm por día"])
+@pytest.mark.parametrize(
+    "fragmento", ["H1-Ciclo 3", "incrustación diaria", "1633 y 1867 Ohm por día", "interpolación"]
+)
 def test_hipotesis_derivada(fragmento):
     assert fragmento in contenido.HIPOTESIS_DERIVADA
 
@@ -448,7 +451,8 @@ def test_pregunta_de_investigacion_conserva_la_formulacion_del_equipo():
 # Tesis, etiquetas llanas, supuestos y guía por disciplina
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize(
-    "fragmento", ["73.3 % y 100 %", "61.5 % y 100 %", "incrustación diaria", "1633 a 1867 Ohm por día"]
+    "fragmento",
+    ["73.3 % y 100 %", "61.5 % y 100 %", "incrustación diaria", "1633 a 1867 Ohm por día", "1171 y 2365"],
 )
 def test_tesis_usa_las_cifras_de_docs_04(fragmento):
     assert fragmento in contenido.TESIS
