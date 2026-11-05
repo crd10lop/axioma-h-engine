@@ -173,6 +173,8 @@ def test_api_url_se_toma_del_entorno(monkeypatch):
         (cliente_api.ejecutar_incertidumbre, "/api/v1/analisis/incertidumbre"),
         (cliente_api.ejecutar_robustez, "/api/v1/analisis/robustez-respuesta"),
         (cliente_api.dimensionar, "/api/v1/analisis/dimensionamiento"),
+        (cliente_api.ejecutar_robustez_desgaste, "/api/v1/analisis/robustez-desgaste"),
+        (cliente_api.calibrar_flujo, "/api/v1/analisis/calibracion"),
     ],
 )
 def test_analisis_usa_su_ruta_y_timeout(request_simulado, funcion, ruta):
@@ -220,3 +222,18 @@ def test_dimensionar_con_personas_invalidas_reporta_422(request_simulado):
     with pytest.raises(cliente_api.ErrorApiAxioma) as error:
         cliente_api.dimensionar({"personas": 0})
     assert error.value.detalle == ["personas: Input should be greater than or equal to 1"]
+
+
+def test_calibrar_flujo_con_objetivo_inalcanzable_reporta_422_con_el_mensaje(request_simulado):
+    mensaje = "El rendimiento objetivo 40.0 L/m²/día no está en el intervalo alcanzable [0.6713, 31.8254]."
+    request_simulado.return_value = respuesta_simulada(422, {"detail": mensaje})
+    with pytest.raises(cliente_api.ErrorApiAxioma) as error:
+        cliente_api.calibrar_flujo({"rendimiento_objetivo_l_m2_dia": 40.0})
+    assert error.value.codigo_estado == 422
+    assert error.value.detalle == [mensaje]
+
+
+def test_calibrar_flujo_sin_conexion(request_simulado):
+    request_simulado.side_effect = requests.exceptions.ConnectionError("rechazada")
+    with pytest.raises(cliente_api.ErrorApiAxioma, match="No fue posible conectar"):
+        cliente_api.calibrar_flujo({"rendimiento_objetivo_l_m2_dia": 10.0})

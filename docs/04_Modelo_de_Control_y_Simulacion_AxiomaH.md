@@ -1,6 +1,6 @@
 # Modelo de control y simulación del motor Axioma-H
 
-Este documento describe el motor de reglas neuro-simbólico, el simulador comparativo y la forma en que se verifican las conjeturas del Ciclo 2. Los valores de todos los parámetros están en `backend/config.py`. Las ecuaciones compartidas por el motor y el simulador están en `backend/modelo_fisico.py`. Los dos parámetros que admiten análisis de sensibilidad, la eficacia máxima del pulso y el flujo máximo de niebla, se agrupan además en `ParametrosModelo` (`backend/modelo_fisico.py`), que toma por defecto los valores de `backend/config.py`. El barrido de salinidad con varias semillas y la sensibilidad están en `backend/analisis.py` (secciones 6.4 y 7.5), junto con la robustez de la respuesta frente a los parámetros supuestos (sección 8.8) y el dimensionamiento del captador (sección 7.7). El impacto comunitario estimado está en `backend/impacto.py` (sección 7.6). La transferencia del modelo a otro sitio se describe en la sección 8.10.
+Este documento describe el motor de reglas neuro-simbólico, el simulador comparativo y la forma en que se verifican las conjeturas del Ciclo 2. Los valores de todos los parámetros están en `backend/config.py`. Las ecuaciones compartidas por el motor y el simulador están en `backend/modelo_fisico.py`. Los parámetros supuestos que se varían en los análisis, la eficacia máxima del pulso, el flujo máximo de niebla y, desde la versión 0.4.0, la fatiga por pulso y la degradación térmica, se agrupan además en `ParametrosModelo` (`backend/modelo_fisico.py`), que toma por defecto los valores de `backend/config.py`. El barrido de salinidad con varias semillas y la sensibilidad están en `backend/analisis.py` (secciones 6.4 y 7.5), junto con la robustez de la respuesta frente a los parámetros supuestos (sección 8.8), la robustez del desgaste (sección 8.11), la calibración del flujo para otro sitio (sección 8.12) y el dimensionamiento del captador (sección 7.7). El impacto comunitario estimado está en `backend/impacto.py` (sección 7.6). La transferencia del modelo a otro sitio se describe en la sección 8.10.
 
 Los documentos de referencia son el PRD de la API ([02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md](02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md)) y la Matriz de Operacionalización ([01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md)). Las decisiones de la sección 1 resuelven las diferencias entre ambos.
 
@@ -389,7 +389,7 @@ Con humedad inicial de 45 % hay menos agua captada y, por tanto, menos sal. El m
 ### 7.5 Limitaciones
 
 - La recuperación tras pulso compara momentos distintos en cada modo: el neuro-simbólico mide justo después de un pulso disparado por impedancia alta, y el temporizador mide después de pulsos a intervalos fijos. Por eso, con salinidad baja, un valor alto del temporizador no indica una membrana mejor mantenida, sino una membrana que no necesitaba limpieza.
-- Los valores absolutos dependen de parámetros supuestos, en especial la eficacia máxima del pulso (0.90), la fatiga por pulso y la degradación térmica (sección 3.4). La dirección de los resultados se explica por la lógica de control (pulsar por demanda frente a pulsar por horario, y el límite de 45 °C), pero su magnitud debe calibrarse con mediciones.
+- Los valores absolutos dependen de parámetros supuestos, en especial la eficacia máxima del pulso (0.90), la fatiga por pulso y la degradación térmica (sección 3.4). La dirección de los resultados se explica por la lógica de control (pulsar por demanda frente a pulsar por horario, y el límite de 45 °C), pero su magnitud debe calibrarse con mediciones. La sección 8.11 varía la fatiga por pulso y la degradación térmica entre la mitad y el doble de su valor: la reducción del desgaste sigue siendo positiva en todos los puntos, y su mínimo va de 61.5 % a 83.7 % con el flujo supuesto.
 - Las cifras de 7.3 corresponden a una semilla. El barrido con varias semillas ya está disponible en la API (`POST /api/v1/analisis/barrido-salinidad`, de 1 a 5 semillas), que reporta la media y la desviación estándar muestral de cada variable. La tabla siguiente es el resultado con las semillas 1 a 5, con las demás condiciones de 7.2 (media +/- desviación).
 
 | Carga salina (Ohm por L/m²) | Escenario y tasa | Recuperación, control basado en reglas (modo neuro-simbólico) (%) | Recuperación temporizador (%) | Degradación, control basado en reglas (modo neuro-simbólico) (%) | Degradación temporizador (%) | Reducción del desgaste |
@@ -605,7 +605,7 @@ El rango calibrado, de 0.49 a 1.83 L/m²/h, está entre 3.3 y 12 veces por debaj
 
 Con rendimientos como los de la literatura, ni el temporizador alcanza el umbral de 12 L/m²/noche. Esto confirma la lectura de la sección 8.2: la validación de la Conjetura 3 con 85 % depende del flujo optimista, y el umbral de rendimiento de la Matriz está por encima de lo que reportan los proyectos operativos. El indicador de violaciones ecológicas no cambia: el modo neuro-simbólico sigue sin violaciones.
 
-La calibración usa un solo escenario, una semilla y un rango de rendimientos medido en colectores de malla. Calibrar el flujo con mediciones en Cabo de la Vela sigue pendiente (sección 8.3).
+La calibración usa un solo escenario, una semilla y un rango de rendimientos medido en colectores de malla. Calibrar el flujo con mediciones en Cabo de la Vela sigue pendiente (sección 8.3). Desde la versión 0.4.0 la calibración tiene endpoint y puede usar el clima de otro sitio (sección 8.12); sin perfil de sitio da los mismos flujos de esta tabla.
 
 ### 8.7 Propagación de la incertidumbre
 
@@ -649,7 +649,7 @@ El barrido de la sección 7 usa el flujo de niebla supuesto (6.0 L/m²/h) y la e
 - Flujos: 6.0 L/m²/h (supuesto) y 1.83 y 0.49 L/m²/h (extremos de la calibración contra la literatura, sección 8.6). Eficacias: 0.80, 0.90 y 1.00 (`EFICACIA_PULSO_RANGO_MIN`, `EFICACIA_MAXIMA_PULSO` y `EFICACIA_PULSO_RANGO_MAX`).
 - Cada combinación es un barrido completo, con las condiciones de la sección 7.2 (24 h, 8 nodos, humedad inicial de 85 %, semilla 42) y una copia de `ParametrosModelo`. `backend/config.py` no cambia.
 - Además de los campos de la sección 7, cada punto informa el rendimiento del control basado en reglas, la **incrustación diaria** (`incrustacion_diaria_ohm_media`, carga salina por ese rendimiento: el aumento de impedancia por sal que la membrana recibiría en un día), la ventaja en recuperación y los pulsos del control basado en reglas.
-- **Cruce.** Cada barrido informa dónde la ventaja en recuperación pasa de <= 0 a > 0 (`cruce`). Se ordenan los puntos con ventaja por incrustación diaria y se interpola linealmente la incrustación diaria y la carga salina en que la ventaja vale 0 (estado `INTERPOLADO`). Si la ventaja es positiva en todos los puntos, el estado es `SIN_CRUCE_NEURO_SUPERIOR`; si no lo es en ninguno, `SIN_CRUCE_NEURO_INFERIOR`; con menos de dos puntos con ventaja, `SIN_DATOS`. Si la ventaja solo pasa de > 0 a <= 0, el estado es `CRUCE_DESCENDENTE`, que contradiría la dirección de la hipótesis; no se presentó en ninguna combinación.
+- **Cruce.** Cada barrido informa dónde la ventaja en recuperación pasa de <= 0 a > 0 (`cruce`). Se ordenan los puntos con ventaja por incrustación diaria y se interpola linealmente la incrustación diaria y la carga salina en que la ventaja vale 0 (estado `INTERPOLADO`). Si la ventaja es positiva en todos los puntos, el estado es `SIN_CRUCE_NEURO_SUPERIOR`; si no lo es en ninguno, `SIN_CRUCE_NEURO_INFERIOR`; con menos de dos puntos con ventaja, `SIN_DATOS`. Si la ventaja solo pasa de > 0 a <= 0, el estado es `CRUCE_DESCENDENTE`, que contradiría la dirección de la hipótesis; no se presentó en ninguna combinación. Desde la versión 0.4.0, el cruce informa además los dos niveles de incrustación diaria entre los que se interpola (`incrustacion_inferior_ohm` e `incrustacion_superior_ohm`) y su distancia (`separacion_ohm`).
 
 **Resultados.** Los datos completos, con una fila por combinación y punto, están en `docs/datos/robustez_respuesta.csv`.
 
@@ -675,6 +675,24 @@ La fila de 6.0 y 0.90 es el barrido de la sección 7.3. La reducción del desgas
 - **El cruce depende de la incrustación diaria, no de la carga por litro.** En las seis combinaciones con cruce, la carga salina del cruce va de 50.3 a 190.9 Ohm por L/m², un factor de 3.8, mientras que la incrustación diaria del cruce va de 1632.9 a 1839.2 Ohm/día, una variación de 13 %. Con una eficacia fija, cambiar el flujo de 6.0 a 1.83 L/m²/h mueve el cruce como mucho 19.4 Ohm/día. La eficacia lo mueve más: alrededor de 1633 a 1640 Ohm/día con 1.00 y de 1820 a 1839 con 0.80. Con 0.49 L/m²/h la incrustación diaria no pasa de 659 Ohm/día en ningún punto, por debajo de todos los cruces, lo que explica que el control basado en reglas no supere al temporizador. Es coherente con el mecanismo de la sección 7.4: la recuperación del temporizador depende de la sal acumulada entre dos pulsos programados, que crece con la incrustación por unidad de tiempo, mientras que el control basado en reglas pulsa siempre con una carga parecida.
 - **Otras semillas.** Repetida con las semillas 1, 2 y 3 (media de las tres), la robustez da los mismos estados de cruce y una incrustación diaria del cruce de 1682.1 a 1866.6 Ohm/día; la reducción del desgaste va de 73.6 % a 100 %. El barrido base con las semillas 1 a 5 de `docs/datos/` cruza en 1818.4 Ohm/día.
 
+**Resolución del cruce.** El barrido tiene seis niveles de carga salina, y el cruce se interpola linealmente entre los dos niveles vecinos en que cambia el signo de la ventaja. Esos niveles están lejos entre sí:
+
+| Flujo (L/m²/h) | Eficacia | Nivel inferior (Ohm/día) | Nivel superior (Ohm/día) | Separación (Ohm/día) |
+|---|---|---|---|---|
+| 6.0 | 0.80 | 1277.90 | 1894.53 | 616.63 |
+| 6.0 | 0.90 | 1290.48 | 1918.13 | 627.65 |
+| 6.0 | 1.00 | 1305.24 | 1944.40 | 639.16 |
+| 1.83 | 0.80 | 1171.06 | 2301.36 | 1130.30 |
+| 1.83 | 0.90 | 1184.11 | 2332.03 | 1147.92 |
+| 1.83 | 1.00 | 1200.71 | 2365.34 | 1164.64 |
+
+Con el flujo de 6.0 L/m²/h los niveles vecinos son las cargas de 40 y 60 Ohm por L/m², y con 1.83, las de 120 y 240. La separación, de 616.6 a 1164.6 Ohm/día, es de 3.0 a 5.6 veces el rango del cruce entre combinaciones (206.3 Ohm/día, de 1632.9 a 1839.2). Dos consecuencias:
+
+- **El rango del cruce es una estimación por interpolación, no un umbral resuelto.** La interpolación supone que la ventaja cambia en línea recta entre los dos niveles. El barrido no puede distinguir los cruces de las seis combinaciones: lo que sí muestra es que el cruce real de cada una está en algún punto de su intervalo, es decir, entre 1171.1 y 2365.3 Ohm/día en el conjunto. Los seis intervalos comparten el tramo de 1305.2 a 1894.5 Ohm/día.
+- **La comparación entre flujos depende de la interpolación.** Con el flujo calibrado los niveles están casi el doble de separados que con el supuesto, de modo que la diferencia de 19.4 Ohm/día entre flujos con la misma eficacia es mucho menor que la resolución del barrido. La conclusión de que el cruce depende de la incrustación diaria y no de la carga por litro sí se sostiene: en carga por litro los intervalos de los dos flujos no se solapan (de 40 a 60 Ohm por L/m² con el supuesto y de 120 a 240 con el calibrado), mientras que en incrustación diaria los seis se solapan. El valor exacto del umbral, en cambio, no está resuelto.
+
+Estrechar el rango exige agregar niveles de carga salina entre 40 y 60 Ohm por L/m² con el flujo supuesto y entre 120 y 240 con el calibrado, o medirlo directamente, como propone H1-Ciclo 3 (sección 8.9).
+
 **Contraste con la propagación de la incertidumbre.** La sección 8.7 muestrea la eficacia y el flujo calibrado de forma continua. La ventaja en recuperación de esas muestras (20 muestras, humedad inicial de 85 %, tasa ALTA, semilla 42) es:
 
 | Escenario | Muestras con ambas recuperaciones | Ventaja en recuperación, p5 / p50 / p95 (puntos) | P(ventaja > 0) |
@@ -689,8 +707,8 @@ Con los flujos calibrados, el control basado en reglas supera al temporizador en
 
 **Respuesta robusta a la pregunta.** En el modelo, y en los rangos evaluados de flujo de niebla y eficacia del pulso:
 
-1. el control basado en reglas reduce el desgaste de la membrana frente al temporizador en todos los niveles de salinidad, con una reducción de 73.3 % a 100 %;
-2. su ventaja en recuperación no depende de la carga salina por litro, sino de la incrustación diaria, y aparece solo por encima de unos 1633 a 1867 Ohm/día;
+1. el control basado en reglas reduce el desgaste de la membrana frente al temporizador en todos los niveles de salinidad, con una reducción de 73.3 % a 100 %, y la reducción se mantiene con la mitad y el doble de la fatiga por pulso y de la degradación térmica, de 61.5 % a 100 % (sección 8.11);
+2. su ventaja en recuperación no depende de la carga salina por litro, sino de la incrustación diaria, y aparece solo por encima de unos 1633 a 1867 Ohm/día, un rango obtenido por interpolación entre niveles separados de 617 a 1165 Ohm/día (resolución del cruce);
 3. con rendimientos como los de la literatura (flujo calibrado), esa incrustación diaria solo se alcanza con la carga salina más alta, por lo que en la mayoría de las condiciones el temporizador recupera igual o más. Esa recuperación mayor no indica una membrana mejor mantenida (sección 7.5): el temporizador pulsa con la membrana casi limpia, a costa de más desgaste.
 
 ### 8.9 Hipótesis derivada H1-Ciclo 3
@@ -699,7 +717,7 @@ La sección 8.8 sugiere una hipótesis más precisa que la hipótesis de trabajo
 
 **Enunciado.** Con el control basado en reglas (pulso cuando la impedancia supera 1500 Ohm) y un temporizador con pulsos cada 2 h, la recuperación tras pulso del control basado en reglas supera a la del temporizador cuando la incrustación diaria de la membrana, el aumento de impedancia por sal en un día de operación, supera un umbral situado en el modelo entre 1633 y 1867 Ohm/día, y no lo supera por debajo de ese umbral, cualquiera sea la combinación de flujo de niebla y carga salina por litro que produzca esa incrustación.
 
-El rango sale de las 6 combinaciones con cruce de la semilla 42 (1632.9 a 1839.2 Ohm/día) y de las mismas combinaciones con las semillas 1 a 3 (1682.1 a 1866.6 Ohm/día). Dentro del rango, el umbral depende sobre todo de la eficacia del pulso.
+El rango sale de las 6 combinaciones con cruce de la semilla 42 (1632.9 a 1839.2 Ohm/día) y de las mismas combinaciones con las semillas 1 a 3 (1682.1 a 1866.6 Ohm/día). Dentro del rango, el umbral depende sobre todo de la eficacia del pulso. Como el rango es más estrecho que la separación de los niveles interpolados (sección 8.8, resolución del cruce), es una estimación del modelo que la medición debe precisar, no un valor resuelto por el barrido.
 
 **Cómo refutarla.**
 
@@ -720,7 +738,7 @@ El modelo se calibró para Cabo de la Vela, pero el clima de referencia ya no es
    - la amplitud del ciclo térmico diurno, en °C (la mitad de la diferencia entre la máxima y la mínima diarias);
    - la amplitud del ciclo diurno de humedad relativa, en puntos de HR;
    - la humedad relativa a las 18:00, que es `humedad_ambiente_inicial_pct`.
-2. **Calibrar el flujo de niebla.** `calibrar_flujo_niebla(rendimiento_medido, escenario=..., humedad_pct=..., semilla=...)` en `backend/analisis.py` busca por bisección el flujo con el que el control basado en reglas alcanza el rendimiento medido (sección 8.6). Se ejecuta desde Python, porque no tiene endpoint, y no modifica `backend/config.py`.
+2. **Calibrar el flujo de niebla.** `POST /api/v1/analisis/calibracion` busca por bisección el flujo con el que el control basado en reglas alcanza el rendimiento medido, con la temperatura y las amplitudes del perfil del sitio, y devuelve el perfil con el flujo calibrado (sección 8.12). En la vista 5 del dashboard lo hace el botón "Calibrar flujo". No modifica `backend/config.py`.
 3. **Pasar el perfil en la simulación.** El campo `sitio` lleva el nombre (mayúsculas, dígitos y guion bajo, hasta 40 caracteres), el flujo calibrado, la temperatura media, la amplitud térmica y la amplitud de humedad. Los valores fuera de rango (flujo en (0, 20] L/m²/h, temperatura media de 0 a 45 °C, amplitud térmica de 0 a 15 °C y amplitud de humedad de 0 a 30 puntos) devuelven `422`. Por ejemplo:
 
    ```json
@@ -745,7 +763,7 @@ El modelo se calibró para Cabo de la Vela, pero el clima de referencia ya no es
 
 **Preguntas que abre.**
 
-a) `calibrar_flujo_niebla` simula con el ciclo de temperatura y humedad de Cabo de la Vela. Como la amplitud de humedad cambia la disponibilidad de niebla, la calibración para otro sitio es aproximada. ¿Cuánto cambia el flujo calibrado si la calibración usa el perfil del sitio?
+a) Hasta la versión 0.3.0, `calibrar_flujo_niebla` simulaba con el ciclo de temperatura y humedad de Cabo de la Vela. Como la amplitud de humedad cambia la disponibilidad de niebla, la calibración para otro sitio era aproximada. ¿Cuánto cambia el flujo calibrado si la calibración usa el perfil del sitio? La sección 8.12 lo responde: la temperatura y la amplitud térmica no lo cambian en los perfiles evaluados, y la amplitud de humedad lo mueve de -4.7 % a +19.6 %.
 
 b) ¿Cómo se mide la carga salina por litro en un sitio nuevo? El modelo la expresa en Ohm por L/m², y para transferirla hace falta relacionar la sal depositada en la membrana con el aumento de impedancia.
 
@@ -754,3 +772,76 @@ c) El perfil conserva las horas de máximo de Cabo de la Vela (04:00 para la hum
 d) El dimensionamiento (sección 7.7), la robustez (sección 8.8) y el barrido aceptan el flujo de niebla, pero no la temperatura ni las amplitudes del sitio. ¿Cambia la respuesta de la sección 8.8 con otro ciclo térmico, que modifica el calentamiento de la matriz y la energía de cada pulso?
 
 e) La consulta previa y el protocolo de co-creación ([01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2.7) se aplican a cualquier sitio con comunidades, no solo a Cabo de la Vela.
+
+### 8.11 Robustez del desgaste frente a la fatiga y la degradación térmica
+
+La sección 8.8 muestra que la reducción del desgaste no depende del flujo de niebla ni de la eficacia del pulso en los rangos evaluados. Pero la degradación de ambos modos la determinan otros dos parámetros supuestos, sin fuente ([06_Referencias_y_Trazabilidad_AxiomaH.md](06_Referencias_y_Trazabilidad_AxiomaH.md), sección 3): la fatiga por pulso (`FATIGA_POR_PULSO_PCT`, 0.02 % de integridad por ciclo térmico) y la degradación térmica (`DEGRADACION_TERMICA_PCT_POR_C_MIN`, 0.05 % por cada °C sobre 45 y minuto de exposición). Hasta la versión 0.3.0 la reducción del desgaste se declaraba robusta sin variarlos. `POST /api/v1/analisis/robustez-desgaste` (`ejecutar_robustez_desgaste` en `backend/analisis.py`) repite el barrido variando ambos.
+
+**Método.**
+
+- Flujos: 6.0 L/m²/h (supuesto) y 1.83 L/m²/h (extremo superior de la calibración, sección 8.6). Se omite el extremo inferior, 0.49 L/m²/h, con el que el control basado en reglas casi no aplica pulsos y la reducción ya es de 99.0 % a 100 % (sección 8.8).
+- Fatiga por pulso: 0.01, 0.02 y 0.04 % (`FATIGAS_ROBUSTEZ_PCT`). Degradación térmica: 0.025, 0.05 y 0.10 % por °C y minuto (`DEGRADACIONES_TERMICAS_ROBUSTEZ`). En ambos casos, la mitad, el valor supuesto y el doble; el rango también es un supuesto.
+- Eficacia del pulso de 0.90. Cada una de las 18 combinaciones es un barrido completo de seis puntos, con las condiciones de la sección 7.2 (24 h, 8 nodos, humedad inicial de 85 %, semilla 42): 108 puntos.
+- La fatiga y la degradación térmica son campos de `ParametrosModelo` y el simulador las lee de allí, como la eficacia y el flujo. Cada combinación usa una copia con `dataclasses.replace`; `backend/config.py` no cambia. Con los valores por defecto, la respuesta de `ejecutar_simulacion` para los cinco escenarios con humedad inicial de 45 % y 85 % es idéntica a la de la versión 0.3.0, y la combinación de 6.0, 0.02 y 0.05 reproduce el barrido de la sección 7.3.
+- Un punto cuenta como de menor desgaste si su reducción es positiva. Un punto sin reducción calculable (el temporizador no se degrada) no cuenta.
+
+**Resultados.** Los datos están en `docs/datos/robustez_desgaste.csv`.
+
+| Flujo (L/m²/h) | Fatiga por pulso (%) | Degradación térmica (% por °C y min) | Reducción del desgaste | Puntos con menor desgaste |
+|---|---|---|---|---|
+| 6.0 | 0.01 | 0.025 | 69.2 % a 99.0 % | 6 de 6 |
+| 6.0 | 0.01 | 0.05 | 76.3 % a 99.5 % | 6 de 6 |
+| 6.0 | 0.01 | 0.10 | 83.7 % a 99.7 % | 6 de 6 |
+| 6.0 | 0.02 | 0.025 | 66.4 % a 98.3 % | 6 de 6 |
+| 6.0 | 0.02 | 0.05 | 73.9 % a 99.0 % | 6 de 6 |
+| 6.0 | 0.02 | 0.10 | 82.0 % a 99.5 % | 6 de 6 |
+| 6.0 | 0.04 | 0.025 | 61.5 % a 97.1 % | 6 de 6 |
+| 6.0 | 0.04 | 0.05 | 69.7 % a 98.3 % | 6 de 6 |
+| 6.0 | 0.04 | 0.10 | 78.7 % a 99.0 % | 6 de 6 |
+| 1.83 | 0.01 | 0.025 | 95.8 % a 100 % | 6 de 6 |
+| 1.83 | 0.01 | 0.05 | 97.6 % a 100 % | 6 de 6 |
+| 1.83 | 0.01 | 0.10 | 98.7 % a 100 % | 6 de 6 |
+| 1.83 | 0.02 | 0.025 | 92.2 % a 100 % | 6 de 6 |
+| 1.83 | 0.02 | 0.05 | 95.3 % a 100 % | 6 de 6 |
+| 1.83 | 0.02 | 0.10 | 97.4 % a 100 % | 6 de 6 |
+| 1.83 | 0.04 | 0.025 | 86.6 % a 100 % | 6 de 6 |
+| 1.83 | 0.04 | 0.05 | 91.5 % a 100 % | 6 de 6 |
+| 1.83 | 0.04 | 0.10 | 95.1 % a 100 % | 6 de 6 |
+
+**Lectura.**
+
+- **Dirección.** En las 18 combinaciones el control basado en reglas se degrada menos que el temporizador en los seis puntos: 108 de 108, con una reducción de 61.5 % a 100 %. En los rangos evaluados, ninguna combinación de fatiga y degradación térmica invierte la respuesta sobre el desgaste.
+- **Magnitud.** Con el flujo supuesto, la reducción mínima va de 61.5 % a 83.7 % según los dos parámetros. Más fatiga reduce la ventaja (con 0.05 % por °C y min, 76.3 %, 73.9 % y 69.7 % con fatigas de 0.01, 0.02 y 0.04 %), porque el control basado en reglas también pulsa, y más en los niveles de salinidad altos. Más degradación térmica la aumenta (con fatiga de 0.02 %, 66.4 %, 73.9 % y 82.0 % con 0.025, 0.05 y 0.10), porque solo el temporizador lleva la matriz por encima de 45 °C (sección 7.4). La combinación menos favorable, fatiga doble con degradación térmica a la mitad, da el mínimo de 61.5 %.
+- **Flujo calibrado.** Con 1.83 L/m²/h la reducción es de 86.6 % a 100 %: el control basado en reglas aplica pocos pulsos, y en los niveles sin pulsos su membrana no se degrada.
+- **Alcance.** El análisis usa una semilla y un rango de mitad a doble que también es supuesto. No mide cuál es la fatiga real de un pulso: esa medición sigue pendiente (ciclos repetidos de pulso a 44 °C sobre una muestra de membrana). Lo que muestra es que la conclusión sobre el desgaste no depende de que esos dos valores sean exactos dentro de un factor de 2.
+
+### 8.12 Calibración del flujo para otro sitio
+
+La pregunta (a) de la sección 8.10 queda abierta mientras la calibración use el ciclo de Cabo de la Vela. Desde la versión 0.4.0, `calibrar_flujo_niebla` acepta un perfil de sitio y `POST /api/v1/analisis/calibracion` (`ejecutar_calibracion` en `backend/analisis.py`) la expone en la API.
+
+**Método.**
+
+- Entrada (`CalibracionConfig`): el rendimiento medido, en (0, 40] L/m²/día; el escenario (DIA_NORMAL por defecto), la humedad inicial (85 % por defecto), la semilla (42 por defecto) y un perfil de sitio opcional.
+- Cada corrida de la bisección de la sección 8.6 usa la temperatura media y las amplitudes térmica y de humedad del perfil, con el flujo reemplazado por el valor evaluado. Sin perfil, el resultado es el de la sección 8.6: 0.4889 L/m²/h para 3 L/m²/día y 1.8256 para 10.
+- Salida (`CalibracionResultado`): el flujo calibrado, el rendimiento que produce y el perfil con ese flujo, listo para el campo `sitio` de la simulación. Sin perfil, se devuelve el de Cabo de la Vela con el flujo calibrado.
+- Un rendimiento fuera del intervalo alcanzable con flujos de 0.1 a 6.0 L/m²/h devuelve `422` con el intervalo en el mensaje. Con el clima de Cabo de la Vela el intervalo es de 0.6713 a 31.8254 L/m²/día, de modo que 40 L/m²/día es inalcanzable.
+- En la vista 5 del dashboard, el campo "Rendimiento medido (L/m²/día)" y el botón "Calibrar flujo" llaman al endpoint con el escenario, la humedad inicial y el perfil editado, y copian el flujo calibrado en el campo de flujo del perfil.
+
+**Resultados.** DIA_NORMAL, humedad inicial de 85 %, tasa ALTA, 8 nodos, semilla 42. Los perfiles distintos de Cabo de la Vela son ilustrativos, no sitios reales; cada uno cambia solo los valores indicados.
+
+| Perfil | Temperatura media (°C) | Amplitud térmica (°C) | Amplitud de humedad (puntos) | Flujo para 3 L/m²/día (L/m²/h) | Flujo para 10 L/m²/día (L/m²/h) |
+|---|---|---|---|---|---|
+| Cabo de la Vela (sin perfil) | 30.0 | 4.5 | 10 | 0.4889 | 1.8256 |
+| Sin ciclo de humedad | 30.0 | 4.5 | 0 | 0.5811 | 2.1829 |
+| Amplitud de humedad de 20 | 30.0 | 4.5 | 20 | 0.4716 | 1.7565 |
+| Amplitud de humedad de 30 | 30.0 | 4.5 | 30 | 0.4659 | 1.7392 |
+| Sitio más fresco | 24.0 | 6.0 | 10 | 0.4889 | 1.8256 |
+| `SITIO_VERIFICACION` | 28.0 | 5.0 | 12 | 0.4832 | 1.8026 |
+
+En todos los casos el rendimiento obtenido con el flujo calibrado difiere del objetivo en menos de 0.02 L/m²/día.
+
+**Lectura.**
+
+- **La amplitud de humedad es la que cuenta.** El ciclo diurno se ancla en la humedad de las 18:00 y la sube hasta su máximo a las 04:00, de modo que con más amplitud hay más niebla disponible y basta un flujo menor. Sin ciclo de humedad el flujo calibrado es 19.6 % mayor para 10 L/m²/día (18.9 % para 3), y con 30 puntos de amplitud es 4.7 % menor. Calibrar con el ciclo de Cabo de la Vela un sitio sin ciclo de humedad subestimaría su flujo en 16.4 %.
+- **La temperatura no cambia el flujo calibrado** en los perfiles evaluados: con 24 °C y 6 °C de amplitud, los flujos coinciden con los de Cabo de la Vela. Sí cambia el rendimiento alcanzable con el flujo máximo de 6.0 L/m²/h (31.26 frente a 31.83 L/m²/día), lejos de los rendimientos de la literatura.
+- **Alcance.** La calibración usa un escenario, una semilla y una humedad inicial, y conserva las horas de máximo de Cabo de la Vela (pregunta c de la sección 8.10). El rendimiento medido debe corresponder a las mismas condiciones: un promedio anual no equivale a un día de niebla con 85 % de humedad a las 18:00.

@@ -140,3 +140,6 @@ FLUJO_NIEBLA_CALIBRADO_MIN_L_M2_H = 0.49
 FLUJO_NIEBLA_CALIBRADO_MAX_L_M2_H = 1.83
 EFICACIA_PULSO_RANGO_MIN = 0.80  # Supuesto: rango plausible alrededor de 0.90, pendiente de medición.
 EFICACIA_PULSO_RANGO_MAX = 1.00  # Supuesto: rango plausible alrededor de 0.90, pendiente de medición.
+# Grilla de la robustez del desgaste. No cambian FATIGA_POR_PULSO_PCT ni DEGRADACION_TERMICA_PCT_POR_C_MIN.
+FATIGAS_ROBUSTEZ_PCT = (0.01, 0.02, 0.04)  # % por ciclo térmico. Supuesto: mitad, valor supuesto y doble.
+DEGRADACIONES_TERMICAS_ROBUSTEZ = (0.025, 0.05, 0.10)  # %/(°C·min). Supuesto: mitad, valor supuesto y doble.

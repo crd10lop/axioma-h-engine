@@ -115,7 +115,7 @@ Estos endpoints se agregaron en la implementación del Ciclo 2 y no forman parte
 
 #### Respuestas calculadas de los endpoints generales, de evaluación y de simulación
 
-Los ejemplos de las secciones 3.1 y 3.2 conservan los valores ilustrativos del PRD original. Los siguientes son los que calcula el modelo con la versión 0.3.0 y la semilla 42; los valores de `timestamp` y `tiempo_actividad_seg` dependen del momento de la consulta.
+Los ejemplos de las secciones 3.1 y 3.2 conservan los valores ilustrativos del PRD original. Los siguientes son los que calcula el modelo con la versión 0.4.0 y la semilla 42; los valores de `timestamp` y `tiempo_actividad_seg` dependen del momento de la consulta.
 
 ##### GET /api/v1/health
 
@@ -123,7 +123,7 @@ Los ejemplos de las secciones 3.1 y 3.2 conservan los valores ilustrativos del P
 {
   "estado": "SALUDABLE",
   "servicio": "Axioma-H Engine",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "timestamp": "2026-10-28T03:01:23.035280+00:00",
   "tiempo_actividad_seg": 0.05
 }
@@ -309,12 +309,15 @@ Todos los campos son opcionales. `semillas` admite de 1 a 5 valores sin repetir;
   "cruce": {
     "estado": "INTERPOLADO",
     "incrustacion_diaria_ohm": 1789.1225,
-    "carga_salina_ohm_l_m2": 55.8891
+    "carga_salina_ohm_l_m2": 55.8891,
+    "incrustacion_inferior_ohm": 1290.48,
+    "incrustacion_superior_ohm": 1918.134,
+    "separacion_ohm": 627.654
   }
 }
 ```
 
-`cruce.estado` es `INTERPOLADO` si la ventaja pasa de <= 0 a > 0 al crecer la incrustación diaria, `CRUCE_DESCENDENTE` si solo pasa de > 0 a <= 0, `SIN_CRUCE_NEURO_SUPERIOR` o `SIN_CRUCE_NEURO_INFERIOR` si no cambia de signo, y `SIN_DATOS` con menos de dos puntos con ventaja.
+`cruce.estado` es `INTERPOLADO` si la ventaja pasa de <= 0 a > 0 al crecer la incrustación diaria, `CRUCE_DESCENDENTE` si solo pasa de > 0 a <= 0, `SIN_CRUCE_NEURO_SUPERIOR` o `SIN_CRUCE_NEURO_INFERIOR` si no cambia de signo, y `SIN_DATOS` con menos de dos puntos con ventaja. Desde la versión 0.4.0, con `INTERPOLADO` y `CRUCE_DESCENDENTE` el cruce informa además los dos niveles de incrustación diaria entre los que se interpola (`incrustacion_inferior_ohm` e `incrustacion_superior_ohm`) y su distancia (`separacion_ohm`); en los demás estados son nulos. Son campos opcionales: las respuestas de versiones anteriores siguen siendo válidas.
 
 #### Robustez de la respuesta
 * **Ruta:** `POST /api/v1/analisis/robustez-respuesta`
@@ -357,7 +360,14 @@ Todos los campos son opcionales: `humedad_ambiente_inicial_pct` (85), `duracion_
         ],
         "flujo_niebla_maximo_l_m2_h": 6.0,
         "eficacia_maxima_pulso": 0.8,
-        "cruce": {"estado": "INTERPOLADO", "incrustacion_diaria_ohm": 1819.8228, "carga_salina_ohm_l_m2": 57.5769}
+        "cruce": {
+          "estado": "INTERPOLADO",
+          "incrustacion_diaria_ohm": 1819.8228,
+          "carga_salina_ohm_l_m2": 57.5769,
+          "incrustacion_inferior_ohm": 1277.9,
+          "incrustacion_superior_ohm": 1894.53,
+          "separacion_ohm": 616.63
+        }
       }
     }
   ],
@@ -366,6 +376,76 @@ Todos los campos son opcionales: `humedad_ambiente_inicial_pct` (85), `duracion_
   "combinaciones_con_cruce": 6,
   "incrustacion_diaria_cruce_min_ohm": 1632.8705,
   "incrustacion_diaria_cruce_max_ohm": 1839.2066
+}
+```
+
+#### Robustez del desgaste
+* **Ruta:** `POST /api/v1/analisis/robustez-desgaste`
+* **Descripción:** Repite el barrido de salinidad con cada combinación de dos flujos de niebla (6.0 y 1.83 L/m²/h), tres fatigas por pulso (0.01, 0.02 y 0.04 %) y tres degradaciones térmicas (0.025, 0.05 y 0.10 % por °C y minuto), con la eficacia del pulso de 0.90. Cada combinación resume el rango de la reducción del desgaste en sus seis puntos y cuántos tienen menor desgaste con el control basado en reglas; el resultado resume el rango entre todas las combinaciones y cuántas tienen menor desgaste en todos sus puntos (`docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md`, sección 8.11).
+
+##### Request Payload (`RobustezDesgasteConfig`):
+Los mismos campos, valores por defecto y límites que `RobustezConfig`; todos son opcionales.
+```json
+{
+  "humedad_ambiente_inicial_pct": 85.0,
+  "semillas": [42]
+}
+```
+
+##### Response Payload (`RobustezDesgasteResultado`), primera combinación de dieciocho:
+```json
+{
+  "combinaciones": [
+    {
+      "flujo_niebla_maximo_l_m2_h": 6.0,
+      "fatiga_por_pulso_pct": 0.01,
+      "degradacion_termica_pct_por_c_min": 0.025,
+      "reduccion_desgaste_min_pct": 69.1502,
+      "reduccion_desgaste_max_pct": 99.0341,
+      "puntos_con_menor_desgaste": 6,
+      "puntos_totales": 6
+    }
+  ],
+  "reduccion_desgaste_min_pct": 61.4684,
+  "reduccion_desgaste_max_pct": 100.0,
+  "combinaciones_con_menor_desgaste_en_todos_los_puntos": 18
+}
+```
+
+Las reducciones mínima y máxima de una combinación son nulas si ningún punto tiene reducción calculable (el temporizador no se degrada).
+
+#### Calibración del flujo de niebla
+* **Ruta:** `POST /api/v1/analisis/calibracion`
+* **Descripción:** Busca por bisección, entre 0.1 y 6.0 L/m²/h, el flujo máximo de niebla con el que el control basado en reglas alcanza un rendimiento medido en 24 h con tasa ALTA y 8 nodos. Con un perfil de sitio, cada corrida usa su temperatura media y sus amplitudes con el flujo evaluado. Devuelve el flujo, el rendimiento que produce y el perfil con ese flujo, listo para el campo `sitio` de la simulación (`docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md`, sección 8.12).
+
+##### Request Payload (`CalibracionConfig`):
+`rendimiento_objetivo_l_m2_dia` es obligatorio, en (0, 40] L/m²/día. Son opcionales `escenario` (`DIA_NORMAL`), `humedad_ambiente_inicial_pct` (85), `semilla` (42) y `sitio` (`PerfilSitio`; nulo para usar el clima de Cabo de la Vela).
+```json
+{
+  "rendimiento_objetivo_l_m2_dia": 10.0,
+  "escenario": "DIA_NORMAL"
+}
+```
+
+##### Response Payload (`CalibracionResultado`):
+```json
+{
+  "flujo_calibrado_l_m2_h": 1.8256,
+  "rendimiento_obtenido_l_m2_dia": 9.9961,
+  "perfil": {
+    "nombre": "CABO_DE_LA_VELA",
+    "flujo_niebla_maximo_l_m2_h": 1.8256,
+    "temperatura_media_c": 30.0,
+    "amplitud_temperatura_c": 4.5,
+    "amplitud_humedad_pct": 10.0
+  }
+}
+```
+
+Si el rendimiento no es alcanzable con flujos de 0.1 a 6.0 L/m²/h, la API responde `422` con el intervalo alcanzable en `detail`. Por ejemplo, con `{"rendimiento_objetivo_l_m2_dia": 40.0}`:
+```json
+{
+  "detail": "El rendimiento objetivo 40.0 L/m²/día no está en el intervalo alcanzable [0.6713, 31.8254] con flujos de 0.1 a 6.0 L/m²/h."
 }
 ```
 
@@ -575,8 +655,8 @@ La API y el dashboard están implementados en `backend/` (FastAPI) y `frontend/`
 - **Campos opcionales en la solicitud.** `SimulationConfig` admite `numero_nodos` (por defecto 8), `paso_minutos` (por defecto 5) y `semilla` (por defecto 42). También admite `sitio`, un perfil de sitio (`PerfilSitio`: `nombre` con el patrón `^[A-Z0-9_]{1,40}$`, `flujo_niebla_maximo_l_m2_h` en (0, 20], `temperatura_media_c` de 0 a 45, `amplitud_temperatura_c` de 0 a 15 y `amplitud_humedad_pct` de 0 a 30), y `eficacia_maxima_pulso`, en (0, 1]. Ambos son nulos por defecto, y entonces se usan los valores de Cabo de la Vela de `backend/config.py` y los resultados no cambian. El payload de la sección 3.2 sigue siendo válido sin cambios. El procedimiento para transferir el modelo a otro sitio está en `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md`, sección 8.10.
 - **Temperatura objetivo del pulso.** Es 44.0 °C. Con 45.0 °C el pulso activaría el corte térmico de la REGLA_01 (`>= 45.0`). El ejemplo de la sección 3.1 se actualizó en consecuencia.
 - **Orden de evaluación.** La REGLA_04 se evalúa antes que la REGLA_03, porque ambas comparten la condición de impedancia alta. El caudal se expresa como porcentaje del tope ecológico del 33 %.
-- **Escenarios y endpoints adicionales.** El simulador incluye el escenario `TORMENTA_DE_SAL_Y_CALOR_EXTREMO`, además de los cuatro de la sección 5. La API expone también `GET /` y `GET /api/v1/health`, y los endpoints de la sección 3.3 (`POST /api/v1/analisis/barrido-salinidad`, `POST /api/v1/analisis/robustez-respuesta`, `POST /api/v1/analisis/sensibilidad`, `POST /api/v1/analisis/incertidumbre`, `POST /api/v1/analisis/dimensionamiento` y `GET /api/v1/sitios`). El de incertidumbre usa por defecto un rango de flujo de niebla calibrado contra la literatura (0.49 a 1.83 L/m²/h); el valor por defecto del modelo sigue siendo 6.0 L/m²/h.
-- **Dashboard.** Los cuatro elementos de la sección 5 están implementados. El panel de telemetría, con las cuatro tarjetas y sus barras de nivel, está en la vista "Evaluación manual de nodo". El selector de escenarios, la consola de decisiones y los gráficos comparativos están en la vista "Simulación comparativa", que incluye además el escenario `TORMENTA_DE_SAL_Y_CALOR_EXTREMO`. El dashboard agrega tres vistas que la especificación no pedía: "Investigación y guía", con la pregunta, la tesis, las conjeturas, las reglas, los supuestos clave y las perspectivas del estudio; "Respuesta a la pregunta", que consume los endpoints de robustez, barrido, incertidumbre, sensibilidad, dimensionamiento y sitios de la sección 3.3 en cuatro partes; y "Explorador de hipótesis", que simula con una eficacia del pulso y un perfil de sitio propios. La descripción de cada vista está en `docs/03_Funcionamiento_General_AxiomaH.md`, sección 5.
+- **Escenarios y endpoints adicionales.** El simulador incluye el escenario `TORMENTA_DE_SAL_Y_CALOR_EXTREMO`, además de los cuatro de la sección 5. La API expone también `GET /` y `GET /api/v1/health`, y los endpoints de la sección 3.3 (`POST /api/v1/analisis/barrido-salinidad`, `POST /api/v1/analisis/robustez-respuesta`, `POST /api/v1/analisis/robustez-desgaste`, `POST /api/v1/analisis/calibracion`, `POST /api/v1/analisis/sensibilidad`, `POST /api/v1/analisis/incertidumbre`, `POST /api/v1/analisis/dimensionamiento` y `GET /api/v1/sitios`). En la versión 0.4.0 el cruce del barrido agrega `incrustacion_inferior_ohm`, `incrustacion_superior_ohm` y `separacion_ohm`, opcionales y nulos sin cruce; ningún campo existente cambia de nombre ni de significado. El de incertidumbre usa por defecto un rango de flujo de niebla calibrado contra la literatura (0.49 a 1.83 L/m²/h); el valor por defecto del modelo sigue siendo 6.0 L/m²/h.
+- **Dashboard.** Los cuatro elementos de la sección 5 están implementados. El panel de telemetría, con las cuatro tarjetas y sus barras de nivel, está en la vista "Evaluación manual de nodo". El selector de escenarios, la consola de decisiones y los gráficos comparativos están en la vista "Simulación comparativa", que incluye además el escenario `TORMENTA_DE_SAL_Y_CALOR_EXTREMO`. El dashboard agrega tres vistas que la especificación no pedía: "Investigación y guía", con la pregunta, la tesis, las conjeturas, las reglas, los supuestos clave y las perspectivas del estudio; "Respuesta a la pregunta", que consume los endpoints de robustez de la respuesta y del desgaste, barrido, incertidumbre, sensibilidad, dimensionamiento y sitios de la sección 3.3 en cuatro partes; y "Explorador de hipótesis", que simula con una eficacia del pulso y un perfil de sitio propios y calibra el flujo con el endpoint de calibración. La descripción de cada vista está en `docs/03_Funcionamiento_General_AxiomaH.md`, sección 5.
 - **Contrato OpenAPI.** El esquema completo de la API, con todos los endpoints y sus límites de validación, se publica en `docs/api/openapi.json`, generado desde `backend.main.app` por `scripts/generar_resultados_referencia.py`. Su uso desde otros sistemas está en `docs/05_Despliegue_y_Operacion_AxiomaH.md`, sección 7.
 - **Valores de ejemplo.** Los valores numéricos de la respuesta de ejemplo de la sección 3.2 son ilustrativos. Los resultados calculados por el modelo para ese payload están en `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md`, sección 5.1.
 - **Despliegue.** La API y el dashboard están desplegados en Render, en el plan gratuito, como los servicios web `axioma-h-api` (https://axioma-h-api.onrender.com) y `axioma-h-dashboard` (https://axioma-h-dashboard.onrender.com), definidos en `render.yaml`. Render despliega desde `main` solo cuando las pruebas y la Quality Gate de SonarQube Cloud están en verde. El dashboard obtiene la URL de la API de la variable `AXIOMA_API_URL`; los orígenes CORS adicionales se configuran con `AXIOMA_CORS_ORIGINS`. La configuración, la verificación y la operación están en `docs/05_Despliegue_y_Operacion_AxiomaH.md`.

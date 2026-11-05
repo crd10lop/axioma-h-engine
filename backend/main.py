@@ -21,7 +21,7 @@ logging.basicConfig(
 )
 
 NOMBRE_SERVICIO = "Axioma-H Engine"
-VERSION_SERVICIO = "0.3.0"
+VERSION_SERVICIO = "0.4.0"
 DESCRIPCION_SERVICIO = (
     "Motor de control neuro-simbólico para la captación pasiva de agua "
     "atmosférica."

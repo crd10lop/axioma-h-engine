@@ -178,6 +178,7 @@ def inicializar_estado() -> None:
         "exp_humedad": 85.0,
         "exp_eficacia": config.EFICACIA_SUPUESTA,
         "exp_perfil": config.PERFIL_SITIO_POR_DEFECTO["nombre"],
+        "exp_rendimiento": config.RENDIMIENTO_LITERATURA_MAX_L_M2_DIA,
     }
     widgets.update({CONTROLES[campo]: valor for campo, valor in TELEMETRIA_PRD.items()})
     widgets.update(
@@ -204,6 +205,10 @@ def inicializar_estado() -> None:
         "error_incertidumbre": None,
         "resultado_robustez": None,
         "error_robustez": None,
+        "resultado_robustez_desgaste": None,
+        "error_robustez_desgaste": None,
+        "resultado_calibracion": None,
+        "error_calibracion": None,
         "resultado_dimensionamiento": None,
         "error_dimensionamiento": None,
         "resultado_explorador": None,
@@ -243,6 +248,18 @@ def incertidumbre_en_cache(carga: dict) -> dict:
 def robustez_en_cache(carga: dict) -> dict:
     """Ejecuta la robustez de la respuesta, o devuelve la respuesta guardada para la misma carga."""
     return cliente_api.ejecutar_robustez(carga)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def robustez_desgaste_en_cache(carga: dict) -> dict:
+    """Ejecuta la robustez del desgaste, o devuelve la respuesta guardada para la misma carga."""
+    return cliente_api.ejecutar_robustez_desgaste(carga)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def calibracion_en_cache(carga: dict) -> dict:
+    """Calibra el flujo de niebla, o devuelve la respuesta guardada para la misma carga."""
+    return cliente_api.calibrar_flujo(carga)
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -1018,6 +1035,30 @@ def seccion_robustez(api_disponible: bool) -> None:
     st.markdown(contenido.lista_markdown(tr.lectura_robustez(resultado)))
 
 
+def seccion_robustez_desgaste(api_disponible: bool) -> None:
+    """Robustez del desgaste: tabla de las 18 combinaciones de flujo, fatiga por pulso y degradación térmica."""
+    st.markdown("**Robustez del desgaste frente a la fatiga y la degradación térmica**")
+    st.caption(
+        "Repite el barrido con el flujo supuesto y el calibrado máximo, y con la mitad, el valor supuesto y el "
+        "doble de la fatiga por pulso y de la degradación térmica. Usa la humedad inicial y las semillas de la "
+        "robustez."
+    )
+    if st.button("Ejecutar robustez del desgaste", disabled=not api_disponible):
+        carga = tr.configuracion_robustez(st.session_state.rob_humedad, st.session_state.rob_semillas)
+        ejecutar_analisis(
+            robustez_desgaste_en_cache, carga, "robustez_desgaste",
+            "Repitiendo el barrido con 18 combinaciones de fatiga y degradación térmica...",
+        )
+    if st.session_state.error_robustez_desgaste is not None:
+        mostrar_error(st.session_state.error_robustez_desgaste)
+    resultado = st.session_state.resultado_robustez_desgaste
+    if resultado is None:
+        st.info("Ejecute la robustez del desgaste para ver si la reducción depende de la fatiga y la degradación supuestas.")
+        return
+    st.dataframe(tr.tabla_robustez_desgaste(resultado), hide_index=True, width="stretch")
+    st.markdown(contenido.lista_markdown(tr.lectura_robustez_desgaste(resultado)))
+
+
 def seccion_dimensionamiento(api_disponible: bool) -> None:
     """Dimensionamiento: área de colector y nodos para un número de personas."""
     columnas = st.columns(5)
@@ -1212,6 +1253,7 @@ def vista_respuesta(api_disponible: bool) -> None:
     st.warning(contenido.AVISO_EXPLORATORIO)
     encabezado_parte("desgaste")
     seccion_robustez(api_disponible)
+    seccion_robustez_desgaste(api_disponible)
     encabezado_parte("recuperacion")
     seccion_barrido(api_disponible)
     encabezado_parte("seguridad")
@@ -1234,8 +1276,54 @@ def cargar_perfil(perfiles: dict[str, dict]) -> None:
         st.session_state[clave] = perfil[campo]
 
 
+def perfil_editado() -> dict:
+    """Perfil de sitio con los valores actuales de los cinco campos editables del explorador."""
+    return {campo: st.session_state[clave] for campo, clave in CAMPOS_EXPLORADOR.items()}
+
+
+def calibrar_perfil() -> None:
+    """Callback que calibra el flujo con el rendimiento medido y lo copia en el campo de flujo del perfil.
+
+    Se ejecuta antes de dibujar los campos, por eso puede cambiar el valor del campo de flujo.
+    """
+    carga = tr.configuracion_calibracion(
+        st.session_state.exp_rendimiento, st.session_state.exp_escenario, st.session_state.exp_humedad, perfil_editado()
+    )
+    try:
+        resultado = calibracion_en_cache(carga)
+    except cliente_api.ErrorApiAxioma as error:
+        st.session_state.error_calibracion = error
+        return
+    st.session_state.resultado_calibracion = resultado
+    st.session_state.error_calibracion = None
+    st.session_state[CAMPOS_EXPLORADOR["flujo_niebla_maximo_l_m2_h"]] = resultado["flujo_calibrado_l_m2_h"]
+
+
+def controles_calibracion(bloqueado: bool) -> None:
+    """Rendimiento medido y botón que calibra el flujo del perfil con POST /api/v1/analisis/calibracion."""
+    columnas = st.columns([2, 1, 4])
+    columnas[0].number_input(
+        "Rendimiento medido (L/m²/día)", config.RENDIMIENTO_MEDIDO_MIN_L_M2_DIA, config.RENDIMIENTO_MEDIDO_MAX_L_M2_DIA,
+        step=0.5, key="exp_rendimiento",
+        help=(
+            "Rendimiento de un colector en el sitio. La calibración busca el flujo de niebla con que el control "
+            "basado en reglas lo alcanza en 24 h, con el escenario, la humedad inicial y el clima del perfil."
+        ),
+    )
+    columnas[1].write("")
+    columnas[1].button("Calibrar flujo", on_click=calibrar_perfil, disabled=bloqueado, width="stretch")
+    with columnas[2]:
+        if st.session_state.error_calibracion is not None:
+            mostrar_error(st.session_state.error_calibracion)
+        elif st.session_state.resultado_calibracion is not None:
+            st.caption(tr.texto_calibracion(st.session_state.resultado_calibracion))
+
+
 def controles_perfil(perfiles: dict[str, dict], bloqueado: bool) -> dict:
-    """Selector de perfil y sus cinco campos, acotados a los límites de PerfilSitio; devuelve el perfil editado."""
+    """Selector de perfil, sus cinco campos acotados a los límites de PerfilSitio y la calibración del flujo.
+
+    Devuelve el perfil editado.
+    """
     if perfiles:
         if st.session_state.exp_perfil not in perfiles:
             st.session_state.exp_perfil = next(iter(perfiles))
@@ -1264,7 +1352,8 @@ def controles_perfil(perfiles: dict[str, dict], bloqueado: bool) -> dict:
         "Amplitud de humedad (puntos)", 0.0, config.AMPLITUD_HUMEDAD_MAX_PCT, step=0.5,
         key=CAMPOS_EXPLORADOR["amplitud_humedad_pct"],
     )
-    return {campo: st.session_state[clave] for campo, clave in CAMPOS_EXPLORADOR.items()}
+    controles_calibracion(bloqueado)
+    return perfil_editado()
 
 
 def mostrar_resultado_explorador(resultado: dict) -> None:

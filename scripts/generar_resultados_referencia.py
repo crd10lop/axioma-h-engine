@@ -6,7 +6,9 @@ Importa el backend directamente (no llama a la API) y ejecuta:
   8 nodos, paso de 5 min, semilla 42);
 - el barrido de salinidad con humedad inicial de 85 % y semillas 1 a 5;
 - la robustez de la respuesta: el barrido con 3 flujos de niebla por 3
-  eficacias del pulso, humedad inicial de 85 % y semilla 42.
+  eficacias del pulso, humedad inicial de 85 % y semilla 42;
+- la robustez del desgaste: el barrido con 2 flujos de niebla por 3 fatigas
+  por pulso por 3 degradaciones térmicas, humedad inicial de 85 % y semilla 42.
 
 Escribe en docs/datos/:
 
@@ -14,11 +16,13 @@ Escribe en docs/datos/:
 - barrido_salinidad.csv: una fila por combinación de escenario y tasa;
 - robustez_respuesta.csv: una fila por combinación de flujo y eficacia y por
   punto del barrido;
+- robustez_desgaste.csv: una fila por combinación de flujo, fatiga por pulso y
+  degradación térmica;
 - resultados_completos.json: comparativa, conjeturas y detalle de verificación
-  de cada corrida, el barrido completo, el resumen de la robustez y las
-  condiciones de ejecución;
-- datapackage.json: descriptor Frictionless Data Package de los tres CSV, con
-  el esquema de cada campo tomado de DICCIONARIO_CAMPOS.
+  de cada corrida, el barrido completo, los resúmenes de ambas robusteces y
+  las condiciones de ejecución;
+- datapackage.json: descriptor Frictionless Data Package de los cuatro CSV,
+  con el esquema de cada campo tomado de DICCIONARIO_CAMPOS.
 
 Escribe además docs/api/openapi.json, el contrato OpenAPI de la API generado
 desde backend.main.app.
@@ -47,12 +51,13 @@ RAIZ_PROYECTO = Path(__file__).resolve().parent.parent
 if str(RAIZ_PROYECTO) not in sys.path:
     sys.path.insert(0, str(RAIZ_PROYECTO))
 
-from backend.analisis import ejecutar_barrido, ejecutar_robustez  # noqa: E402
+from backend.analisis import ejecutar_barrido, ejecutar_robustez, ejecutar_robustez_desgaste  # noqa: E402
 from backend.main import VERSION_SERVICIO, app  # noqa: E402
 from backend.schemas import (  # noqa: E402
     BarridoConfig,
     Escenario,
     RobustezConfig,
+    RobustezDesgasteConfig,
     SimulationConfig,
     TasaSalinizacion,
 )
@@ -67,9 +72,17 @@ ARCHIVO_ESCENARIOS = "resultados_escenarios.csv"
 ARCHIVO_BARRIDO = "barrido_salinidad.csv"
 ARCHIVO_JSON = "resultados_completos.json"
 ARCHIVO_ROBUSTEZ = "robustez_respuesta.csv"
-ARCHIVOS = (ARCHIVO_ESCENARIOS, ARCHIVO_BARRIDO, ARCHIVO_JSON, ARCHIVO_ROBUSTEZ, ARCHIVO_DATAPACKAGE)
+ARCHIVO_ROBUSTEZ_DESGASTE = "robustez_desgaste.csv"
+ARCHIVOS = (
+    ARCHIVO_ESCENARIOS,
+    ARCHIVO_BARRIDO,
+    ARCHIVO_JSON,
+    ARCHIVO_ROBUSTEZ,
+    ARCHIVO_ROBUSTEZ_DESGASTE,
+    ARCHIVO_DATAPACKAGE,
+)
 ARCHIVOS_API = (ARCHIVO_OPENAPI,)
-CSV = (ARCHIVO_ESCENARIOS, ARCHIVO_BARRIDO, ARCHIVO_ROBUSTEZ)
+CSV = (ARCHIVO_ESCENARIOS, ARCHIVO_BARRIDO, ARCHIVO_ROBUSTEZ, ARCHIVO_ROBUSTEZ_DESGASTE)
 
 HUMEDADES_PCT = (45.0, 85.0)
 DURACION_HORAS = 24
@@ -202,6 +215,27 @@ DICCIONARIO_CAMPOS: dict[str, tuple[str, str]] = {
     "cruce_estado": (TIPO_TEXTO, "Estado del cruce de la ventaja en recuperación frente a la incrustación diaria."),
     "cruce_incrustacion_diaria_ohm": (TIPO_NUMERO, "Incrustación diaria interpolada donde la ventaja vale 0 (Ohm/día)."),
     "cruce_carga_salina_ohm_l_m2": (TIPO_NUMERO, "Carga salina interpolada donde la ventaja vale 0 (Ohm por L/m²)."),
+    "cruce_incrustacion_inferior_ohm": (
+        TIPO_NUMERO,
+        "Menor incrustación diaria de los dos puntos entre los que se interpola el cruce (Ohm/día).",
+    ),
+    "cruce_incrustacion_superior_ohm": (
+        TIPO_NUMERO,
+        "Mayor incrustación diaria de los dos puntos entre los que se interpola el cruce (Ohm/día).",
+    ),
+    "cruce_separacion_ohm": (TIPO_NUMERO, "Distancia entre los dos puntos interpolados del cruce (Ohm/día)."),
+    "fatiga_por_pulso_pct": (TIPO_NUMERO, "Pérdida de integridad por ciclo térmico de la combinación (%)."),
+    "degradacion_termica_pct_por_c_min": (
+        TIPO_NUMERO,
+        "Pérdida de integridad por cada °C sobre 45 y minuto de exposición de la combinación (%).",
+    ),
+    "reduccion_desgaste_min_pct": (TIPO_NUMERO, "Menor reducción del desgaste entre los puntos del barrido (%)."),
+    "reduccion_desgaste_max_pct": (TIPO_NUMERO, "Mayor reducción del desgaste entre los puntos del barrido (%)."),
+    "puntos_con_menor_desgaste": (
+        TIPO_ENTERO,
+        "Puntos del barrido en que el control basado en reglas se degrada menos que el temporizador.",
+    ),
+    "puntos_totales": (TIPO_ENTERO, "Puntos del barrido de la combinación."),
 }
 
 
@@ -314,11 +348,22 @@ def filas_robustez(robustez: dict) -> list[dict]:
                     "cruce_estado": cruce["estado"],
                     "cruce_incrustacion_diaria_ohm": _vacio_si_nulo(cruce["incrustacion_diaria_ohm"]),
                     "cruce_carga_salina_ohm_l_m2": _vacio_si_nulo(cruce["carga_salina_ohm_l_m2"]),
+                    "cruce_incrustacion_inferior_ohm": _vacio_si_nulo(cruce.get("incrustacion_inferior_ohm")),
+                    "cruce_incrustacion_superior_ohm": _vacio_si_nulo(cruce.get("incrustacion_superior_ohm")),
+                    "cruce_separacion_ohm": _vacio_si_nulo(cruce.get("separacion_ohm")),
                     **punto,
                     CAMPO_HUMEDAD: HUMEDAD_BARRIDO_PCT,
                 }
             )
     return filas
+
+
+def filas_robustez_desgaste(robustez_desgaste: dict) -> list[dict]:
+    """Aplana la robustez del desgaste serializada: una fila por combinación, con la humedad inicial al final."""
+    return [
+        {**{clave: _vacio_si_nulo(valor) for clave, valor in combinacion.items()}, CAMPO_HUMEDAD: HUMEDAD_BARRIDO_PCT}
+        for combinacion in robustez_desgaste["combinaciones"]
+    ]
 
 
 def escribir_csv(ruta: Path, filas: list[dict]) -> None:
@@ -344,6 +389,11 @@ def condiciones() -> dict:
         },
         "barrido": {CAMPO_HUMEDAD: HUMEDAD_BARRIDO_PCT, "duracion_horas": DURACION_HORAS, "semillas": SEMILLAS_BARRIDO},
         "robustez": {CAMPO_HUMEDAD: HUMEDAD_BARRIDO_PCT, "duracion_horas": DURACION_HORAS, "semillas": SEMILLAS_ROBUSTEZ},
+        "robustez_desgaste": {
+            CAMPO_HUMEDAD: HUMEDAD_BARRIDO_PCT,
+            "duracion_horas": DURACION_HORAS,
+            "semillas": SEMILLAS_ROBUSTEZ,
+        },
         "nota": (
             "Las corridas omiten series_temporales y bitacora; se reproducen con POST "
             "/api/v1/simulacion/ejecutar y la misma configuración."
@@ -368,12 +418,16 @@ def generar(carpeta: Path = CARPETA_POR_DEFECTO, carpeta_api: Path = CARPETA_API
     robustez = ejecutar_robustez(
         RobustezConfig(humedad_ambiente_inicial_pct=HUMEDAD_BARRIDO_PCT, semillas=SEMILLAS_ROBUSTEZ)
     ).model_dump(mode="json")
+    robustez_desgaste = ejecutar_robustez_desgaste(
+        RobustezDesgasteConfig(humedad_ambiente_inicial_pct=HUMEDAD_BARRIDO_PCT, semillas=SEMILLAS_ROBUSTEZ)
+    ).model_dump(mode="json")
 
     rutas = [carpeta / nombre for nombre in ARCHIVOS]
     filas_csv = {
         ARCHIVO_ESCENARIOS: [fila_escenario(escenario, humedad, r) for escenario, humedad, r in corridas],
         ARCHIVO_BARRIDO: [{**punto, CAMPO_HUMEDAD: HUMEDAD_BARRIDO_PCT} for punto in barrido["puntos"]],
         ARCHIVO_ROBUSTEZ: filas_robustez(robustez),
+        ARCHIVO_ROBUSTEZ_DESGASTE: filas_robustez_desgaste(robustez_desgaste),
     }
     for nombre, filas in filas_csv.items():
         escribir_csv(carpeta / nombre, filas)
@@ -400,6 +454,9 @@ def generar(carpeta: Path = CARPETA_POR_DEFECTO, carpeta_api: Path = CARPETA_API
         "barrido_salinidad": barrido,
         "robustez_respuesta": {
             clave: valor for clave, valor in robustez.items() if clave != "combinaciones"
+        },
+        "robustez_desgaste": {
+            clave: valor for clave, valor in robustez_desgaste.items() if clave != "combinaciones"
         },
     }
     escribir_json(carpeta / ARCHIVO_JSON, completos)

@@ -23,29 +23,47 @@ class ParametrosModelo:
 
     eficacia_maxima_pulso: float = config.EFICACIA_MAXIMA_PULSO
     flujo_niebla_maximo_l_m2_h: float = config.FLUJO_NIEBLA_MAXIMO_L_M2_H
+    fatiga_por_pulso_pct: float = config.FATIGA_POR_PULSO_PCT
+    degradacion_termica_pct_por_c_min: float = config.DEGRADACION_TERMICA_PCT_POR_C_MIN
 
 
 PARAMETROS_BASE = ParametrosModelo()
 
 
+def _positivo(cambios: dict[str, float], campo: str, valor: float | None, descripcion: str) -> None:
+    """Agrega el valor a los cambios si no es None; lanza ValueError si no es positivo."""
+    if valor is None:
+        return
+    if valor <= 0:
+        raise ValueError(f"{descripcion} debe ser positivo: {valor}")
+    cambios[campo] = valor
+
+
 def parametros_desde(
-    flujo_niebla_maximo_l_m2_h: float | None = None, eficacia_maxima_pulso: float | None = None
+    flujo_niebla_maximo_l_m2_h: float | None = None,
+    eficacia_maxima_pulso: float | None = None,
+    fatiga_por_pulso_pct: float | None = None,
+    degradacion_termica_pct_por_c_min: float | None = None,
 ) -> ParametrosModelo:
     """Parámetros del modelo con los valores indicados y los demás de `backend/config.py`.
 
-    Devuelve PARAMETROS_BASE si ambos valores son None; si no, una copia con
-    `dataclasses.replace`, sin modificar `backend.config`. Lanza ValueError si
-    un valor no es positivo o si la eficacia supera 1.
+    Devuelve PARAMETROS_BASE si todos los valores son None; si no, una copia
+    con `dataclasses.replace`, sin modificar `backend.config`. Lanza ValueError
+    si un valor no es positivo o si la eficacia supera 1.
     """
     cambios: dict[str, float] = {}
-    if flujo_niebla_maximo_l_m2_h is not None:
-        if flujo_niebla_maximo_l_m2_h <= 0:
-            raise ValueError(f"El flujo máximo de niebla debe ser positivo: {flujo_niebla_maximo_l_m2_h}")
-        cambios["flujo_niebla_maximo_l_m2_h"] = flujo_niebla_maximo_l_m2_h
+    _positivo(cambios, "flujo_niebla_maximo_l_m2_h", flujo_niebla_maximo_l_m2_h, "El flujo máximo de niebla")
     if eficacia_maxima_pulso is not None:
         if not 0 < eficacia_maxima_pulso <= 1:
             raise ValueError(f"La eficacia máxima del pulso debe estar en (0, 1]: {eficacia_maxima_pulso}")
         cambios["eficacia_maxima_pulso"] = eficacia_maxima_pulso
+    _positivo(cambios, "fatiga_por_pulso_pct", fatiga_por_pulso_pct, "La fatiga por pulso")
+    _positivo(
+        cambios,
+        "degradacion_termica_pct_por_c_min",
+        degradacion_termica_pct_por_c_min,
+        "La degradación térmica",
+    )
     return replace(PARAMETROS_BASE, **cambios) if cambios else PARAMETROS_BASE
 
 

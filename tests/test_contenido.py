@@ -96,8 +96,20 @@ def test_respuesta_preliminar_conserva_las_cifras():
 
 def test_respuesta_preliminar_incluye_la_robustez():
     texto = " ".join(contenido.RESPUESTA_PRELIMINAR)
-    for cifra in ("73.3 %", "54 puntos", "1633 y 1839 Ohm"):
+    for cifra in ("73.3 %", "54 puntos", "1633 y 1839 Ohm", "61.5 % y 100 % en 108 puntos"):
         assert cifra in texto
+
+
+def test_robustez_del_desgaste_coincide_con_docs_01():
+    documento = (RUTA_DOCS / "01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md").read_text(encoding="utf-8")
+    assert "lo reduce entre 61.5 % y 100 % en 108 puntos" in documento
+
+
+def test_supuesto_de_fatiga_informa_el_efecto_observado():
+    fatiga = contenido.SUPUESTOS_CLAVE[3]
+    assert "108 puntos" in fatiga["efecto"]
+    assert "de 73.9 % a 69.7 %" in fatiga["efecto"]
+    assert "docs/04, sección 8.11" in fatiga["efecto"]
 
 
 def test_respuesta_preliminar_no_repite_la_tesis():
@@ -435,7 +447,9 @@ def test_pregunta_de_investigacion_conserva_la_formulacion_del_equipo():
 # ---------------------------------------------------------------------------
 # Tesis, etiquetas llanas, supuestos y guía por disciplina
 # ---------------------------------------------------------------------------
-@pytest.mark.parametrize("fragmento", ["73.3 % y 100 %", "incrustación diaria", "1633 a 1867 Ohm por día"])
+@pytest.mark.parametrize(
+    "fragmento", ["73.3 % y 100 %", "61.5 % y 100 %", "incrustación diaria", "1633 a 1867 Ohm por día"]
+)
 def test_tesis_usa_las_cifras_de_docs_04(fragmento):
     assert fragmento in contenido.TESIS
 

@@ -2,7 +2,7 @@
   "profile": "tabular-data-package",
   "name": "axioma-h-resultados-referencia",
   "title": "Resultados de referencia del modelo Axioma-H",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "licenses": [
     {
       "name": "MIT",
@@ -401,6 +401,21 @@
             "description": "Carga salina interpolada donde la ventaja vale 0 (Ohm por L/m²)."
           },
           {
+            "name": "cruce_incrustacion_inferior_ohm",
+            "type": "number",
+            "description": "Menor incrustación diaria de los dos puntos entre los que se interpola el cruce (Ohm/día)."
+          },
+          {
+            "name": "cruce_incrustacion_superior_ohm",
+            "type": "number",
+            "description": "Mayor incrustación diaria de los dos puntos entre los que se interpola el cruce (Ohm/día)."
+          },
+          {
+            "name": "cruce_separacion_ohm",
+            "type": "number",
+            "description": "Distancia entre los dos puntos interpolados del cruce (Ohm/día)."
+          },
+          {
             "name": "escenario",
             "type": "string",
             "description": "Escenario ambiental."
@@ -484,6 +499,61 @@
             "name": "pulsos_neuro_media",
             "type": "number",
             "description": "Media de los pulsos del control basado en reglas en toda la red."
+          },
+          {
+            "name": "humedad_inicial_pct",
+            "type": "number",
+            "description": "Humedad relativa a las 18:00 (%)."
+          }
+        ],
+        "missingValues": [
+          ""
+        ]
+      }
+    },
+    {
+      "name": "robustez_desgaste",
+      "path": "robustez_desgaste.csv",
+      "profile": "tabular-data-resource",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "schema": {
+        "fields": [
+          {
+            "name": "flujo_niebla_maximo_l_m2_h",
+            "type": "number",
+            "description": "Flujo máximo de niebla de la combinación (L/m²/h)."
+          },
+          {
+            "name": "fatiga_por_pulso_pct",
+            "type": "number",
+            "description": "Pérdida de integridad por ciclo térmico de la combinación (%)."
+          },
+          {
+            "name": "degradacion_termica_pct_por_c_min",
+            "type": "number",
+            "description": "Pérdida de integridad por cada °C sobre 45 y minuto de exposición de la combinación (%)."
+          },
+          {
+            "name": "reduccion_desgaste_min_pct",
+            "type": "number",
+            "description": "Menor reducción del desgaste entre los puntos del barrido (%)."
+          },
+          {
+            "name": "reduccion_desgaste_max_pct",
+            "type": "number",
+            "description": "Mayor reducción del desgaste entre los puntos del barrido (%)."
+          },
+          {
+            "name": "puntos_con_menor_desgaste",
+            "type": "integer",
+            "description": "Puntos del barrido en que el control basado en reglas se degrada menos que el temporizador."
+          },
+          {
+            "name": "puntos_totales",
+            "type": "integer",
+            "description": "Puntos del barrido de la combinación."
           },
           {
             "name": "humedad_inicial_pct",

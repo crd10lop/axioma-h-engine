@@ -110,6 +110,19 @@ def ejecutar_robustez(carga: dict) -> dict:
     return _solicitar("POST", "/api/v1/analisis/robustez-respuesta", config.TIMEOUT_ANALISIS_SEG, carga)
 
 
+def ejecutar_robustez_desgaste(carga: dict) -> dict:
+    """Repite el barrido con fatigas y degradaciones térmicas en POST /api/v1/analisis/robustez-desgaste."""
+    return _solicitar("POST", "/api/v1/analisis/robustez-desgaste", config.TIMEOUT_ANALISIS_SEG, carga)
+
+
+def calibrar_flujo(carga: dict) -> dict:
+    """Calibra el flujo de niebla con un rendimiento medido en POST /api/v1/analisis/calibracion.
+
+    Un rendimiento fuera del intervalo alcanzable se informa como ErrorApiAxioma con código 422.
+    """
+    return _solicitar("POST", "/api/v1/analisis/calibracion", config.TIMEOUT_ANALISIS_SEG, carga)
+
+
 def dimensionar(carga: dict) -> dict:
     """Dimensiona el captador para un número de personas en POST /api/v1/analisis/dimensionamiento."""
     return _solicitar("POST", "/api/v1/analisis/dimensionamiento", config.TIMEOUT_ANALISIS_SEG, carga)

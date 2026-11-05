@@ -36,11 +36,12 @@ HIPOTESIS = (
     "acumulada menor que el temporizador, y su ventaja crece con el nivel de salinidad."
 )
 
-# Tesis actual: respuesta robusta de docs/04, sección 8.8.
+# Tesis actual: respuesta robusta de docs/04, secciones 8.8 y 8.11.
 TESIS = (
     "El control basado en reglas reduce el desgaste de la membrana frente al temporizador en todos los "
     "niveles de salinidad y con todos los valores evaluados de flujo de niebla y eficacia del pulso, entre "
-    "73.3 % y 100 %. Su ventaja en recuperación es condicional: no depende de la carga salina por litro "
+    "73.3 % y 100 %, y también con la mitad y el doble de la fatiga por pulso y de la degradación térmica "
+    "supuestas, entre 61.5 % y 100 %. Su ventaja en recuperación es condicional: no depende de la carga salina por litro "
     "sino de la incrustación diaria, y aparece solo por encima de unos 1633 a 1867 Ohm por día, que con "
     "rendimientos de niebla como los de la literatura solo se alcanzan con la salinidad más alta."
 )
@@ -65,9 +66,10 @@ RESPUESTA_PRELIMINAR: list[str] = [
     "cambia de carga, pero ocurre con una incrustación diaria parecida (ver la tesis).",
     "Robustez frente a los parámetros supuestos. Repetido con tres flujos de niebla (el supuesto y los dos "
     "extremos calibrados contra la literatura) y tres eficacias del pulso (0.80, 0.90 y 1.00), el control "
-    "basado en reglas reduce el desgaste entre 73.3 % y 100 % en los 54 puntos. La ventaja en recuperación "
-    "no depende de la carga salina por litro sino de la incrustación diaria (la carga salina por el agua "
-    "captada en un día): en las seis combinaciones en que aparece, el cruce está entre 1633 y 1839 Ohm por "
+    "basado en reglas reduce el desgaste entre 73.3 % y 100 % en los 54 puntos. Con la mitad y el doble de la "
+    "fatiga por pulso y de la degradación térmica, lo reduce entre 61.5 % y 100 % en 108 puntos. La ventaja "
+    "en recuperación no depende de la carga salina por litro sino de la incrustación diaria (la carga salina "
+    "por el agua captada en un día): en las seis combinaciones en que aparece, el cruce está entre 1633 y 1839 Ohm por "
     "día, mientras que la carga por litro del cruce va de 50 a 191. Con el flujo calibrado mínimo esa "
     "incrustación no se alcanza y el temporizador recupera más en todos los niveles en que hay pulsos.",
 ]
@@ -281,9 +283,11 @@ SUPUESTOS_CLAVE: list[dict[str, str]] = [
         "0.02 % de integridad por pulso",
         "Supuesto del modelo, sin fuente: estimación de orden de magnitud (docs/06, sección 3).",
         ("Junto con la degradación térmica de los pulsos diurnos sobre 45 °C, explica el desgaste del "
-        "temporizador, que aplica 88 pulsos en 24 h (docs/04, sección 7.4). La dirección de la reducción "
-        "del desgaste se explica por la lógica de control, pero su magnitud depende de este valor, que no "
-        "se ha variado en un análisis de sensibilidad (docs/04, sección 7.5)."),
+        "temporizador, que aplica 88 pulsos en 24 h (docs/04, sección 7.4). Con la mitad y el doble de la "
+        "fatiga (0.01 y 0.04 %) y de la degradación térmica, el control basado en reglas se degrada menos en "
+        "los 108 puntos evaluados. Duplicar la fatiga baja la reducción mínima de 73.9 % a 69.7 % con el flujo "
+        "supuesto, y a 61.5 % si además la degradación térmica es la mitad: la dirección no cambia, la "
+        "magnitud sí (docs/04, sección 8.11)."),
         "Pérdida de función de una membrana tras ciclos repetidos de pulso a 44 °C en laboratorio.",
     ),
     _supuesto(
@@ -313,8 +317,9 @@ COLUMNAS_SUPUESTOS = {
 GUIA_DISCIPLINAS: dict[str, dict[str, str]] = {
     "Hidrología e ingeniería": {
         "donde": (
-            "Vista 4, partes b y d, y vista 5 con el perfil de sitio. Campos rendimiento_neuro_l_m2_dia_media, "
-            "incrustacion_diaria_ohm_media y area_colector_m2; datos en docs/datos/robustez_respuesta.csv."
+            "Vista 4, partes b y d, y vista 5 con el perfil de sitio y la calibración del flujo. Campos "
+            "rendimiento_neuro_l_m2_dia_media, incrustacion_diaria_ohm_media y area_colector_m2; datos en "
+            "docs/datos/robustez_respuesta.csv."
         ),
         "pregunta": (
             "¿El rendimiento de niebla medido en un sitio, convertido en flujo con la calibración, produce con "

@@ -43,6 +43,8 @@ RUTA_INCERTIDUMBRE = "/api/v1/analisis/incertidumbre"
 RUTA_ROBUSTEZ = "/api/v1/analisis/robustez-respuesta"
 RUTA_DIMENSIONAMIENTO = "/api/v1/analisis/dimensionamiento"
 RUTA_SITIOS = "/api/v1/sitios"
+RUTA_ROBUSTEZ_DESGASTE = "/api/v1/analisis/robustez-desgaste"
+RUTA_CALIBRACION = "/api/v1/analisis/calibracion"
 
 # Una sola semilla mantiene el barrido (12 simulaciones) dentro del tiempo de espera.
 BARRIDO_EJEMPLO = {"humedad_ambiente_inicial_pct": 85.0, "semillas": [42]}
@@ -68,6 +70,9 @@ INCERTIDUMBRE_EJEMPLO = {**CONDICIONES_ANALISIS, "n_muestras": MUESTRAS_INCERTID
 # Ejemplo del esquema RobustezConfig: una semilla, 9 combinaciones de 6 puntos (108 simulaciones).
 ROBUSTEZ_EJEMPLO = {"humedad_ambiente_inicial_pct": 85.0, "semillas": [42]}
 COMBINACIONES_ROBUSTEZ = 9
+
+# Robustez del desgaste con el mismo esquema: 2 flujos por 3 fatigas por 3 degradaciones térmicas.
+COMBINACIONES_ROBUSTEZ_DESGASTE = 18
 
 # Ejemplo del esquema DimensionamientoConfig; un dimensionamiento por flujo de referencia.
 DIMENSIONAMIENTO_EJEMPLO = {**CONDICIONES_ANALISIS, "personas": 50, "estandar": "OMS_20"}
@@ -103,6 +108,12 @@ SITIO_EJEMPLO = {
 }
 EFICACIA_EJEMPLO = 0.95
 SIMULACION_SITIO_EJEMPLO = {**SIMULACION_EJEMPLO, "sitio": SITIO_EJEMPLO, "eficacia_maxima_pulso": EFICACIA_EJEMPLO}
+
+# Calibración del flujo con el perfil de ejemplo: 10 L/m²/día es alcanzable y 40, no (respuesta 422).
+CAMPO_RENDIMIENTO_OBJETIVO = "rendimiento_objetivo_l_m2_dia"
+CALIBRACION_EJEMPLO = {CAMPO_RENDIMIENTO_OBJETIVO: 10.0, "sitio": SITIO_EJEMPLO}
+CALIBRACION_INALCANZABLE = {CAMPO_RENDIMIENTO_OBJETIVO: 40.0}
+TOLERANCIA_RENDIMIENTO_CALIBRADO = 0.1  # L/m²/día entre el rendimiento obtenido y el objetivo.
 
 # Ejemplo del esquema TelemetryInput en backend/schemas.py.
 TELEMETRIA_BASE = {
@@ -287,6 +298,8 @@ def probar_documentacion_api(cliente: httpx.Client, api: str) -> str:
             RUTA_ROBUSTEZ,
             RUTA_DIMENSIONAMIENTO,
             RUTA_SITIOS,
+            RUTA_ROBUSTEZ_DESGASTE,
+            RUTA_CALIBRACION,
         )
         if ruta not in rutas
     ]
@@ -474,6 +487,58 @@ def probar_robustez(cliente: httpx.Client, api: str) -> str:
     )
 
 
+@prueba("API: robustez del desgaste")
+def probar_robustez_desgaste(cliente: httpx.Client, api: str) -> str:
+    respuesta = cliente.post(f"{api}{RUTA_ROBUSTEZ_DESGASTE}", json=ROBUSTEZ_EJEMPLO)
+    _verificar_codigo(respuesta)
+    resultado = respuesta.json()
+    combinaciones = resultado["combinaciones"]
+    _verificar(
+        len(combinaciones) == COMBINACIONES_ROBUSTEZ_DESGASTE,
+        f"Llegaron {len(combinaciones)} combinaciones de las {COMBINACIONES_ROBUSTEZ_DESGASTE} esperadas",
+    )
+    _verificar(
+        all(c["puntos_totales"] == PUNTOS_BARRIDO for c in combinaciones),
+        f"Alguna combinación no tiene {PUNTOS_BARRIDO} puntos",
+    )
+    return (
+        f"{len(combinaciones)} combinaciones; {resultado['combinaciones_con_menor_desgaste_en_todos_los_puntos']} con "
+        f"menor desgaste en todos los puntos; reducción {resultado['reduccion_desgaste_min_pct']:.2f} % a "
+        f"{resultado['reduccion_desgaste_max_pct']:.2f} %"
+    )
+
+
+@prueba("API: calibración del flujo con perfil de sitio")
+def probar_calibracion(cliente: httpx.Client, api: str) -> str:
+    respuesta = cliente.post(f"{api}{RUTA_CALIBRACION}", json=CALIBRACION_EJEMPLO)
+    _verificar_codigo(respuesta)
+    resultado = respuesta.json()
+    perfil = resultado["perfil"]
+    _verificar(perfil["nombre"] == SITIO_EJEMPLO["nombre"], f"perfil.nombre = {perfil['nombre']!r}")
+    _verificar(
+        math.isclose(perfil["flujo_niebla_maximo_l_m2_h"], resultado["flujo_calibrado_l_m2_h"]),
+        "El flujo del perfil no es el flujo calibrado",
+    )
+    objetivo = CALIBRACION_EJEMPLO[CAMPO_RENDIMIENTO_OBJETIVO]
+    _verificar(
+        math.isclose(resultado["rendimiento_obtenido_l_m2_dia"], objetivo, abs_tol=TOLERANCIA_RENDIMIENTO_CALIBRADO),
+        f"Rendimiento obtenido {resultado['rendimiento_obtenido_l_m2_dia']} lejos del objetivo {objetivo}",
+    )
+    return (
+        f"flujo calibrado {resultado['flujo_calibrado_l_m2_h']} L/m²/h; rendimiento "
+        f"{resultado['rendimiento_obtenido_l_m2_dia']:.2f} L/m²/día"
+    )
+
+
+@prueba("API: calibración inalcanzable -> 422")
+def probar_calibracion_inalcanzable(cliente: httpx.Client, api: str) -> str:
+    respuesta = cliente.post(f"{api}{RUTA_CALIBRACION}", json=CALIBRACION_INALCANZABLE)
+    _verificar_codigo(respuesta, 422)
+    detalle = respuesta.json()["detail"]
+    _verificar(isinstance(detalle, str) and "intervalo alcanzable" in detalle, f"Detalle inesperado: {detalle!r}")
+    return f"422: {detalle[:80]}"
+
+
 @prueba("API: dimensionamiento del captador")
 def probar_dimensionamiento(cliente: httpx.Client, api: str) -> str:
     respuesta = cliente.post(f"{api}{RUTA_DIMENSIONAMIENTO}", json=DIMENSIONAMIENTO_EJEMPLO)
@@ -563,6 +628,9 @@ def ejecutar_pruebas(api: str, dashboard: str, timeout: float) -> List[Resultado
         resultados.append(probar_incertidumbre(cliente, api))
         resultados.append(probar_simulacion_sitio(cliente, api))
         resultados.append(probar_robustez(cliente, api))
+        resultados.append(probar_robustez_desgaste(cliente, api))
+        resultados.append(probar_calibracion(cliente, api))
+        resultados.append(probar_calibracion_inalcanzable(cliente, api))
         resultados.append(probar_dimensionamiento(cliente, api))
         resultados.append(probar_sitios(cliente, api))
         resultados.append(probar_salud_dashboard(cliente, dashboard))

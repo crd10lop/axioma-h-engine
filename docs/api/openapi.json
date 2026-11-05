@@ -3,7 +3,7 @@
   "info": {
     "title": "Axioma-H Engine",
     "description": "Motor de control neuro-simbólico para la captación pasiva de agua atmosférica.",
-    "version": "0.3.0"
+    "version": "0.4.0"
   },
   "paths": {
     "/api/v1/nodo/evaluar": {
@@ -254,6 +254,83 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/analisis/robustez-desgaste": {
+      "post": {
+        "tags": [
+          "Análisis de robustez"
+        ],
+        "summary": "Robustez Desgaste",
+        "description": "Repite el barrido de salinidad con 2 flujos, 3 fatigas por pulso y 3 degradaciones térmicas.",
+        "operationId": "robustez_desgaste_api_v1_analisis_robustez_desgaste_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RobustezDesgasteConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RobustezDesgasteResultado"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analisis/calibracion": {
+      "post": {
+        "tags": [
+          "Análisis de robustez"
+        ],
+        "summary": "Calibracion",
+        "description": "Calibra el flujo de niebla con el rendimiento medido de un sitio, sin modificar la configuración global.",
+        "operationId": "calibracion_api_v1_analisis_calibracion_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalibracionConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibracionResultado"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Datos no válidos o rendimiento objetivo fuera del intervalo alcanzable."
           }
         }
       }
@@ -525,6 +602,87 @@
         "title": "BarridoResultado",
         "description": "Barrido de salinidad ordenado por carga salina creciente."
       },
+      "CalibracionConfig": {
+        "properties": {
+          "rendimiento_objetivo_l_m2_dia": {
+            "type": "number",
+            "maximum": 40.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Rendimiento Objetivo L M2 Dia",
+            "description": "Rendimiento medido del captador en L/m²/día, en (0, 40]."
+          },
+          "escenario": {
+            "$ref": "#/components/schemas/Escenario",
+            "description": "Escenario ambiental.",
+            "default": "DIA_NORMAL"
+          },
+          "humedad_ambiente_inicial_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Humedad Ambiente Inicial Pct",
+            "description": "Humedad relativa al inicio de la simulación (18:00 hora local).",
+            "default": 85.0
+          },
+          "semilla": {
+            "type": "integer",
+            "title": "Semilla",
+            "description": "Semilla del generador aleatorio del entorno.",
+            "default": 42
+          },
+          "sitio": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PerfilSitio"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Perfil del sitio cuya temperatura y amplitudes se usan en cada corrida; su flujo se reemplaza por el evaluado. Nulo para usar el clima de Cabo de la Vela de backend/config.py."
+          }
+        },
+        "type": "object",
+        "required": [
+          "rendimiento_objetivo_l_m2_dia"
+        ],
+        "title": "CalibracionConfig",
+        "description": "Rendimiento medido en un sitio y condiciones de la calibración inversa del flujo de niebla.",
+        "examples": [
+          {
+            "escenario": "DIA_NORMAL",
+            "rendimiento_objetivo_l_m2_dia": 10.0
+          }
+        ]
+      },
+      "CalibracionResultado": {
+        "properties": {
+          "flujo_calibrado_l_m2_h": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Flujo Calibrado L M2 H",
+            "description": "Flujo máximo de niebla calibrado en L/m²/h."
+          },
+          "rendimiento_obtenido_l_m2_dia": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Rendimiento Obtenido L M2 Dia",
+            "description": "Rendimiento del control basado en reglas con el flujo calibrado, en L/m²/día."
+          },
+          "perfil": {
+            "$ref": "#/components/schemas/PerfilSitio",
+            "description": "Perfil del sitio con el flujo calibrado, listo para simular."
+          }
+        },
+        "type": "object",
+        "required": [
+          "flujo_calibrado_l_m2_h",
+          "rendimiento_obtenido_l_m2_dia",
+          "perfil"
+        ],
+        "title": "CalibracionResultado",
+        "description": "Flujo de niebla calibrado, rendimiento que produce y perfil del sitio con ese flujo."
+      },
       "CausaNoValidacion": {
         "type": "string",
         "enum": [
@@ -535,6 +693,71 @@
         ],
         "title": "CausaNoValidacion",
         "description": "Motivo por el que un indicador de una conjetura no cumple su umbral."
+      },
+      "CombinacionDesgaste": {
+        "properties": {
+          "flujo_niebla_maximo_l_m2_h": {
+            "type": "number",
+            "title": "Flujo Niebla Maximo L M2 H",
+            "description": "Flujo máximo de niebla en L/m²/h."
+          },
+          "fatiga_por_pulso_pct": {
+            "type": "number",
+            "title": "Fatiga Por Pulso Pct",
+            "description": "Pérdida de integridad por ciclo térmico (%)."
+          },
+          "degradacion_termica_pct_por_c_min": {
+            "type": "number",
+            "title": "Degradacion Termica Pct Por C Min",
+            "description": "Pérdida de integridad por cada °C sobre 45 y minuto de exposición (%)."
+          },
+          "reduccion_desgaste_min_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reduccion Desgaste Min Pct",
+            "description": "Menor (D_temp - D_neuro) / D_temp * 100 entre los puntos; nula si ningún punto la tiene."
+          },
+          "reduccion_desgaste_max_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reduccion Desgaste Max Pct",
+            "description": "Mayor (D_temp - D_neuro) / D_temp * 100 entre los puntos; nula si ningún punto la tiene."
+          },
+          "puntos_con_menor_desgaste": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Puntos Con Menor Desgaste",
+            "description": "Puntos en que el control basado en reglas se degrada menos que el temporizador."
+          },
+          "puntos_totales": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Puntos Totales",
+            "description": "Puntos del barrido de la combinación."
+          }
+        },
+        "type": "object",
+        "required": [
+          "flujo_niebla_maximo_l_m2_h",
+          "fatiga_por_pulso_pct",
+          "degradacion_termica_pct_por_c_min",
+          "puntos_con_menor_desgaste",
+          "puntos_totales"
+        ],
+        "title": "CombinacionDesgaste",
+        "description": "Reducción del desgaste en los seis puntos del barrido con un flujo, una fatiga y una degradación térmica."
       },
       "CombinacionRobustez": {
         "properties": {
@@ -724,6 +947,42 @@
             ],
             "title": "Carga Salina Ohm L M2",
             "description": "Carga salina interpolada en el cruce (Ohm por L/m²); nula sin cruce."
+          },
+          "incrustacion_inferior_ohm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incrustacion Inferior Ohm",
+            "description": "Menor incrustación diaria de los dos puntos entre los que se interpola (Ohm/día); nula sin cruce."
+          },
+          "incrustacion_superior_ohm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incrustacion Superior Ohm",
+            "description": "Mayor incrustación diaria de los dos puntos entre los que se interpola (Ohm/día); nula sin cruce."
+          },
+          "separacion_ohm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Separacion Ohm",
+            "description": "Distancia entre los dos puntos interpolados (Ohm/día): el cruce real puede estar en cualquier lugar de ese intervalo. Nula sin cruce."
           }
         },
         "type": "object",
@@ -2045,6 +2304,104 @@
             ]
           }
         ]
+      },
+      "RobustezDesgasteConfig": {
+        "properties": {
+          "humedad_ambiente_inicial_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Humedad Ambiente Inicial Pct",
+            "description": "Humedad relativa al inicio de cada corrida (18:00 hora local).",
+            "default": 85.0
+          },
+          "duracion_horas": {
+            "type": "integer",
+            "maximum": 72.0,
+            "minimum": 24.0,
+            "title": "Duracion Horas",
+            "description": "Horas simuladas en cada corrida, de 24 a 72.",
+            "default": 24
+          },
+          "numero_nodos": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Numero Nodos",
+            "description": "Cantidad de nodos simulados.",
+            "default": 8
+          },
+          "semillas": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Semillas",
+            "description": "Semillas del entorno, sin repetir; cada combinación se simula una vez por semilla."
+          }
+        },
+        "type": "object",
+        "title": "RobustezDesgasteConfig",
+        "description": "Parámetros del barrido de salinidad repetido en la grilla de flujos, fatigas por pulso y degradaciones térmicas.\n\nUsa los mismos campos, límites y descripciones que RobustezConfig.",
+        "examples": [
+          {
+            "humedad_ambiente_inicial_pct": 85.0,
+            "semillas": [
+              42
+            ]
+          }
+        ]
+      },
+      "RobustezDesgasteResultado": {
+        "properties": {
+          "combinaciones": {
+            "items": {
+              "$ref": "#/components/schemas/CombinacionDesgaste"
+            },
+            "type": "array",
+            "title": "Combinaciones",
+            "description": "Combinaciones en orden de flujo, fatiga y degradación térmica."
+          },
+          "reduccion_desgaste_min_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reduccion Desgaste Min Pct",
+            "description": "Menor reducción del desgaste entre los puntos de todas las combinaciones."
+          },
+          "reduccion_desgaste_max_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reduccion Desgaste Max Pct",
+            "description": "Mayor reducción del desgaste entre los puntos de todas las combinaciones."
+          },
+          "combinaciones_con_menor_desgaste_en_todos_los_puntos": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Combinaciones Con Menor Desgaste En Todos Los Puntos",
+            "description": "Combinaciones en que el control basado en reglas se degrada menos en todos los puntos."
+          }
+        },
+        "type": "object",
+        "required": [
+          "combinaciones",
+          "combinaciones_con_menor_desgaste_en_todos_los_puntos"
+        ],
+        "title": "RobustezDesgasteResultado",
+        "description": "Reducción del desgaste en la grilla de flujos, fatigas por pulso y degradaciones térmicas."
       },
       "RobustezResultado": {
         "properties": {

@@ -875,14 +875,20 @@ CLAVE_INCRUSTACION = "incrustacion_diaria_ohm_media"
 ESTADO_INTERPOLADO = "INTERPOLADO"
 MAXIMO_SEMILLAS_ROBUSTEZ = 3
 COLUMNA_CRUCE = "Cruce"
+COLUMNA_FLUJO = "Flujo (L/m²/h)"
+COLUMNA_REDUCCION_MIN = "Reducción del desgaste mínima (%)"
+COLUMNA_REDUCCION_MAX = "Reducción del desgaste máxima (%)"
+COLUMNA_SEPARACION_CRUCE = "Separación de los puntos del cruce (Ohm/día)"
+CLAVE_SEPARACION = "separacion_ohm"
 COLUMNAS_ROBUSTEZ = [
-    "Flujo (L/m²/h)",
+    COLUMNA_FLUJO,
     "Eficacia",
     COLUMNA_CRUCE,
     "Incrustación diaria del cruce (Ohm/día)",
     "Carga salina del cruce (Ohm por L/m²)",
-    "Reducción del desgaste mínima (%)",
-    "Reducción del desgaste máxima (%)",
+    COLUMNA_SEPARACION_CRUCE,
+    COLUMNA_REDUCCION_MIN,
+    COLUMNA_REDUCCION_MAX,
     "Incrustación diaria máxima (Ohm/día)",
 ]
 
@@ -916,6 +922,7 @@ def _fila_robustez(combinacion: dict) -> dict:
         etiqueta_llana(cruce.get("estado", "SIN_DATOS")),
         cruce.get("incrustacion_diaria_ohm"),
         cruce.get(CLAVE_CARGA),
+        cruce.get(CLAVE_SEPARACION),
         reduccion_min,
         reduccion_max,
         incrustacion_max,
@@ -941,6 +948,11 @@ def _frase_desgaste_robustez(resultado: dict, total: int) -> str:
     maximo = resultado.get("reduccion_desgaste_max_pct")
     if minimo is None or maximo is None:
         return "No hay datos para calcular la reducción del desgaste."
+    if minimo <= 0:
+        return (
+            f"En las {total} combinaciones, la reducción del desgaste frente al temporizador va de {minimo:.1f} % "
+            f"a {maximo:.1f} %: en algún punto {CONTROL_REGLAS} no reduce el desgaste."
+        )
     return (
         f"En las {total} combinaciones, {CONTROL_REGLAS} reduce el desgaste entre {minimo:.1f} % y "
         f"{maximo:.1f} % frente al temporizador."
@@ -968,6 +980,31 @@ def _frase_dependencia_cruce(cruces: list[dict]) -> str | None:
     )
 
 
+def _frase_resolucion_cruce(cruces: list[dict], minimo: float, maximo: float) -> str | None:
+    """Compara la separación de los puntos interpolados con el rango del cruce entre combinaciones.
+
+    Devuelve None si la respuesta no informa la separación (API anterior a 0.4.0).
+    """
+    con_separacion = [cruce for cruce in cruces if cruce.get(CLAVE_SEPARACION) is not None]
+    if not con_separacion:
+        return None
+    separaciones = [cruce[CLAVE_SEPARACION] for cruce in con_separacion]
+    inferior = min(cruce["incrustacion_inferior_ohm"] for cruce in con_separacion)
+    superior = max(cruce["incrustacion_superior_ohm"] for cruce in con_separacion)
+    rango = maximo - minimo
+    inicio = (
+        f"Los dos niveles entre los que se interpola cada cruce están separados de {min(separaciones):.0f} a "
+        f"{max(separaciones):.0f} Ohm por día"
+    )
+    if min(separaciones) > rango:
+        return (
+            f"{inicio}, más que el rango del cruce entre combinaciones ({rango:.0f} Ohm por día): el barrido no "
+            f"resuelve esa diferencia, y el cruce real de cada combinación está entre {inferior:.0f} y "
+            f"{superior:.0f} Ohm por día."
+        )
+    return f"{inicio}, no más que el rango del cruce entre combinaciones ({rango:.0f} Ohm por día)."
+
+
 def _frases_cruce_robustez(resultado: dict, combinaciones: list[dict]) -> list[str]:
     """Combinaciones con cruce, rango de la incrustación diaria del cruce y estados sin cruce."""
     total = len(combinaciones)
@@ -981,9 +1018,8 @@ def _frases_cruce_robustez(resultado: dict, combinaciones: list[dict]) -> list[s
             f"{len(cruces)} de {total} combinaciones cruzan: {CONTROL_REGLAS} pasa a recuperar más que el "
             f"temporizador desde una incrustación diaria de {minimo:.0f} a {maximo:.0f} Ohm por día."
         ]
-        dependencia = _frase_dependencia_cruce(cruces)
-        if dependencia is not None:
-            frases.append(dependencia)
+        adicionales = (_frase_dependencia_cruce(cruces), _frase_resolucion_cruce(cruces, minimo, maximo))
+        frases.extend(frase for frase in adicionales if frase is not None)
     estados = [(c.get("barrido", {}).get(CLAVE_CRUCE) or {}).get("estado", "SIN_DATOS") for c in combinaciones]
     for estado in sorted(set(estados) - {ESTADO_INTERPOLADO}):
         frases.append(f"{estados.count(estado)} de {total} combinaciones: {etiqueta_llana(estado).lower()}.")
@@ -998,6 +1034,80 @@ def lectura_robustez(resultado: dict) -> list[str]:
     return [_frase_desgaste_robustez(resultado, len(combinaciones))] + _frases_cruce_robustez(
         resultado, combinaciones
     )
+
+
+# ---------------------------------------------------------------------------
+# Robustez del desgaste frente a la fatiga y la degradación térmica (docs/04, sección 8.11)
+# ---------------------------------------------------------------------------
+COLUMNA_PUNTOS_MENOR_DESGASTE = "Puntos con menor desgaste"
+COLUMNAS_ROBUSTEZ_DESGASTE = [
+    COLUMNA_FLUJO,
+    "Fatiga por pulso (%)",
+    "Degradación térmica (% por °C y min)",
+    COLUMNA_REDUCCION_MIN,
+    COLUMNA_REDUCCION_MAX,
+    COLUMNA_PUNTOS_MENOR_DESGASTE,
+]
+CLAVE_FATIGA = "fatiga_por_pulso_pct"
+CLAVE_DEGRADACION_TERMICA = "degradacion_termica_pct_por_c_min"
+CLAVE_REDUCCION_MIN = "reduccion_desgaste_min_pct"
+
+
+def _fila_robustez_desgaste(combinacion: dict) -> dict:
+    """Una fila de la tabla de robustez del desgaste a partir de una combinación de la grilla."""
+    puntos = f"{combinacion.get('puntos_con_menor_desgaste', 0)} de {combinacion.get('puntos_totales', 0)}"
+    valores = [
+        combinacion.get("flujo_niebla_maximo_l_m2_h"),
+        combinacion.get(CLAVE_FATIGA),
+        combinacion.get(CLAVE_DEGRADACION_TERMICA),
+        combinacion.get(CLAVE_REDUCCION_MIN),
+        combinacion.get("reduccion_desgaste_max_pct"),
+        puntos,
+    ]
+    return dict(zip(COLUMNAS_ROBUSTEZ_DESGASTE, valores))
+
+
+def tabla_robustez_desgaste(resultado: dict) -> pd.DataFrame:
+    """Una fila por combinación de flujo, fatiga y degradación térmica con su rango de reducción del desgaste."""
+    filas = [_fila_robustez_desgaste(combinacion) for combinacion in resultado.get(CLAVE_COMBINACIONES, [])]
+    return pd.DataFrame(filas, columns=COLUMNAS_ROBUSTEZ_DESGASTE)
+
+
+def _frase_menor_reduccion(combinaciones: list[dict]) -> str | None:
+    """Combinación con la menor reducción del desgaste, o None si ninguna la tiene."""
+    con_reduccion = [combinacion for combinacion in combinaciones if combinacion.get(CLAVE_REDUCCION_MIN) is not None]
+    if not con_reduccion:
+        return None
+    menor = min(con_reduccion, key=lambda combinacion: combinacion[CLAVE_REDUCCION_MIN])
+    return (
+        f"La menor reducción ({menor[CLAVE_REDUCCION_MIN]:.1f} %) aparece con una fatiga de {menor[CLAVE_FATIGA]:g} % "
+        f"por pulso, una degradación térmica de {menor[CLAVE_DEGRADACION_TERMICA]:g} % por °C y minuto y un flujo "
+        f"de {menor['flujo_niebla_maximo_l_m2_h']:g} L/m²/h."
+    )
+
+
+def lectura_robustez_desgaste(resultado: dict) -> list[str]:
+    """Frases calculadas con el rango de la reducción del desgaste y las combinaciones que la sostienen."""
+    combinaciones = resultado.get(CLAVE_COMBINACIONES, [])
+    if not combinaciones:
+        return ["La robustez del desgaste no devolvió combinaciones."]
+    total = len(combinaciones)
+    en_todos = resultado.get("combinaciones_con_menor_desgaste_en_todos_los_puntos", 0)
+    if en_todos == total:
+        sostiene = (
+            f"En las {total} combinaciones, {CONTROL_REGLAS} se degrada menos que el temporizador en todos los "
+            "puntos del barrido."
+        )
+    else:
+        sostiene = (
+            f"Solo en {en_todos} de {total} combinaciones {CONTROL_REGLAS} se degrada menos en todos los puntos: "
+            "en las demás hay niveles de salinidad en que no reduce el desgaste."
+        )
+    frases = [_frase_desgaste_robustez(resultado, total), sostiene]
+    menor = _frase_menor_reduccion(combinaciones)
+    if menor is not None:
+        frases.append(menor)
+    return frases
 
 
 # ---------------------------------------------------------------------------
@@ -1038,9 +1148,16 @@ def lectura_cruce(resultado: dict) -> str:
     frase = f"{etiqueta_llana(cruce['estado'])}."
     if cruce.get("incrustacion_diaria_ohm") is None:
         return frase
-    return (
+    frase = (
         f"{frase} El cruce está en una incrustación diaria de {cruce['incrustacion_diaria_ohm']:.0f} Ohm por día "
         f"(carga salina de {cruce[CLAVE_CARGA]:.1f} Ohm por L/m²)."
+    )
+    if cruce.get(CLAVE_SEPARACION) is None:
+        return frase
+    return (
+        f"{frase} Se interpola entre los niveles de {cruce['incrustacion_inferior_ohm']:.0f} y "
+        f"{cruce['incrustacion_superior_ohm']:.0f} Ohm por día, separados {cruce[CLAVE_SEPARACION]:.0f}: el cruce "
+        "real puede estar en cualquier punto de ese intervalo."
     )
 
 
@@ -1141,20 +1258,48 @@ def normalizar_nombre_sitio(texto: str) -> str:
     return nombre[:LONGITUD_MAXIMA_NOMBRE_SITIO] or NOMBRE_SITIO_POR_DEFECTO
 
 
-def configuracion_explorador(escenario: str, tasa: str, humedad: float, eficacia: float, sitio: dict) -> dict:
-    """Carga de una simulación de 24 h con la eficacia del pulso y el perfil de sitio elegidos."""
+def _perfil_sitio(sitio: dict) -> dict:
+    """Perfil de sitio para la API: el nombre normalizado y los campos numéricos como float."""
     perfil = {campo: sitio[campo] for campo in CAMPOS_SITIO}
     perfil["nombre"] = normalizar_nombre_sitio(str(perfil["nombre"]))
     for campo in CAMPOS_SITIO[1:]:
         perfil[campo] = float(perfil[campo])
+    return perfil
+
+
+def configuracion_explorador(escenario: str, tasa: str, humedad: float, eficacia: float, sitio: dict) -> dict:
+    """Carga de una simulación de 24 h con la eficacia del pulso y el perfil de sitio elegidos."""
     return {
         "duracion_horas": 24,
         "escenario": escenario,
         "humedad_ambiente_inicial_pct": float(humedad),
         "tasa_salinizacion": tasa,
         "eficacia_maxima_pulso": float(eficacia),
-        "sitio": perfil,
+        "sitio": _perfil_sitio(sitio),
     }
+
+
+def configuracion_calibracion(rendimiento: float, escenario: str, humedad: float, sitio: dict) -> dict:
+    """Carga de la calibración con el rendimiento medido, el escenario, la humedad inicial y el perfil editado.
+
+    La API usa la temperatura y las amplitudes del perfil y reemplaza su flujo por cada valor evaluado.
+    """
+    return {
+        "rendimiento_objetivo_l_m2_dia": float(rendimiento),
+        "escenario": escenario,
+        "humedad_ambiente_inicial_pct": float(humedad),
+        "sitio": _perfil_sitio(sitio),
+    }
+
+
+def texto_calibracion(resultado: dict) -> str:
+    """Frase con el flujo calibrado y el rendimiento que produce en 24 h con tasa de salinización ALTA."""
+    nombre = (resultado.get("perfil") or {}).get("nombre", "el sitio")
+    return (
+        f"Flujo calibrado para {nombre}: {resultado['flujo_calibrado_l_m2_h']:g} L/m²/h. Con él, {CONTROL_REGLAS} "
+        f"rinde {resultado['rendimiento_obtenido_l_m2_dia']:.2f} L/m² al día en 24 h con tasa de salinización ALTA. "
+        "El flujo se copió en el campo del perfil."
+    )
 
 
 def parametros_usados_a_dataframe(resultado: dict) -> pd.DataFrame:

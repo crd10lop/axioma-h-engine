@@ -1,6 +1,6 @@
 {
   "condiciones": {
-    "version_servicio": "0.3.0",
+    "version_servicio": "0.4.0",
     "escenarios": {
       "duracion_horas": 24,
       "tasa_salinizacion": "ALTA",
@@ -24,6 +24,13 @@
       ]
     },
     "robustez": {
+      "humedad_inicial_pct": 85.0,
+      "duracion_horas": 24,
+      "semillas": [
+        42
+      ]
+    },
+    "robustez_desgaste": {
       "humedad_inicial_pct": 85.0,
       "duracion_horas": 24,
       "semillas": [
@@ -1527,7 +1534,10 @@
     "cruce": {
       "estado": "INTERPOLADO",
       "incrustacion_diaria_ohm": 1818.4241,
-      "carga_salina_ohm_l_m2": 56.5618
+      "carga_salina_ohm_l_m2": 56.5618,
+      "incrustacion_inferior_ohm": 1296.0112,
+      "incrustacion_superior_ohm": 1926.876,
+      "separacion_ohm": 630.8648
     }
   },
   "robustez_respuesta": {
@@ -1536,5 +1546,10 @@
     "combinaciones_con_cruce": 6,
     "incrustacion_diaria_cruce_min_ohm": 1632.8705,
     "incrustacion_diaria_cruce_max_ohm": 1839.2066
+  },
+  "robustez_desgaste": {
+    "reduccion_desgaste_min_pct": 61.4684,
+    "reduccion_desgaste_max_pct": 100.0,
+    "combinaciones_con_menor_desgaste_en_todos_los_puntos": 18
   }
 }

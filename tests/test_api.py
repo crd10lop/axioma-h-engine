@@ -311,6 +311,14 @@ SITIO_EJEMPLO = {
     "amplitud_temperatura_c": 5.0,
     "amplitud_humedad_pct": 12.0,
 }
+CAMPOS_CRUCE = {
+    "estado",
+    "incrustacion_diaria_ohm",
+    "carga_salina_ohm_l_m2",
+    "incrustacion_inferior_ohm",
+    "incrustacion_superior_ohm",
+    "separacion_ohm",
+}
 PAYLOAD_DIMENSIONAMIENTO = {
     "personas": 50,
     "estandar": "OMS_20",
@@ -366,7 +374,7 @@ def test_barrido_con_flujo_y_eficacia():
     datos = cliente.post(RUTA_BARRIDO, json=payload).json()
     assert datos["flujo_niebla_maximo_l_m2_h"] == pytest.approx(1.83)
     assert datos["eficacia_maxima_pulso"] == pytest.approx(0.8)
-    assert set(datos["cruce"]) == {"estado", "incrustacion_diaria_ohm", "carga_salina_ohm_l_m2"}
+    assert set(datos["cruce"]) == CAMPOS_CRUCE
 
 
 @pytest.mark.parametrize("cambios", [{"flujo_niebla_maximo_l_m2_h": 0.0}, {"eficacia_maxima_pulso": 1.5}])
@@ -454,4 +462,76 @@ def test_incertidumbre_informa_la_ventaja_en_recuperacion():
 
 
 def test_version_del_servicio():
-    assert cliente.get("/api/v1/health").json()["version"] == "0.3.0"
+    assert cliente.get("/api/v1/health").json()["version"] == "0.4.0"
+
+
+# ---------------------------------------------------------------------------
+# Robustez del desgaste y calibración del flujo (0.4.0)
+# ---------------------------------------------------------------------------
+RUTA_ROBUSTEZ_DESGASTE = "/api/v1/analisis/robustez-desgaste"
+RUTA_CALIBRACION = "/api/v1/analisis/calibracion"
+CAMPO_RENDIMIENTO = "rendimiento_objetivo_l_m2_dia"
+CAMPO_PERFIL = "perfil"
+PAYLOAD_CALIBRACION = {CAMPO_RENDIMIENTO: 10.0}
+
+
+def test_robustez_desgaste():
+    respuesta = cliente.post(RUTA_ROBUSTEZ_DESGASTE, json={"semillas": [42]})
+    assert respuesta.status_code == 200
+    datos = respuesta.json()
+    assert len(datos["combinaciones"]) == 18
+    assert datos["combinaciones_con_menor_desgaste_en_todos_los_puntos"] == 18
+    assert datos["reduccion_desgaste_min_pct"] == pytest.approx(61.47, abs=0.01)
+    assert datos["combinaciones"][0]["puntos_totales"] == 6
+
+
+@pytest.mark.parametrize("cambios", [{"duracion_horas": 12}, {"semillas": [1, 2, 3, 4]}, {"semillas": [7, 7]}])
+def test_robustez_desgaste_rechaza_configuracion_invalida(cambios):
+    assert cliente.post(RUTA_ROBUSTEZ_DESGASTE, json=cambios).status_code == 422
+
+
+def test_calibracion_sin_sitio():
+    respuesta = cliente.post(RUTA_CALIBRACION, json=PAYLOAD_CALIBRACION)
+    assert respuesta.status_code == 200
+    datos = respuesta.json()
+    assert datos["flujo_calibrado_l_m2_h"] == pytest.approx(1.8256, abs=1e-4)
+    assert datos[CAMPO_PERFIL]["nombre"] == "CABO_DE_LA_VELA"
+    assert datos[CAMPO_PERFIL]["flujo_niebla_maximo_l_m2_h"] == pytest.approx(datos["flujo_calibrado_l_m2_h"])
+
+
+def test_calibracion_con_sitio_conserva_su_clima():
+    payload = {**PAYLOAD_CALIBRACION, "sitio": SITIO_EJEMPLO}
+    perfil = cliente.post(RUTA_CALIBRACION, json=payload).json()[CAMPO_PERFIL]
+    assert perfil["nombre"] == SITIO_EJEMPLO["nombre"]
+    assert perfil["temperatura_media_c"] == pytest.approx(SITIO_EJEMPLO["temperatura_media_c"])
+    assert perfil["flujo_niebla_maximo_l_m2_h"] == pytest.approx(1.8026, abs=1e-4)
+
+
+def test_calibracion_con_objetivo_inalcanzable_devuelve_422_con_mensaje():
+    respuesta = cliente.post(RUTA_CALIBRACION, json={CAMPO_RENDIMIENTO: 40.0})
+    assert respuesta.status_code == 422
+    assert "no está en el intervalo alcanzable" in respuesta.json()["detail"]
+
+
+@pytest.mark.parametrize(
+    "cambios",
+    [
+        {CAMPO_RENDIMIENTO: 0.0},
+        {CAMPO_RENDIMIENTO: 40.5},
+        {"humedad_ambiente_inicial_pct": 101.0},
+        {"escenario": "HURACAN"},
+    ],
+)
+def test_calibracion_rechaza_configuracion_invalida(cambios):
+    payload = {**PAYLOAD_CALIBRACION, **cambios}
+    assert cliente.post(RUTA_CALIBRACION, json=payload).status_code == 422
+
+
+def test_calibracion_exige_el_rendimiento_objetivo():
+    assert cliente.post(RUTA_CALIBRACION, json={}).status_code == 422
+
+
+def test_endpoints_de_0_4_0_publicados_en_openapi():
+    rutas = cliente.get("/openapi.json").json()["paths"]
+    assert RUTA_ROBUSTEZ_DESGASTE in rutas
+    assert RUTA_CALIBRACION in rutas

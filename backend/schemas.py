@@ -530,6 +530,21 @@ class CruceRecuperacion(BaseModel):
     carga_salina_ohm_l_m2: float | None = Field(
         default=None, description="Carga salina interpolada en el cruce (Ohm por L/m²); nula sin cruce."
     )
+    incrustacion_inferior_ohm: float | None = Field(
+        default=None,
+        description="Menor incrustación diaria de los dos puntos entre los que se interpola (Ohm/día); nula sin cruce.",
+    )
+    incrustacion_superior_ohm: float | None = Field(
+        default=None,
+        description="Mayor incrustación diaria de los dos puntos entre los que se interpola (Ohm/día); nula sin cruce.",
+    )
+    separacion_ohm: float | None = Field(
+        default=None,
+        description=(
+            "Distancia entre los dos puntos interpolados (Ohm/día): el cruce real puede estar en cualquier "
+            "lugar de ese intervalo. Nula sin cruce."
+        ),
+    )
 
 
 class BarridoResultado(BaseModel):
@@ -592,6 +607,95 @@ class RobustezResultado(BaseModel):
     incrustacion_diaria_cruce_max_ohm: float | None = Field(
         default=None, description="Mayor incrustación diaria de cruce entre las combinaciones con cruce INTERPOLADO."
     )
+
+
+# ---------------------------------------------------------------------------
+# Robustez del desgaste frente a la fatiga y la degradación térmica
+# ---------------------------------------------------------------------------
+_DESCRIPCION_REDUCCION_DESGASTE = "(D_temp - D_neuro) / D_temp * 100"
+
+
+class RobustezDesgasteConfig(RobustezConfig):
+    """Parámetros del barrido de salinidad repetido en la grilla de flujos, fatigas por pulso y degradaciones térmicas.
+
+    Usa los mismos campos, límites y descripciones que RobustezConfig.
+    """
+
+
+class CombinacionDesgaste(BaseModel):
+    """Reducción del desgaste en los seis puntos del barrido con un flujo, una fatiga y una degradación térmica."""
+
+    flujo_niebla_maximo_l_m2_h: float = Field(..., description=_DESCRIPCION_FLUJO)
+    fatiga_por_pulso_pct: float = Field(..., description="Pérdida de integridad por ciclo térmico (%).")
+    degradacion_termica_pct_por_c_min: float = Field(
+        ..., description="Pérdida de integridad por cada °C sobre 45 y minuto de exposición (%)."
+    )
+    reduccion_desgaste_min_pct: float | None = Field(
+        default=None,
+        description=f"Menor {_DESCRIPCION_REDUCCION_DESGASTE} entre los puntos; nula si ningún punto la tiene.",
+    )
+    reduccion_desgaste_max_pct: float | None = Field(
+        default=None,
+        description=f"Mayor {_DESCRIPCION_REDUCCION_DESGASTE} entre los puntos; nula si ningún punto la tiene.",
+    )
+    puntos_con_menor_desgaste: int = Field(
+        ..., ge=0, description="Puntos en que el control basado en reglas se degrada menos que el temporizador."
+    )
+    puntos_totales: int = Field(..., ge=0, description="Puntos del barrido de la combinación.")
+
+
+class RobustezDesgasteResultado(BaseModel):
+    """Reducción del desgaste en la grilla de flujos, fatigas por pulso y degradaciones térmicas."""
+
+    combinaciones: list[CombinacionDesgaste] = Field(
+        ..., description="Combinaciones en orden de flujo, fatiga y degradación térmica."
+    )
+    reduccion_desgaste_min_pct: float | None = Field(
+        default=None, description="Menor reducción del desgaste entre los puntos de todas las combinaciones."
+    )
+    reduccion_desgaste_max_pct: float | None = Field(
+        default=None, description="Mayor reducción del desgaste entre los puntos de todas las combinaciones."
+    )
+    combinaciones_con_menor_desgaste_en_todos_los_puntos: int = Field(
+        ..., ge=0, description="Combinaciones en que el control basado en reglas se degrada menos en todos los puntos."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Calibración del flujo de niebla para otro sitio
+# ---------------------------------------------------------------------------
+class CalibracionConfig(BaseModel):
+    """Rendimiento medido en un sitio y condiciones de la calibración inversa del flujo de niebla."""
+
+    model_config = ConfigDict(
+        json_schema_extra={"examples": [{"rendimiento_objetivo_l_m2_dia": 10.0, "escenario": "DIA_NORMAL"}]}
+    )
+
+    rendimiento_objetivo_l_m2_dia: float = Field(
+        ..., gt=0, le=40, description="Rendimiento medido del captador en L/m²/día, en (0, 40]."
+    )
+    escenario: Escenario = Field(default=Escenario.DIA_NORMAL, description=_DESCRIPCION_ESCENARIO)
+    humedad_ambiente_inicial_pct: float = Field(
+        default=85.0, ge=0, le=100, description=_DESCRIPCION_HUMEDAD_INICIAL
+    )
+    semilla: int = Field(default=42, description=_DESCRIPCION_SEMILLA)
+    sitio: PerfilSitio | None = Field(
+        default=None,
+        description=(
+            "Perfil del sitio cuya temperatura y amplitudes se usan en cada corrida; su flujo se reemplaza por el "
+            "evaluado. Nulo para usar el clima de Cabo de la Vela de backend/config.py."
+        ),
+    )
+
+
+class CalibracionResultado(BaseModel):
+    """Flujo de niebla calibrado, rendimiento que produce y perfil del sitio con ese flujo."""
+
+    flujo_calibrado_l_m2_h: float = Field(..., gt=0, description="Flujo máximo de niebla calibrado en L/m²/h.")
+    rendimiento_obtenido_l_m2_dia: float = Field(
+        ..., ge=0, description="Rendimiento del control basado en reglas con el flujo calibrado, en L/m²/día."
+    )
+    perfil: PerfilSitio = Field(..., description="Perfil del sitio con el flujo calibrado, listo para simular.")
 
 
 # ---------------------------------------------------------------------------

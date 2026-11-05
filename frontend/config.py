@@ -10,7 +10,7 @@ API_URL = os.environ.get("AXIOMA_API_URL", "http://127.0.0.1:8000").rstrip("/")
 TIMEOUT_SALUD_SEG = int(os.environ.get("AXIOMA_TIMEOUT_SALUD_SEG", "75"))  # s. Verificación de salud.
 TIMEOUT_EVALUACION_SEG = 10  # s. Evaluación de nodos.
 TIMEOUT_SIMULACION_SEG = 60  # s. Simulación comparativa.
-TIMEOUT_ANALISIS_SEG = 120  # s. Barrido, robustez, sensibilidad, incertidumbre y dimensionamiento.
+TIMEOUT_ANALISIS_SEG = 120  # s. Barrido, robustez, sensibilidad, incertidumbre, dimensionamiento y calibración.
 
 COMANDO_BACKEND = "uvicorn backend.main:app --reload --port 8000"
 
@@ -64,6 +64,11 @@ TEMPERATURA_MEDIA_MIN_C = 0.0
 TEMPERATURA_MEDIA_MAX_C = 45.0
 AMPLITUD_TEMPERATURA_MAX_C = 15.0
 AMPLITUD_HUMEDAD_MAX_PCT = 30.0
+
+# Límites del rendimiento medido de la calibración del flujo; el máximo coincide con
+# CalibracionConfig en backend/schemas.py, que exige un valor positivo de hasta 40 L/m²/día.
+RENDIMIENTO_MEDIDO_MIN_L_M2_DIA = 0.1
+RENDIMIENTO_MEDIDO_MAX_L_M2_DIA = 40.0
 
 # Perfil de Cabo de la Vela con que arranca el explorador de hipótesis antes de consultar
 # GET /api/v1/sitios; debe coincidir con los valores por defecto de PerfilSitio (backend/schemas.py).

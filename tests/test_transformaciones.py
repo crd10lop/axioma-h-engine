@@ -5,7 +5,13 @@ import copy
 import pandas as pd
 import pytest
 
-from backend.analisis import ejecutar_barrido, ejecutar_dimensionamiento, ejecutar_incertidumbre, ejecutar_robustez
+from backend.analisis import (
+    ejecutar_barrido,
+    ejecutar_dimensionamiento,
+    ejecutar_incertidumbre,
+    ejecutar_robustez,
+    ejecutar_robustez_desgaste,
+)
 from backend.schemas import (
     BarridoConfig,
     CausaNoValidacion,
@@ -13,6 +19,7 @@ from backend.schemas import (
     Escenario,
     IncertidumbreConfig,
     RobustezConfig,
+    RobustezDesgasteConfig,
     SimulationConfig,
     TasaSalinizacion,
 )
@@ -837,6 +844,7 @@ def test_tabla_robustez_con_datos_reales(robustez_real):
     assert primera[tr.COLUMNA_CRUCE] == tr.etiqueta_llana(tr.ESTADO_INTERPOLADO)
     assert primera["Incrustación diaria del cruce (Ohm/día)"] == pytest.approx(1819.82, abs=0.01)
     assert primera["Reducción del desgaste mínima (%)"] == pytest.approx(73.26, abs=0.01)
+    assert primera[tr.COLUMNA_SEPARACION_CRUCE] == pytest.approx(616.63, abs=0.01)
 
 
 def test_tabla_robustez_sin_cruce_deja_celdas_vacias(robustez_real):
@@ -857,7 +865,43 @@ def test_lectura_robustez_con_datos_reales(robustez_real):
     assert frases[1].startswith("6 de 9 combinaciones cruzan")
     assert "1633 a 1839 Ohm por día" in frases[1]
     assert "Es coherente con H1-Ciclo 3" in frases[2]
-    assert frases[3].startswith("3 de 9 combinaciones: sin datos suficientes")
+    assert "separados de 617 a 1165 Ohm por día, más que el rango del cruce entre combinaciones (206" in frases[3]
+    assert "entre 1171 y 2365 Ohm por día" in frases[3]
+    assert frases[4].startswith("3 de 9 combinaciones: sin datos suficientes")
+
+
+def test_lectura_robustez_con_separacion_menor_que_el_rango():
+    cruce = {
+        "estado": tr.ESTADO_INTERPOLADO,
+        "incrustacion_diaria_ohm": 1000.0,
+        tr.CLAVE_CARGA: 50.0,
+        "incrustacion_inferior_ohm": 950.0,
+        "incrustacion_superior_ohm": 1050.0,
+        tr.CLAVE_SEPARACION: 100.0,
+    }
+    combinacion = _combinacion(tr.ESTADO_INTERPOLADO)
+    combinacion["barrido"][CRUCE] = cruce
+    resultado = {
+        tr.CLAVE_COMBINACIONES: [combinacion],
+        "incrustacion_diaria_cruce_min_ohm": 1000.0,
+        "incrustacion_diaria_cruce_max_ohm": 1500.0,
+    }
+    frases = tr.lectura_robustez(resultado)
+    assert frases[-1] == (
+        "Los dos niveles entre los que se interpola cada cruce están separados de 100 a 100 Ohm por día, "
+        "no más que el rango del cruce entre combinaciones (500 Ohm por día)."
+    )
+
+
+def test_lectura_robustez_con_reduccion_no_positiva():
+    resultado = {
+        tr.CLAVE_COMBINACIONES: [_combinacion("SIN_DATOS")],
+        "reduccion_desgaste_min_pct": -5.0,
+        "reduccion_desgaste_max_pct": 90.0,
+    }
+    frase = tr.lectura_robustez(resultado)[0]
+    assert "va de -5.0 % a 90.0 %" in frase
+    assert "no reduce el desgaste" in frase
 
 
 def test_lectura_robustez_sin_cruce_ni_reduccion():
@@ -899,6 +943,73 @@ def test_lectura_robustez_sin_combinaciones():
 
 
 # ---------------------------------------------------------------------------
+# Robustez del desgaste frente a la fatiga y la degradación térmica
+# ---------------------------------------------------------------------------
+@pytest.fixture(scope="module")
+def robustez_desgaste_real():
+    """Robustez del desgaste real con semilla 42 y humedad inicial de 85 %, como en docs/04, sección 8.11."""
+    return ejecutar_robustez_desgaste(RobustezDesgasteConfig()).model_dump(mode="json")
+
+
+def _combinacion_desgaste(reduccion_min, puntos_menor=6):
+    """Combinación sintética de la robustez del desgaste con la reducción mínima y los puntos indicados."""
+    return {
+        "flujo_niebla_maximo_l_m2_h": 6.0,
+        tr.CLAVE_FATIGA: 0.02,
+        tr.CLAVE_DEGRADACION_TERMICA: 0.05,
+        tr.CLAVE_REDUCCION_MIN: reduccion_min,
+        "reduccion_desgaste_max_pct": 99.0,
+        "puntos_con_menor_desgaste": puntos_menor,
+        "puntos_totales": 6,
+    }
+
+
+def test_tabla_robustez_desgaste_con_datos_reales(robustez_desgaste_real):
+    tabla = tr.tabla_robustez_desgaste(robustez_desgaste_real)
+    assert list(tabla.columns) == tr.COLUMNAS_ROBUSTEZ_DESGASTE
+    assert len(tabla) == 18
+    assert tabla.iloc[0][tr.COLUMNA_REDUCCION_MIN] == pytest.approx(69.15, abs=0.01)
+    assert set(tabla[tr.COLUMNA_PUNTOS_MENOR_DESGASTE]) == {"6 de 6"}
+
+
+def test_tabla_robustez_desgaste_vacia():
+    tabla = tr.tabla_robustez_desgaste({})
+    assert tabla.empty
+    assert list(tabla.columns) == tr.COLUMNAS_ROBUSTEZ_DESGASTE
+
+
+def test_lectura_robustez_desgaste_con_datos_reales(robustez_desgaste_real):
+    frases = tr.lectura_robustez_desgaste(robustez_desgaste_real)
+    assert "reduce el desgaste entre 61.5 % y 100.0 %" in frases[0]
+    assert frases[1].startswith("En las 18 combinaciones, el control basado en reglas se degrada menos")
+    assert "fatiga de 0.04 % por pulso, una degradación térmica de 0.025 %" in frases[2]
+
+
+def test_lectura_robustez_desgaste_sin_menor_desgaste_en_todos_los_puntos():
+    resultado = {
+        tr.CLAVE_COMBINACIONES: [_combinacion_desgaste(-3.0, puntos_menor=5), _combinacion_desgaste(None, 0)],
+        "reduccion_desgaste_min_pct": -3.0,
+        "reduccion_desgaste_max_pct": 99.0,
+        "combinaciones_con_menor_desgaste_en_todos_los_puntos": 0,
+    }
+    frases = tr.lectura_robustez_desgaste(resultado)
+    assert "no reduce el desgaste" in frases[0]
+    assert frases[1].startswith("Solo en 0 de 2 combinaciones")
+    assert "(-3.0 %)" in frases[2]
+
+
+def test_lectura_robustez_desgaste_sin_reducciones():
+    resultado = {tr.CLAVE_COMBINACIONES: [_combinacion_desgaste(None, 0)]}
+    frases = tr.lectura_robustez_desgaste(resultado)
+    assert frases[0].startswith("No hay datos para calcular")
+    assert len(frases) == 2
+
+
+def test_lectura_robustez_desgaste_sin_combinaciones():
+    assert tr.lectura_robustez_desgaste({}) == ["La robustez del desgaste no devolvió combinaciones."]
+
+
+# ---------------------------------------------------------------------------
 # Barrido frente a la incrustación diaria
 # ---------------------------------------------------------------------------
 def test_serie_barrido_por_incrustacion(barrido_real):
@@ -933,6 +1044,13 @@ def test_lectura_cruce_con_datos_reales(barrido_real):
     assert frase.startswith("Cruza: el control basado en reglas pasa a recuperar más.")
     assert "1789 Ohm por día" in frase
     assert "55.9 Ohm por L/m²" in frase
+    assert "Se interpola entre los niveles de 1290 y 1918 Ohm por día, separados 628" in frase
+
+
+def test_lectura_cruce_sin_separacion_con_api_0_3_0():
+    resultado = {CRUCE: {"estado": tr.ESTADO_INTERPOLADO, "incrustacion_diaria_ohm": 1700.0, tr.CLAVE_CARGA: 55.0}}
+    frase = tr.lectura_cruce(resultado)
+    assert frase.endswith("(carga salina de 55.0 Ohm por L/m²).")
 
 
 def test_lectura_cruce_sin_valor():
@@ -1045,6 +1163,30 @@ def test_configuracion_explorador():
     assert carga["sitio"]["nombre"] == "MI_SITIO_1"
     assert isinstance(carga["sitio"]["flujo_niebla_maximo_l_m2_h"], float)
     assert set(carga["sitio"]) == set(tr.CAMPOS_SITIO)
+
+
+def test_configuracion_calibracion():
+    carga = tr.configuracion_calibracion(10, "DIA_NORMAL", 85, SITIO_EXPLORADOR)
+    assert carga["rendimiento_objetivo_l_m2_dia"] == pytest.approx(10.0)
+    assert carga["escenario"] == "DIA_NORMAL"
+    assert carga["humedad_ambiente_inicial_pct"] == pytest.approx(85.0)
+    assert carga["sitio"] == tr.configuracion_explorador("DIA_NORMAL", "ALTA", 85, 0.9, SITIO_EXPLORADOR)["sitio"]
+
+
+def test_texto_calibracion():
+    resultado = {
+        "flujo_calibrado_l_m2_h": 1.8026,
+        "rendimiento_obtenido_l_m2_dia": 10.0016,
+        "perfil": {"nombre": "SITIO_VERIFICACION"},
+    }
+    texto = tr.texto_calibracion(resultado)
+    assert texto.startswith("Flujo calibrado para SITIO_VERIFICACION: 1.8026 L/m²/h.")
+    assert "rinde 10.00 L/m² al día" in texto
+
+
+def test_texto_calibracion_sin_perfil():
+    texto = tr.texto_calibracion({"flujo_calibrado_l_m2_h": 0.5, "rendimiento_obtenido_l_m2_dia": 3.0})
+    assert "para el sitio" in texto
 
 
 def test_parametros_usados_a_dataframe(resultado):

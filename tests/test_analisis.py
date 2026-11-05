@@ -10,14 +10,18 @@ from backend import analisis, config
 from backend.modelo_fisico import PARAMETROS_BASE, ParametrosModelo
 from backend.schemas import (
     BarridoConfig,
+    BarridoResultado,
+    CalibracionConfig,
     DimensionamientoConfig,
     Escenario,
     EstadoCruce,
     EstandarConsumo,
     IncertidumbreConfig,
     ParametroSensible,
+    PerfilSitio,
     PuntoBarrido,
     RobustezConfig,
+    RobustezDesgasteConfig,
     SensibilidadConfig,
     SimulationConfig,
     TasaSalinizacion,
@@ -525,6 +529,44 @@ def test_cruce_descendente():
     assert cruce.carga_salina_ohm_l_m2 == pytest.approx(40.0)
 
 
+@pytest.mark.parametrize(
+    ("ventajas", "estado"),
+    [((-1.0, 3.0), EstadoCruce.INTERPOLADO), ((2.0, -2.0), EstadoCruce.CRUCE_DESCENDENTE)],
+)
+def test_cruce_informa_los_puntos_interpolados_y_su_separacion(ventajas, estado):
+    cruce = analisis._cruce([_punto(1000.0, ventajas[0]), _punto(1600.0, ventajas[1]), _punto(2500.0, ventajas[1])])
+    assert cruce.estado == estado
+    assert cruce.incrustacion_inferior_ohm == pytest.approx(1000.0)
+    assert cruce.incrustacion_superior_ohm == pytest.approx(1600.0)
+    assert cruce.separacion_ohm == pytest.approx(600.0)
+
+
+@pytest.mark.parametrize(
+    "puntos",
+    [[_punto(100.0, 1.0)], [_punto(100.0, 1.0), _punto(200.0, 2.0)], [_punto(100.0, -1.0), _punto(200.0, -2.0)]],
+)
+def test_cruce_sin_interpolacion_no_informa_separacion(puntos):
+    cruce = analisis._cruce(puntos)
+    assert cruce.separacion_ohm is None
+    assert cruce.incrustacion_inferior_ohm is None
+
+
+def test_barrido_por_defecto_separacion_del_cruce(barrido):
+    cruce = barrido.cruce
+    assert cruce.incrustacion_inferior_ohm == pytest.approx(1290.48, abs=0.01)
+    assert cruce.incrustacion_superior_ohm == pytest.approx(1918.13, abs=0.01)
+    assert cruce.separacion_ohm == pytest.approx(627.65, abs=0.01)
+    assert cruce.incrustacion_inferior_ohm < cruce.incrustacion_diaria_ohm < cruce.incrustacion_superior_ohm
+
+
+def test_barrido_con_parametros_explicitos_ignora_los_de_la_configuracion():
+    parametros = ParametrosModelo(eficacia_maxima_pulso=0.8, flujo_niebla_maximo_l_m2_h=1.83)
+    cfg = BarridoConfig(duracion_horas=2, numero_nodos=1, eficacia_maxima_pulso=0.95)
+    resultado = analisis.ejecutar_barrido(cfg, parametros=parametros)
+    assert resultado.eficacia_maxima_pulso == pytest.approx(0.8)
+    assert resultado.flujo_niebla_maximo_l_m2_h == pytest.approx(1.83)
+
+
 # ---------------------------------------------------------------------------
 # Robustez de la respuesta
 # ---------------------------------------------------------------------------
@@ -593,6 +635,167 @@ def test_robustez_no_modifica_la_configuracion():
 
 def test_extremos_sin_valores():
     assert analisis._extremos([]) == (None, None)
+
+
+def test_robustez_informa_la_separacion_de_cada_cruce(robustez):
+    separaciones = [
+        c.barrido.cruce.separacion_ohm for c in robustez.combinaciones if c.barrido.cruce.estado == EstadoCruce.INTERPOLADO
+    ]
+    rango = robustez.incrustacion_diaria_cruce_max_ohm - robustez.incrustacion_diaria_cruce_min_ohm
+    assert min(separaciones) == pytest.approx(616.63, abs=0.01)
+    assert max(separaciones) == pytest.approx(1164.64, abs=0.01)
+    assert min(separaciones) > rango
+
+
+# ---------------------------------------------------------------------------
+# Robustez del desgaste frente a la fatiga y la degradación térmica
+# ---------------------------------------------------------------------------
+@pytest.fixture(scope="module")
+def robustez_desgaste():
+    """Robustez del desgaste con semilla 42 y humedad inicial de 85 %, como en el documento 04, sección 8.11."""
+    return analisis.ejecutar_robustez_desgaste(RobustezDesgasteConfig())
+
+
+def test_grilla_de_fatiga_y_degradacion_alrededor_del_supuesto():
+    assert config.FATIGAS_ROBUSTEZ_PCT == pytest.approx((0.01, 0.02, 0.04))
+    assert config.DEGRADACIONES_TERMICAS_ROBUSTEZ == pytest.approx((0.025, 0.05, 0.10))
+    assert config.FATIGA_POR_PULSO_PCT in config.FATIGAS_ROBUSTEZ_PCT
+    assert config.DEGRADACION_TERMICA_PCT_POR_C_MIN in config.DEGRADACIONES_TERMICAS_ROBUSTEZ
+
+
+def test_robustez_desgaste_tiene_dieciocho_combinaciones_ordenadas(robustez_desgaste):
+    ternas = [
+        (c.flujo_niebla_maximo_l_m2_h, c.fatiga_por_pulso_pct, c.degradacion_termica_pct_por_c_min)
+        for c in robustez_desgaste.combinaciones
+    ]
+    assert len(set(ternas)) == 18
+    assert ternas[0] == pytest.approx((config.FLUJO_NIEBLA_MAXIMO_L_M2_H, 0.01, 0.025))
+    assert ternas[-1] == pytest.approx((config.FLUJO_NIEBLA_CALIBRADO_MAX_L_M2_H, 0.04, 0.10))
+
+
+def test_robustez_desgaste_combinacion_base_coincide_con_el_barrido(robustez_desgaste, barrido):
+    base = robustez_desgaste.combinaciones[4]
+    reducciones = [punto.reduccion_desgaste_pct for punto in barrido.puntos]
+    assert base.fatiga_por_pulso_pct == pytest.approx(config.FATIGA_POR_PULSO_PCT)
+    assert base.degradacion_termica_pct_por_c_min == pytest.approx(config.DEGRADACION_TERMICA_PCT_POR_C_MIN)
+    assert base.reduccion_desgaste_min_pct == pytest.approx(min(reducciones))
+    assert base.reduccion_desgaste_max_pct == pytest.approx(max(reducciones))
+
+
+def test_robustez_desgaste_rango_coherente_con_las_combinaciones(robustez_desgaste):
+    minimos = [c.reduccion_desgaste_min_pct for c in robustez_desgaste.combinaciones]
+    maximos = [c.reduccion_desgaste_max_pct for c in robustez_desgaste.combinaciones]
+    assert robustez_desgaste.reduccion_desgaste_min_pct == pytest.approx(min(minimos))
+    assert robustez_desgaste.reduccion_desgaste_max_pct == pytest.approx(max(maximos))
+
+
+def test_robustez_desgaste_reproduce_el_documento_04(robustez_desgaste):
+    assert robustez_desgaste.combinaciones_con_menor_desgaste_en_todos_los_puntos == 18
+    assert robustez_desgaste.reduccion_desgaste_min_pct == pytest.approx(61.47, abs=0.01)
+    assert robustez_desgaste.reduccion_desgaste_max_pct == pytest.approx(100.0)
+    menor = min(robustez_desgaste.combinaciones, key=lambda c: c.reduccion_desgaste_min_pct)
+    assert (menor.fatiga_por_pulso_pct, menor.degradacion_termica_pct_por_c_min) == pytest.approx((0.04, 0.025))
+
+
+def test_robustez_desgaste_mas_fatiga_reduce_menos_y_mas_degradacion_reduce_mas(robustez_desgaste):
+    por_terna = {
+        (c.fatiga_por_pulso_pct, c.degradacion_termica_pct_por_c_min): c.reduccion_desgaste_min_pct
+        for c in robustez_desgaste.combinaciones
+        if c.flujo_niebla_maximo_l_m2_h == pytest.approx(config.FLUJO_NIEBLA_MAXIMO_L_M2_H)
+    }
+    assert por_terna[(0.04, 0.05)] < por_terna[(0.02, 0.05)] < por_terna[(0.01, 0.05)]
+    assert por_terna[(0.02, 0.025)] < por_terna[(0.02, 0.05)] < por_terna[(0.02, 0.10)]
+
+
+def test_combinacion_desgaste_cuenta_solo_las_reducciones_positivas(monkeypatch):
+    puntos = [
+        PuntoBarrido(**{**_punto(100.0, 1.0).model_dump(), "reduccion_desgaste_pct": reduccion})
+        for reduccion in (50.0, 0.0, -10.0, None)
+    ]
+    monkeypatch.setattr(analisis, "ejecutar_barrido", lambda *_args, **_kwargs: BarridoResultado(puntos=puntos))
+    combinacion = analisis._combinacion_desgaste(RobustezDesgasteConfig(), 6.0, 0.02, 0.05)
+    assert combinacion.puntos_con_menor_desgaste == 1
+    assert combinacion.puntos_totales == 4
+    assert combinacion.reduccion_desgaste_min_pct == pytest.approx(-10.0)
+
+
+def test_robustez_desgaste_sin_menor_desgaste_en_todos_los_puntos(monkeypatch):
+    puntos = [PuntoBarrido(**{**_punto(100.0, 1.0).model_dump(), "reduccion_desgaste_pct": None})]
+    monkeypatch.setattr(analisis, "ejecutar_barrido", lambda *_args, **_kwargs: BarridoResultado(puntos=puntos))
+    resultado = analisis.ejecutar_robustez_desgaste(RobustezDesgasteConfig())
+    assert resultado.combinaciones_con_menor_desgaste_en_todos_los_puntos == 0
+    assert resultado.reduccion_desgaste_min_pct is None
+
+
+def test_robustez_desgaste_no_modifica_la_configuracion():
+    antes = _configuracion_global()
+    analisis.ejecutar_robustez_desgaste(RobustezDesgasteConfig(numero_nodos=1))
+    despues = _configuracion_global()
+    assert despues == antes
+    assert PARAMETROS_BASE == ParametrosModelo()
+
+
+@pytest.mark.parametrize("cambios", [{"duracion_horas": 23}, {"semillas": [1, 2, 3, 4]}, {"semillas": [5, 5]}])
+def test_configuracion_de_robustez_desgaste_invalida(cambios):
+    with pytest.raises(ValidationError):
+        RobustezDesgasteConfig(**cambios)
+
+
+# ---------------------------------------------------------------------------
+# Calibración del flujo para otro sitio
+# ---------------------------------------------------------------------------
+CAMPO_RENDIMIENTO = "rendimiento_objetivo_l_m2_dia"
+SITIO_CALIBRACION = PerfilSitio(
+    nombre="SITIO_VERIFICACION",
+    flujo_niebla_maximo_l_m2_h=1.83,
+    temperatura_media_c=28.0,
+    amplitud_temperatura_c=5.0,
+    amplitud_humedad_pct=12.0,
+)
+
+
+def test_calibracion_con_el_perfil_por_defecto_es_identica_a_sin_sitio():
+    sin_sitio = analisis.calibrar_flujo_niebla(10.0)
+    con_perfil = analisis.calibrar_flujo_niebla(10.0, sitio=PerfilSitio(flujo_niebla_maximo_l_m2_h=1.0))
+    assert con_perfil == pytest.approx(sin_sitio)
+
+
+def test_calibracion_con_otro_sitio_usa_su_clima():
+    assert analisis.calibrar_flujo_niebla(10.0, sitio=SITIO_CALIBRACION) == pytest.approx(1.8026, abs=1e-4)
+
+
+def test_ejecutar_calibracion_sin_sitio():
+    resultado = analisis.ejecutar_calibracion(CalibracionConfig(rendimiento_objetivo_l_m2_dia=10.0))
+    assert resultado.flujo_calibrado_l_m2_h == pytest.approx(1.8256, abs=1e-4)
+    assert resultado.rendimiento_obtenido_l_m2_dia == pytest.approx(9.9961, abs=1e-4)
+    assert resultado.perfil.nombre == "CABO_DE_LA_VELA"
+    assert resultado.perfil.flujo_niebla_maximo_l_m2_h == pytest.approx(resultado.flujo_calibrado_l_m2_h)
+
+
+def test_ejecutar_calibracion_con_sitio_conserva_su_clima():
+    cfg = CalibracionConfig(rendimiento_objetivo_l_m2_dia=3.0, sitio=SITIO_CALIBRACION)
+    resultado = analisis.ejecutar_calibracion(cfg)
+    assert resultado.perfil.nombre == SITIO_CALIBRACION.nombre
+    assert resultado.perfil.temperatura_media_c == pytest.approx(SITIO_CALIBRACION.temperatura_media_c)
+    assert resultado.flujo_calibrado_l_m2_h == pytest.approx(0.4832, abs=1e-4)
+    assert resultado.rendimiento_obtenido_l_m2_dia == pytest.approx(3.0, abs=0.05)
+    assert SITIO_CALIBRACION.flujo_niebla_maximo_l_m2_h == pytest.approx(1.83)
+
+
+def test_ejecutar_calibracion_inalcanzable():
+    cfg = CalibracionConfig(rendimiento_objetivo_l_m2_dia=40.0)
+    with pytest.raises(ValueError, match="no está en el intervalo alcanzable"):
+        analisis.ejecutar_calibracion(cfg)
+
+
+@pytest.mark.parametrize(
+    "cambios",
+    [{CAMPO_RENDIMIENTO: 0.0}, {CAMPO_RENDIMIENTO: 41.0}, {"humedad_ambiente_inicial_pct": -1.0}],
+)
+def test_configuracion_de_calibracion_invalida(cambios):
+    datos = {CAMPO_RENDIMIENTO: 10.0, **cambios}
+    with pytest.raises(ValidationError):
+        CalibracionConfig(**datos)
 
 
 @pytest.mark.parametrize(

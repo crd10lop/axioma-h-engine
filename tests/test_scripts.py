@@ -99,7 +99,51 @@ def test_filas_robustez_una_fila_por_combinacion_y_punto():
     assert filas[2]["flujo_niebla_maximo_l_m2_h"] == pytest.approx(1.83)
     assert filas[1]["carga_salina_ohm_l_m2"] == pytest.approx(40.0)
     assert filas[0]["cruce_incrustacion_diaria_ohm"] == ""
+    assert filas[0]["cruce_separacion_ohm"] == ""
     assert filas[0][generador.CAMPO_HUMEDAD] == pytest.approx(generador.HUMEDAD_BARRIDO_PCT)
+
+
+def test_filas_robustez_incluye_la_separacion_del_cruce():
+    cruce = {
+        "estado": "INTERPOLADO",
+        "incrustacion_diaria_ohm": 1789.1,
+        "carga_salina_ohm_l_m2": 55.9,
+        "incrustacion_inferior_ohm": 1290.5,
+        "incrustacion_superior_ohm": 1918.1,
+        "separacion_ohm": 627.6,
+    }
+    robustez = {
+        "combinaciones": [
+            {"flujo_niebla_maximo_l_m2_h": 6.0, "eficacia_maxima_pulso": 0.9, "barrido": {"cruce": cruce, "puntos": [{}]}}
+        ]
+    }
+    fila = generador.filas_robustez(robustez)[0]
+    assert fila["cruce_incrustacion_inferior_ohm"] == pytest.approx(1290.5)
+    assert fila["cruce_incrustacion_superior_ohm"] == pytest.approx(1918.1)
+    assert fila["cruce_separacion_ohm"] == pytest.approx(627.6)
+
+
+def test_filas_robustez_desgaste_una_fila_por_combinacion():
+    robustez_desgaste = {
+        "combinaciones": [
+            {
+                "flujo_niebla_maximo_l_m2_h": 6.0,
+                "fatiga_por_pulso_pct": fatiga,
+                "degradacion_termica_pct_por_c_min": 0.05,
+                "reduccion_desgaste_min_pct": None,
+                "reduccion_desgaste_max_pct": 99.0,
+                "puntos_con_menor_desgaste": 6,
+                "puntos_totales": 6,
+            }
+            for fatiga in (0.01, 0.02)
+        ],
+        "combinaciones_con_menor_desgaste_en_todos_los_puntos": 2,
+    }
+    filas = generador.filas_robustez_desgaste(robustez_desgaste)
+    assert len(filas) == 2
+    assert filas[1]["fatiga_por_pulso_pct"] == pytest.approx(0.02)
+    assert filas[0]["reduccion_desgaste_min_pct"] == ""
+    assert list(filas[0])[-1] == generador.CAMPO_HUMEDAD
 
 
 # ---------------------------------------------------------------------------

@@ -427,14 +427,14 @@ def _ejecutar_pulso(
         diag.energia_pulsos_wh += energia
         diag.pulsos += 1
         diag.temperaturas_pulso_c.append(t_pulso)
-        _descontar_integridad(estado, config.FATIGA_POR_PULSO_PCT)
+        _descontar_integridad(estado, parametros.fatiga_por_pulso_pct)
         perdida_pulso = 0.0
         if t_pulso > config.UMBRAL_TEMPERATURA_CORTE_C:
             perdida_pulso = _descontar_integridad(
                 estado,
                 (t_pulso - config.UMBRAL_TEMPERATURA_CORTE_C)
                 * duracion_pulso_min
-                * config.DEGRADACION_TERMICA_PCT_POR_C_MIN,
+                * parametros.degradacion_termica_pct_por_c_min,
             )
         diag.recuperaciones_pct.append(
             min(100.0, modelo_fisico.conductancia_relativa(estado.impedancia) * 100.0)
@@ -479,7 +479,13 @@ def _actualizar_impedancia(
 
 
 def _degradar_membrana(
-    estado: _EstadoNodo, t_matriz: float, impedancia_operacion: float, paso_min: int, dt_h: float
+    estado: _EstadoNodo,
+    t_matriz: float,
+    impedancia_operacion: float,
+    paso_min: int,
+    dt_h: float,
+    *,
+    parametros: ParametrosModelo = PARAMETROS_BASE,
 ) -> float:
     """Descuenta la degradación por calor ambiental y por cristalización.
 
@@ -491,7 +497,7 @@ def _degradar_membrana(
             estado,
             (t_matriz - config.UMBRAL_TEMPERATURA_CORTE_C)
             * paso_min
-            * config.DEGRADACION_TERMICA_PCT_POR_C_MIN,
+            * parametros.degradacion_termica_pct_por_c_min,
         )
     if impedancia_operacion > config.UMBRAL_IMPEDANCIA_OHMS:
         _descontar_integridad(estado, config.DEGRADACION_CRISTALIZACION_PCT_H * dt_h)
@@ -520,7 +526,8 @@ def simular_modo(
     extracción; si se omite, se usa FRACCION_EXTRACCION_TEMPORIZADOR. El
     temporizador conserva su programación (pulso cada intervalo fijo, sin corte
     térmico ni pausa ecológica) con cualquier fracción. `parametros` define la
-    eficacia del pulso y el flujo de niebla sin modificar `backend.config`.
+    eficacia del pulso, el flujo de niebla, la fatiga por pulso y la
+    degradación térmica sin modificar `backend.config`.
 
     En cada paso y para cada nodo: se decide la acción (motor de reglas o
     programación fija), se ejecuta el pulso si corresponde, se calcula el
@@ -613,7 +620,9 @@ def simular_modo(
             _actualizar_impedancia(estado, entorno, i, n, litros, dt_h)
 
             # Degradación de la membrana.
-            perdida_ambiental_total += _degradar_membrana(estado, t_matriz, impedancia_operacion, paso_min, dt_h)
+            perdida_ambiental_total += _degradar_membrana(
+                estado, t_matriz, impedancia_operacion, paso_min, dt_h, parametros=parametros
+            )
             diag.integridad_minima = min(diag.integridad_minima, estado.integridad)
 
             # Balance de la reserva térmica.

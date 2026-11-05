@@ -250,6 +250,26 @@ def test_calor_ambiental_sobre_45_degrada_la_membrana():
     assert diag.integridad_final_promedio == pytest.approx(100.0 - perdida_esperada)
 
 
+def test_degradacion_termica_ambiental_usa_los_parametros_del_modelo():
+    t_matriz = config.UMBRAL_TEMPERATURA_CORTE_C + 2.0
+    entorno = entorno_constante(pasos=1, t_matriz=t_matriz)
+    parametros = ParametrosModelo(degradacion_termica_pct_por_c_min=0.10)
+    diag = simular_modo(entorno, ModoOperacion.NEURO_SIMBOLICO, parametros=parametros)
+    assert diag.perdida_termica_ambiental_pct == pytest.approx(2.0 * entorno.paso_minutos * 0.10)
+
+
+@pytest.mark.parametrize("fatiga", [0.01, 0.04])
+def test_fatiga_por_pulso_usa_los_parametros_del_modelo(fatiga):
+    # El temporizador ordena su primer pulso en el minuto 120 (paso 24). Con la matriz a 20 °C el pulso llega
+    # a 32 °C y, sin captación, la impedancia no sube: no hay degradación térmica ni cristalización.
+    entorno = entorno_constante(pasos=25, t_matriz=20.0, humedad=10.0)
+    parametros = ParametrosModelo(fatiga_por_pulso_pct=fatiga)
+    diag = simular_modo(entorno, ModoOperacion.TEMPORIZADOR_FIJO, parametros=parametros)
+    assert diag.pulsos == 1
+    assert diag.perdida_termica_pct == pytest.approx(0.0)
+    assert 100.0 - diag.integridad_final_promedio == pytest.approx(fatiga)
+
+
 def test_rendimiento_nocturno_sin_horas_nocturnas():
     entorno = entorno_constante(pasos=12, hora_inicio=8.0)
     diag = simular_modo(entorno, ModoOperacion.NEURO_SIMBOLICO)

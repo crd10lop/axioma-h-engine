@@ -1,25 +1,32 @@
-"""Endpoints del análisis de robustez: barrido de salinidad, robustez, sensibilidad, incertidumbre y dimensionamiento."""
+"""Endpoints del análisis de robustez: barrido de salinidad, robustez, sensibilidad, incertidumbre, dimensionamiento
+y calibración."""
 
 import logging
 import time
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from backend.analisis import (
     ejecutar_barrido,
+    ejecutar_calibracion,
     ejecutar_dimensionamiento,
     ejecutar_incertidumbre,
     ejecutar_robustez,
+    ejecutar_robustez_desgaste,
     ejecutar_sensibilidad,
 )
 from backend.schemas import (
     BarridoConfig,
     BarridoResultado,
+    CalibracionConfig,
+    CalibracionResultado,
     DimensionamientoConfig,
     DimensionamientoResultado,
     IncertidumbreConfig,
     IncertidumbreResultado,
     RobustezConfig,
+    RobustezDesgasteConfig,
+    RobustezDesgasteResultado,
     RobustezResultado,
     SensibilidadConfig,
     SensibilidadResultado,
@@ -89,6 +96,45 @@ def robustez_respuesta(configuracion: RobustezConfig) -> RobustezResultado:
         len(configuracion.semillas),
         time.perf_counter() - inicio,
         resultado.combinaciones_con_cruce,
+    )
+    return resultado
+
+
+@router.post("/robustez-desgaste")
+def robustez_desgaste(configuracion: RobustezDesgasteConfig) -> RobustezDesgasteResultado:
+    """Repite el barrido de salinidad con 2 flujos, 3 fatigas por pulso y 3 degradaciones térmicas."""
+    inicio = time.perf_counter()
+    resultado = ejecutar_robustez_desgaste(configuracion)
+    logger.info(
+        "Robustez del desgaste con humedad inicial %.1f %%, %d h, %d nodos y %d semillas completada en %.2f s. "
+        "Combinaciones con menor desgaste en todos los puntos: %d.",
+        configuracion.humedad_ambiente_inicial_pct,
+        configuracion.duracion_horas,
+        configuracion.numero_nodos,
+        len(configuracion.semillas),
+        time.perf_counter() - inicio,
+        resultado.combinaciones_con_menor_desgaste_en_todos_los_puntos,
+    )
+    return resultado
+
+
+@router.post(
+    "/calibracion",
+    responses={422: {"description": "Datos no válidos o rendimiento objetivo fuera del intervalo alcanzable."}},
+)
+def calibracion(configuracion: CalibracionConfig) -> CalibracionResultado:
+    """Calibra el flujo de niebla con el rendimiento medido de un sitio, sin modificar la configuración global."""
+    inicio = time.perf_counter()
+    try:
+        resultado = ejecutar_calibracion(configuracion)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    logger.info(
+        "Calibración para %.2f L/m²/día en %s completada en %.2f s. Flujo calibrado: %.4f L/m²/h.",
+        configuracion.rendimiento_objetivo_l_m2_dia,
+        configuracion.escenario.value,
+        time.perf_counter() - inicio,
+        resultado.flujo_calibrado_l_m2_h,
     )
     return resultado
 

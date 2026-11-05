@@ -94,3 +94,37 @@ def test_parametros_desde_no_modifica_los_parametros_base():
 def test_parametros_desde_rechaza_valores_invalidos(flujo, eficacia, mensaje):
     with pytest.raises(ValueError, match=mensaje):
         parametros_desde(flujo, eficacia)
+
+
+def test_parametros_base_usan_la_fatiga_y_la_degradacion_de_config():
+    assert PARAMETROS_BASE.fatiga_por_pulso_pct == pytest.approx(config.FATIGA_POR_PULSO_PCT)
+    assert PARAMETROS_BASE.degradacion_termica_pct_por_c_min == pytest.approx(config.DEGRADACION_TERMICA_PCT_POR_C_MIN)
+
+
+def test_parametros_desde_con_fatiga_y_degradacion():
+    parametros = parametros_desde(fatiga_por_pulso_pct=0.04, degradacion_termica_pct_por_c_min=0.025)
+    assert parametros == ParametrosModelo(fatiga_por_pulso_pct=0.04, degradacion_termica_pct_por_c_min=0.025)
+    assert PARAMETROS_BASE == ParametrosModelo()
+
+
+def test_parametros_desde_con_los_valores_base_es_igual_a_los_parametros_base():
+    parametros = parametros_desde(
+        fatiga_por_pulso_pct=config.FATIGA_POR_PULSO_PCT,
+        degradacion_termica_pct_por_c_min=config.DEGRADACION_TERMICA_PCT_POR_C_MIN,
+    )
+    assert parametros == PARAMETROS_BASE
+    assert hash(parametros) == hash(PARAMETROS_BASE)
+
+
+@pytest.mark.parametrize(
+    ("cambios", "mensaje"),
+    [
+        ({"fatiga_por_pulso_pct": 0.0}, "fatiga"),
+        ({"fatiga_por_pulso_pct": -0.01}, "fatiga"),
+        ({"degradacion_termica_pct_por_c_min": 0.0}, "degradación térmica"),
+        ({"degradacion_termica_pct_por_c_min": -0.05}, "degradación térmica"),
+    ],
+)
+def test_parametros_desde_rechaza_fatiga_o_degradacion_no_positivas(cambios, mensaje):
+    with pytest.raises(ValueError, match=mensaje):
+        parametros_desde(**cambios)

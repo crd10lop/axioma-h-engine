@@ -1,5 +1,5 @@
-"""Análisis de robustez del modelo: barrido de salinidad, robustez de la respuesta, sensibilidad,
-calibración, incertidumbre y dimensionamiento del captador.
+"""Análisis de robustez del modelo: barrido de salinidad, robustez de la respuesta y del desgaste,
+sensibilidad, calibración, incertidumbre y dimensionamiento del captador.
 
 Ningún análisis modifica `backend.config`. Cada análisis construye con
 `parametros_desde` una instancia inmutable de `ParametrosModelo` por cada
@@ -18,6 +18,9 @@ from backend.modelo_fisico import ParametrosModelo, parametros_desde
 from backend.schemas import (
     BarridoConfig,
     BarridoResultado,
+    CalibracionConfig,
+    CalibracionResultado,
+    CombinacionDesgaste,
     CombinacionRobustez,
     ConjeturasValidadas,
     CruceRecuperacion,
@@ -37,6 +40,8 @@ from backend.schemas import (
     PuntoSensibilidad,
     ResumenDistribucion,
     RobustezConfig,
+    RobustezDesgasteConfig,
+    RobustezDesgasteResultado,
     RobustezResultado,
     SensibilidadConfig,
     SensibilidadResultado,
@@ -69,6 +74,8 @@ FLUJOS_REFERENCIA = (
 )
 # Eficacias del pulso de la grilla de robustez: el rango supuesto y el valor por defecto.
 EFICACIAS_ROBUSTEZ = (config.EFICACIA_PULSO_RANGO_MIN, config.EFICACIA_MAXIMA_PULSO, config.EFICACIA_PULSO_RANGO_MAX)
+# Flujos de la robustez del desgaste: el supuesto del modelo y el extremo superior de la calibración.
+FLUJOS_DESGASTE = (config.FLUJO_NIEBLA_MAXIMO_L_M2_H, config.FLUJO_NIEBLA_CALIBRADO_MAX_L_M2_H)
 
 _TAMANO_CACHE = 256
 _DECIMALES = 4
@@ -203,8 +210,10 @@ def _interpolar_cruce(
 ) -> CruceRecuperacion:
     """Interpola linealmente la incrustación diaria y la carga salina donde la ventaja vale 0.
 
-    Cada punto es (incrustación diaria, ventaja, carga salina). Las ventajas de
-    los dos puntos tienen signos distintos, por lo que su diferencia no es nula.
+    Cada punto es (incrustación diaria, ventaja, carga salina), y el anterior
+    tiene la menor incrustación. Las ventajas de los dos puntos tienen signos
+    distintos, por lo que su diferencia no es nula. Se informan además los dos
+    puntos y su separación, que acota dónde puede estar el cruce real.
     """
     incrustacion_0, ventaja_0, carga_0 = anterior
     incrustacion_1, ventaja_1, carga_1 = siguiente
@@ -213,6 +222,9 @@ def _interpolar_cruce(
         estado=estado,
         incrustacion_diaria_ohm=round(incrustacion_0 + fraccion * (incrustacion_1 - incrustacion_0), _DECIMALES),
         carga_salina_ohm_l_m2=round(carga_0 + fraccion * (carga_1 - carga_0), _DECIMALES),
+        incrustacion_inferior_ohm=round(incrustacion_0, _DECIMALES),
+        incrustacion_superior_ohm=round(incrustacion_1, _DECIMALES),
+        separacion_ohm=round(incrustacion_1 - incrustacion_0, _DECIMALES),
     )
 
 
@@ -247,7 +259,7 @@ def _cruce(puntos: list[PuntoBarrido]) -> CruceRecuperacion:
     return _interpolar_cruce(EstadoCruce.CRUCE_DESCENDENTE, datos[descendente], datos[descendente + 1])
 
 
-def ejecutar_barrido(cfg: BarridoConfig) -> BarridoResultado:
+def ejecutar_barrido(cfg: BarridoConfig, *, parametros: ParametrosModelo | None = None) -> BarridoResultado:
     """Barrido de salinidad: DIA_NORMAL e INCRUSTACION_SALINA_RAPIDA con tasas BAJA, MEDIA y ALTA.
 
     Cada combinación se simula una vez por semilla con el flujo de niebla y la
@@ -256,8 +268,12 @@ def ejecutar_barrido(cfg: BarridoConfig) -> BarridoResultado:
     recuperación tras pulso y de la degradación acumulada de ambos modos, junto
     con la incrustación diaria y la ventaja en recuperación. Los puntos se
     ordenan por carga salina creciente y se informa el cruce de la ventaja.
+    Con `parametros` explícitos se usan esos en lugar de los de la
+    configuración; así la robustez del desgaste varía la fatiga y la
+    degradación térmica, que no son campos de la API del barrido.
     """
-    parametros = parametros_desde(cfg.flujo_niebla_maximo_l_m2_h, cfg.eficacia_maxima_pulso)
+    if parametros is None:
+        parametros = parametros_desde(cfg.flujo_niebla_maximo_l_m2_h, cfg.eficacia_maxima_pulso)
     puntos = [
         _punto_barrido(cfg, escenario, tasa, parametros)
         for escenario in ESCENARIOS_BARRIDO
@@ -274,18 +290,21 @@ def ejecutar_barrido(cfg: BarridoConfig) -> BarridoResultado:
 # ---------------------------------------------------------------------------
 # Robustez de la respuesta frente a los parámetros supuestos
 # ---------------------------------------------------------------------------
+def _config_barrido(cfg: RobustezConfig, flujo: float, eficacia: float | None = None) -> BarridoConfig:
+    """Barrido con las condiciones de corrida de la robustez y el flujo y la eficacia dados."""
+    return BarridoConfig(
+        humedad_ambiente_inicial_pct=cfg.humedad_ambiente_inicial_pct,
+        duracion_horas=cfg.duracion_horas,
+        numero_nodos=cfg.numero_nodos,
+        semillas=cfg.semillas,
+        flujo_niebla_maximo_l_m2_h=flujo,
+        eficacia_maxima_pulso=eficacia,
+    )
+
+
 def _combinacion_robustez(cfg: RobustezConfig, flujo: float, eficacia: float) -> CombinacionRobustez:
     """Barrido de salinidad con un flujo de niebla y una eficacia del pulso de la grilla."""
-    barrido = ejecutar_barrido(
-        BarridoConfig(
-            humedad_ambiente_inicial_pct=cfg.humedad_ambiente_inicial_pct,
-            duracion_horas=cfg.duracion_horas,
-            numero_nodos=cfg.numero_nodos,
-            semillas=cfg.semillas,
-            flujo_niebla_maximo_l_m2_h=flujo,
-            eficacia_maxima_pulso=eficacia,
-        )
-    )
+    barrido = ejecutar_barrido(_config_barrido(cfg, flujo, eficacia))
     return CombinacionRobustez(flujo_niebla_maximo_l_m2_h=flujo, eficacia_maxima_pulso=eficacia, barrido=barrido)
 
 
@@ -330,6 +349,65 @@ def ejecutar_robustez(cfg: RobustezConfig) -> RobustezResultado:
         combinaciones_con_cruce=len(cruces),
         incrustacion_diaria_cruce_min_ohm=cruce_min,
         incrustacion_diaria_cruce_max_ohm=cruce_max,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Robustez del desgaste frente a la fatiga y la degradación térmica
+# ---------------------------------------------------------------------------
+def _combinacion_desgaste(
+    cfg: RobustezDesgasteConfig, flujo: float, fatiga: float, degradacion: float
+) -> CombinacionDesgaste:
+    """Barrido con un flujo, una fatiga por pulso y una degradación térmica, resumido en su reducción del desgaste.
+
+    La eficacia del pulso es la de `backend/config.py`. Un punto cuenta como de
+    menor desgaste si su reducción es positiva; un punto sin reducción (el
+    temporizador no se degrada) no cuenta.
+    """
+    parametros = parametros_desde(flujo, fatiga_por_pulso_pct=fatiga, degradacion_termica_pct_por_c_min=degradacion)
+    barrido = ejecutar_barrido(_config_barrido(cfg, flujo), parametros=parametros)
+    reducciones = [punto.reduccion_desgaste_pct for punto in barrido.puntos if punto.reduccion_desgaste_pct is not None]
+    reduccion_min, reduccion_max = _extremos(reducciones)
+    return CombinacionDesgaste(
+        flujo_niebla_maximo_l_m2_h=flujo,
+        fatiga_por_pulso_pct=fatiga,
+        degradacion_termica_pct_por_c_min=degradacion,
+        reduccion_desgaste_min_pct=reduccion_min,
+        reduccion_desgaste_max_pct=reduccion_max,
+        puntos_con_menor_desgaste=sum(1 for reduccion in reducciones if _neuro_supera(reduccion)),
+        puntos_totales=len(barrido.puntos),
+    )
+
+
+def ejecutar_robustez_desgaste(cfg: RobustezDesgasteConfig) -> RobustezDesgasteResultado:
+    """Repite el barrido de salinidad con 2 flujos por 3 fatigas por pulso por 3 degradaciones térmicas.
+
+    Los flujos son el supuesto del modelo y el extremo superior de la
+    calibración; la fatiga y la degradación térmica toman la mitad, el valor
+    supuesto y el doble. Resume el rango de la reducción del desgaste entre
+    todos los puntos y cuenta las combinaciones en que el control basado en
+    reglas se degrada menos en los seis puntos. No modifica `backend.config`.
+    """
+    combinaciones = [
+        _combinacion_desgaste(cfg, flujo, fatiga, degradacion)
+        for flujo in FLUJOS_DESGASTE
+        for fatiga in config.FATIGAS_ROBUSTEZ_PCT
+        for degradacion in config.DEGRADACIONES_TERMICAS_ROBUSTEZ
+    ]
+    extremos = [
+        valor
+        for combinacion in combinaciones
+        for valor in (combinacion.reduccion_desgaste_min_pct, combinacion.reduccion_desgaste_max_pct)
+        if valor is not None
+    ]
+    reduccion_min, reduccion_max = _extremos(extremos)
+    return RobustezDesgasteResultado(
+        combinaciones=combinaciones,
+        reduccion_desgaste_min_pct=reduccion_min,
+        reduccion_desgaste_max_pct=reduccion_max,
+        combinaciones_con_menor_desgaste_en_todos_los_puntos=sum(
+            1 for combinacion in combinaciones if combinacion.puntos_con_menor_desgaste == combinacion.puntos_totales
+        ),
     )
 
 
@@ -392,11 +470,13 @@ def _simular_con_parametros(
     duracion_horas: int,
     semilla: int,
     parametros: ParametrosModelo,
+    sitio: PerfilSitio | None = None,
 ) -> tuple[DetalleVerificacion, DiagnosticoModo, DiagnosticoModo, int]:
     """Simula una corrida con 8 nodos y los parámetros dados, y verifica las conjeturas.
 
-    Devuelve el detalle de verificación, los diagnósticos del modo
-    neuro-simbólico y del temporizador, y el número de nodos.
+    Con `sitio`, el entorno usa su temperatura y sus amplitudes; sin él, las
+    de Cabo de la Vela. Devuelve el detalle de verificación, los diagnósticos
+    del modo neuro-simbólico y del temporizador, y el número de nodos.
     """
     cfg = SimulationConfig(
         duracion_horas=duracion_horas,
@@ -404,6 +484,7 @@ def _simular_con_parametros(
         humedad_ambiente_inicial_pct=humedad,
         tasa_salinizacion=tasa,
         semilla=semilla,
+        sitio=sitio,
     )
     entorno, neuro, temporizador = ejecutar_simulacion_detallada(cfg, parametros=parametros)
     return verificar_conjeturas(neuro, temporizador, entorno.numero_nodos), neuro, temporizador, entorno.numero_nodos
@@ -455,13 +536,36 @@ _MAXIMO_ITERACIONES = 60
 
 
 @lru_cache(maxsize=_TAMANO_CACHE)
-def _rendimiento_neuro(escenario: Escenario, humedad: float, semilla: int, flujo: float) -> float:
-    """Rendimiento del modo neuro-simbólico en L/m²/día con el flujo de niebla dado y los demás parámetros base."""
+def _rendimiento_neuro(
+    escenario: Escenario, humedad: float, semilla: int, flujo: float, clima: tuple[float, float, float] | None = None
+) -> float:
+    """Rendimiento del modo neuro-simbólico en L/m²/día con el flujo de niebla dado y los demás parámetros base.
+
+    `clima` es la temperatura media y las amplitudes térmica y de humedad del
+    sitio, en una tupla inmutable que sirve de clave de la caché; con None se
+    usa el clima de Cabo de la Vela.
+    """
     parametros = parametros_desde(flujo_niebla_maximo_l_m2_h=flujo)
+    sitio = None
+    if clima is not None:
+        temperatura, amplitud_temperatura, amplitud_humedad = clima
+        sitio = PerfilSitio(
+            flujo_niebla_maximo_l_m2_h=flujo,
+            temperatura_media_c=temperatura,
+            amplitud_temperatura_c=amplitud_temperatura,
+            amplitud_humedad_pct=amplitud_humedad,
+        )
     _, neuro, _, nodos = _simular_con_parametros(
-        escenario, humedad, TASA_CALIBRACION, DURACION_CALIBRACION_H, semilla, parametros
+        escenario, humedad, TASA_CALIBRACION, DURACION_CALIBRACION_H, semilla, parametros, sitio
     )
     return impacto_comunitario(neuro.litros_totales, DURACION_CALIBRACION_H, nodos).rendimiento_l_m2_dia
+
+
+def _clima(sitio: PerfilSitio | None) -> tuple[float, float, float] | None:
+    """Temperatura media y amplitudes del sitio como tupla inmutable, o None si no hay sitio."""
+    if sitio is None:
+        return None
+    return sitio.temperatura_media_c, sitio.amplitud_temperatura_c, sitio.amplitud_humedad_pct
 
 
 def calibrar_flujo_niebla(
@@ -471,21 +575,25 @@ def calibrar_flujo_niebla(
     humedad_pct: float = 85.0,
     semilla: int = 42,
     tolerancia: float = 0.01,
+    sitio: PerfilSitio | None = None,
 ) -> float:
     """Flujo máximo de niebla con el que el neuro-simbólico alcanza el rendimiento objetivo.
 
     Bisección sobre [0.1, 6.0] L/m²/h con una corrida de 24 h y tasa ALTA por
     cada flujo evaluado; el rendimiento crece con el flujo. Se detiene cuando
     el intervalo mide menos que la tolerancia y devuelve su punto medio,
-    redondeado a 4 decimales. No modifica `backend.config`: cada corrida usa una
-    copia de `ParametrosModelo`. Lanza ValueError si la tolerancia no es
-    positiva o si el objetivo no está entre los rendimientos de los extremos.
+    redondeado a 4 decimales. Con `sitio`, cada corrida usa su temperatura
+    media y sus amplitudes con el flujo evaluado; sin él, el clima de Cabo de
+    la Vela. No modifica `backend.config`: cada corrida usa una copia de
+    `ParametrosModelo`. Lanza ValueError si la tolerancia no es positiva o si
+    el objetivo no está entre los rendimientos de los extremos.
     """
     if tolerancia <= 0:
         raise ValueError(f"La tolerancia debe ser positiva: {tolerancia}")
+    clima = _clima(sitio)
     inferior, superior = FLUJO_BUSQUEDA_MIN_L_M2_H, FLUJO_BUSQUEDA_MAX_L_M2_H
-    alcanzable_min = _rendimiento_neuro(escenario, humedad_pct, semilla, inferior)
-    alcanzable_max = _rendimiento_neuro(escenario, humedad_pct, semilla, superior)
+    alcanzable_min = _rendimiento_neuro(escenario, humedad_pct, semilla, inferior, clima)
+    alcanzable_max = _rendimiento_neuro(escenario, humedad_pct, semilla, superior, clima)
     if not alcanzable_min <= rendimiento_objetivo_l_m2_dia <= alcanzable_max:
         raise ValueError(
             f"El rendimiento objetivo {rendimiento_objetivo_l_m2_dia} L/m²/día no está en el intervalo "
@@ -494,12 +602,37 @@ def calibrar_flujo_niebla(
     iteraciones = 0
     while superior - inferior >= tolerancia and iteraciones < _MAXIMO_ITERACIONES:
         medio = (inferior + superior) / 2.0
-        if _rendimiento_neuro(escenario, humedad_pct, semilla, medio) < rendimiento_objetivo_l_m2_dia:
+        if _rendimiento_neuro(escenario, humedad_pct, semilla, medio, clima) < rendimiento_objetivo_l_m2_dia:
             inferior = medio
         else:
             superior = medio
         iteraciones += 1
     return round((inferior + superior) / 2.0, _DECIMALES)
+
+
+def ejecutar_calibracion(cfg: CalibracionConfig) -> CalibracionResultado:
+    """Calibra el flujo de niebla con el rendimiento medido y devuelve el perfil del sitio con ese flujo.
+
+    Informa el rendimiento que produce el flujo calibrado, que difiere del
+    objetivo en lo que cambia el rendimiento dentro de la tolerancia de la
+    bisección. Sin sitio, el perfil es el de Cabo de la Vela con el flujo
+    calibrado. Lanza ValueError si el objetivo no es alcanzable.
+    """
+    clima = _clima(cfg.sitio)
+    flujo = calibrar_flujo_niebla(
+        cfg.rendimiento_objetivo_l_m2_dia,
+        escenario=cfg.escenario,
+        humedad_pct=cfg.humedad_ambiente_inicial_pct,
+        semilla=cfg.semilla,
+        sitio=cfg.sitio,
+    )
+    rendimiento = _rendimiento_neuro(cfg.escenario, cfg.humedad_ambiente_inicial_pct, cfg.semilla, flujo, clima)
+    sitio = cfg.sitio if cfg.sitio is not None else PerfilSitio()
+    return CalibracionResultado(
+        flujo_calibrado_l_m2_h=flujo,
+        rendimiento_obtenido_l_m2_dia=rendimiento,
+        perfil=sitio.model_copy(update={"flujo_niebla_maximo_l_m2_h": flujo}),
+    )
 
 
 # ---------------------------------------------------------------------------

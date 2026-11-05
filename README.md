@@ -30,8 +30,8 @@ Las sub-preguntas, las variables y la hipótesis de trabajo están en [docs/01](
 
 Todas las cifras salen de ejecuciones del modelo y su fuente única es [docs/04](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), secciones 6 a 8. En el modelo, con 24 h, humedad inicial de 85 % y los rangos evaluados de flujo de niebla y eficacia del pulso:
 
-- **Desgaste.** El control basado en reglas (modo neuro-simbólico en la API) reduce la degradación de la membrana entre 73.3 % y 100 % frente al temporizador en los 54 puntos de las nueve combinaciones de flujo y eficacia (§8.8).
-- **Recuperación.** Su ventaja no depende de la carga salina por litro sino de la incrustación diaria: el cruce está entre 1632.9 y 1839.2 Ohm por día con la semilla 42 (1682.1 a 1866.6 con las semillas 1 a 3), mientras que la carga por litro del cruce va de 50.3 a 190.9 Ohm por L/m² (§8.8).
+- **Desgaste.** El control basado en reglas (modo neuro-simbólico en la API) reduce la degradación de la membrana entre 73.3 % y 100 % frente al temporizador en los 54 puntos de las nueve combinaciones de flujo y eficacia (§8.8). Con la mitad y el doble de la fatiga por pulso y de la degradación térmica supuestas, se degrada menos en los 108 puntos de 18 combinaciones, con una reducción de 61.5 % a 100 % (§8.11).
+- **Recuperación.** Su ventaja no depende de la carga salina por litro sino de la incrustación diaria: el cruce está entre 1632.9 y 1839.2 Ohm por día con la semilla 42 (1682.1 a 1866.6 con las semillas 1 a 3), mientras que la carga por litro del cruce va de 50.3 a 190.9 Ohm por L/m². Los dos niveles entre los que se interpola cada cruce están separados de 617 a 1165 Ohm por día, más que ese rango: el barrido no distingue el cruce entre combinaciones, que en cada una está en algún punto entre 1171 y 2365 Ohm por día (§8.8).
 - **Con niebla como la de la literatura.** Con el flujo calibrado mínimo, 0.49 L/m²/h, la incrustación diaria no pasa de 659 Ohm por día y el temporizador recupera más en todos los niveles con pulsos; con el flujo calibrado, el control basado en reglas recupera más en solo 3 de 62 muestras de la incertidumbre (§8.7 y §8.8).
 - **Conjeturas.** Las Conjeturas 1 y 2 dependen de la eficacia del pulso, que habría que medir (0.94 y 0.97 para validarlas, §6.2); la Conjetura 3 no se valida con el flujo calibrado (§8.6).
 - **Personas.** Para 50 personas con 20 L al día harían falta 32 nodos de 1 m² con el flujo supuesto, y entre 100 y 332 con el flujo calibrado, en línea con los 100 a 333 m² de la literatura (§7.7).
@@ -43,7 +43,7 @@ La respuesta es condicional: la reducción del desgaste es robusta, y la ventaja
 1. **Pregunta y tesis.** La vista 1 del dashboard, "Investigación y guía", y [docs/01](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2. La vista incluye los supuestos clave con la medición que reemplazaría a cada uno y una guía de lectura por disciplina.
 2. **Funcionamiento.** Las vistas 2 y 3 muestran cómo decide un nodo y cómo se comparan ambos controles; [docs/03](docs/03_Funcionamiento_General_AxiomaH.md) lo explica en lenguaje general.
 3. **Respuesta por partes.** La vista 4 responde la pregunta en cuatro partes: ¿reduce el desgaste?, ¿mejora la recuperación y desde qué salinidad?, ¿qué tan seguro es? y ¿para cuántas personas alcanza? Las tablas completas están en [docs/04](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), secciones 5 a 8.
-4. **Hipótesis propias.** La vista 5, "Explorador de hipótesis", simula con una eficacia del pulso y un perfil de sitio propios, dice qué cambiaría cada resultado y propone preguntas para el Ciclo 3.
+4. **Hipótesis propias.** La vista 5, "Explorador de hipótesis", simula con una eficacia del pulso y un perfil de sitio propios, calibra el flujo de niebla con un rendimiento medido, dice qué cambiaría cada resultado y propone preguntas para el Ciclo 3.
 5. **Lectura crítica.** Conflictos entre indicadores, contraste con la literatura, robustez y transferencia a otro sitio en [docs/04](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 8.
 6. **Límites y fuentes.** Las [limitaciones](#limitaciones) de este documento y la trazabilidad de cada parámetro en [docs/06](docs/06_Referencias_y_Trazabilidad_AxiomaH.md).
 
@@ -72,7 +72,7 @@ axioma-h-engine/
 │   ├── modelo_fisico.py    Ecuaciones compartidas y parámetros inmutables
 │   ├── motor_reglas.py     Motor de control basado en reglas
 │   ├── simulador.py        Simulación comparativa y verificación de conjeturas
-│   ├── analisis.py         Barrido, robustez, sensibilidad, calibración, incertidumbre y dimensionamiento
+│   ├── analisis.py         Barrido, robustez de la respuesta y del desgaste, sensibilidad, calibración, incertidumbre y dimensionamiento
 │   ├── impacto.py          Impacto comunitario y dimensionamiento (OMS y Sphere)
 │   └── routers/            nodo.py, simulacion.py, analisis.py y sitios.py
 ├── frontend/
@@ -114,7 +114,7 @@ uvicorn backend.main:app --reload --port 8000   # API: http://127.0.0.1:8000/doc
 streamlit run frontend/app.py                   # Dashboard: http://localhost:8501
 ```
 
-Todo funciona sin conexión a internet. Para usar otra API, defina `AXIOMA_API_URL` antes de iniciar Streamlit. Los datos de [docs/datos/](docs/datos/README.md) se regeneran sin la API con `python scripts/generar_resultados_referencia.py`, y `--comprobar` verifica que coinciden con el modelo. El despliegue en Render, con 26 comprobaciones automatizadas, está en [docs/05](docs/05_Despliegue_y_Operacion_AxiomaH.md).
+Todo funciona sin conexión a internet. Para usar otra API, defina `AXIOMA_API_URL` antes de iniciar Streamlit. Los datos de [docs/datos/](docs/datos/README.md) se regeneran sin la API con `python scripts/generar_resultados_referencia.py`, y `--comprobar` verifica que coinciden con el modelo. El despliegue en Render, con 29 comprobaciones automatizadas, está en [docs/05](docs/05_Despliegue_y_Operacion_AxiomaH.md).
 
 ## Endpoints
 
@@ -125,6 +125,8 @@ Todo funciona sin conexión a internet. Para usar otra API, defina `AXIOMA_API_U
 | POST | `/api/v1/simulacion/ejecutar` | Simulación comparativa, con perfil de sitio y eficacia opcionales |
 | POST | `/api/v1/analisis/barrido-salinidad` | Seis niveles de carga salina, de 1 a 5 semillas |
 | POST | `/api/v1/analisis/robustez-respuesta` | Barrido con 3 flujos por 3 eficacias y cruce de la ventaja |
+| POST | `/api/v1/analisis/robustez-desgaste` | Barrido con 2 flujos por 3 fatigas por pulso por 3 degradaciones térmicas |
+| POST | `/api/v1/analisis/calibracion` | Flujo de niebla calibrado con un rendimiento medido y el perfil del sitio |
 | POST | `/api/v1/analisis/sensibilidad` | Varios valores de la eficacia o del flujo de niebla |
 | POST | `/api/v1/analisis/incertidumbre` | Muestreo conjunto de eficacia y flujo calibrado |
 | POST | `/api/v1/analisis/dimensionamiento` | Área y nodos para un número de personas |
@@ -169,6 +171,7 @@ La versión de la API se publica en `GET /api/v1/health` (`VERSION_SERVICIO` en 
 | 0.1.0 | Motor de reglas, simulación comparativa, verificación de las tres conjeturas, dashboard y despliegue en Render. |
 | 0.2.0 | Barrido con varias semillas, sensibilidad, causas de no validación, temporizador con tope ecológico, impacto comunitario, supervisión humana (REGLA_06) e incertidumbre con el flujo calibrado. |
 | 0.3.0 | Robustez de la respuesta, incrustación diaria y cruce, dimensionamiento, perfil de sitio, `parametros_usados` y `GET /api/v1/sitios`. |
+| 0.4.0 | Robustez del desgaste frente a la fatiga por pulso y la degradación térmica, niveles interpolados y separación del cruce, y calibración del flujo por API con el perfil del sitio. Los resultados por defecto del modelo no cambian. |
 
 El dashboard de cinco vistas, con la respuesta por partes y el explorador de hipótesis, y los datos interoperables (Data Package y OpenAPI versionado) se agregaron sobre la API 0.3.0, sin cambios en la API.
 
