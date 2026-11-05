@@ -59,3 +59,17 @@ $RECYCLE.BIN/
 
 # macOS
 .DS_Store
+
+# Auxiliares de LaTeX (el PDF final sí se versiona)
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.lot
+*.out
+*.run.xml
+*.synctex.gz
+*.toc

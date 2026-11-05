@@ -14,6 +14,7 @@ Incluye una API REST, un dashboard de cinco vistas y un simulador que compara el
 | Recurso | Enlace |
 |---|---|
 | Código fuente | https://github.com/crd10lop/axioma-h-engine |
+| Informe final (PDF y fuente LaTeX) | [docs/00_Informe_Final_AxiomaH.pdf](docs/00_Informe_Final_AxiomaH.pdf) ([fuente LaTeX](docs/00_Informe_Final_AxiomaH/README.md)) |
 | Dashboard desplegado | [Abrir dashboard](https://axioma-h-dashboard.onrender.com) |
 | API desplegada (documentación interactiva) | [Abrir API](https://axioma-h-api.onrender.com/docs) |
 | Contrato OpenAPI versionado | [docs/api/openapi.json](docs/api/openapi.json) |
@@ -40,7 +41,7 @@ La respuesta es condicional: la reducción del desgaste es robusta, y la ventaja
 
 ## Cómo leer este artefacto
 
-En la barra lateral del dashboard, el selector **Nivel de lectura** adapta las vistas 1 y 4 a tres públicos: **Comunidad** (lectura breve; vistas 1 y 4, parte d, impacto en distintos entornos), **Evaluador no técnico** (lectura breve; vistas 1 y 4, y la sección [Respuesta](#respuesta) de este documento) e **Investigador** (lectura completa, seleccionada por defecto; vistas 4 y 5, y [docs/04](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), secciones 7 y 8).
+Para una lectura integrada y autocontenida del proyecto, empieza por el [Informe final en PDF (documento 00)](docs/00_Informe_Final_AxiomaH.pdf) (fuente en LaTeX en [docs/00_Informe_Final_AxiomaH/](docs/00_Informe_Final_AxiomaH/README.md)). En la barra lateral del dashboard, el selector **Nivel de lectura** adapta las vistas 1 y 4 a tres públicos: **Comunidad** (lectura breve; vistas 1 y 4, parte d, impacto en distintos entornos), **Evaluador no técnico** (lectura breve; vistas 1 y 4, y la sección [Respuesta](#respuesta) de este documento) e **Investigador** (lectura completa, seleccionada por defecto; vistas 4 y 5, y [docs/04](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), secciones 7 y 8).
 
 1. **Pregunta y tesis.** La vista 1 del dashboard, "Investigación y guía", y [docs/01](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2. La vista incluye los supuestos clave con la medición que reemplazaría a cada uno y una guía de lectura por disciplina.
 2. **Funcionamiento.** Las vistas 2 y 3 muestran cómo decide un nodo y cómo se comparan ambos controles; [docs/03](docs/03_Funcionamiento_General_AxiomaH.md) lo explica en lenguaje general.
@@ -53,6 +54,7 @@ En la barra lateral del dashboard, el selector **Nivel de lectura** adapta las v
 
 | N.º | Documento | Contenido |
 |---|---|---|
+| 00 | [Informe final del proyecto (PDF)](docs/00_Informe_Final_AxiomaH.pdf) ([fuente LaTeX](docs/00_Informe_Final_AxiomaH/README.md)) | Síntesis académica completa, figuras de los datos abiertos, discusión y anexos. |
 | 01 | [Plan y Matriz de Operacionalización](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md) | Pregunta, conjeturas, variables, perspectivas, alcance e hitos. |
 | 02 | [Especificación técnica y PRD de la API](docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md) | Endpoints, payloads y respuestas de ejemplo calculadas por el modelo. |
 | 03 | [Funcionamiento general](docs/03_Funcionamiento_General_AxiomaH.md) | Explicación general, uso de las cinco vistas y guía por disciplina. |
@@ -85,6 +87,8 @@ axioma-h-engine/
 │   └── transformaciones.py Conversión de respuestas en tablas, gráficos y frases calculadas
 ├── tests/                  Pruebas con pytest, sin red
 ├── docs/
+│   ├── 00_Informe_Final_AxiomaH/   Código fuente en LaTeX del informe final (informe.tex, secciones, figuras y referencias)
+│   ├── 00_Informe_Final_AxiomaH.pdf Informe académico compilado
 │   ├── 01_ a 06_*.md       Documentación en orden de lectura
 │   ├── api/openapi.json    Contrato OpenAPI generado desde la aplicación
 │   └── datos/              CSV, JSON, datapackage.json y diccionario de campos
@@ -135,7 +139,7 @@ Todo funciona sin conexión a internet. Para usar otra API, defina `AXIOMA_API_U
 | POST | `/api/v1/analisis/impacto-entornos` | Impacto en 18 entornos de niebla y salinidad frente a la entrega por carrotanque |
 | GET | `/api/v1/sitios` | Perfiles de sitio de referencia |
 
-Ningún análisis modifica la configuración del modelo (decisión D5). Los payloads y las respuestas de ejemplo están en [docs/02](docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md), sección 3, y el uso desde otros sistemas (curl, pandas, Data Package y sensores reales) en [docs/05](docs/05_Despliegue_y_Operacion_AxiomaH.md), sección 7.
+El esquema OpenAPI ([docs/api/openapi.json](docs/api/openapi.json)) publica 13 rutas en total: las 12 de la tabla y `GET /` (estado general del motor). Ningún análisis modifica la configuración del modelo (decisión D5). Los payloads y las respuestas de ejemplo están en [docs/02](docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md), sección 3, y el uso desde otros sistemas (curl, pandas, Data Package y sensores reales) en [docs/05](docs/05_Despliegue_y_Operacion_AxiomaH.md), sección 7.
 
 ## Reglas de control
 

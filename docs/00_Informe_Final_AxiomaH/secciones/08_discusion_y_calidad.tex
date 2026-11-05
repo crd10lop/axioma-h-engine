@@ -1,0 +1,26 @@
+\chapter{Discusi\'on cient\'ifica y garant\'ias de calidad del software}
+\label{cap:discusion_calidad}
+
+\section{Discusi\'on de los veredictos y car\'acter condicional de la respuesta}
+El an\'alisis integrado de los resultados confirma que la respuesta a la pregunta general de investigaci\'on no es un simple juicio binario, sino una conclusi\'on rigurosamente condicionada por los reg\'imenes f\'isicos de operaci\'on:
+
+\subsection{Desgaste mec\'anico: ventaja estructural del control simb\'olico}
+La reducci\'on de desgaste f\'isico ($\ge \SI{61.5}{\percent}$ en todos los casos evaluados) responde a una diferencia estructural insalvable entre ambos esquemas: el temporizador opera a lazo abierto y genera fatiga t\'ermica continua (36 pulsos en 72 horas) independientemente de que la superficie est\'e limpia o no. En contraste, el motor de reglas solo aplica calor ante acumulaci\'on salina efectiva ($Z > 1500.0\;\Omega$). Dado que el punto de empate mec\'anico exigir\'ia una fatiga por pulso de $\SI{2.0}{\percent}$ (cien veces mayor que el valor de dise\~no), la protecci\'on de la membrana es una propiedad intr\'insecamente robusta del control simb\'olico.
+
+\subsection{Recuperaci\'on hidr\'aulica: coherencia de zona y advertencia metodol\'ogica}
+A diferencia del desgaste, la ventaja en recuperaci\'on es condicional y est\'a gobernada por la tasa de incrustaci\'on diaria ($\Omega\text{/d\'ia}$). En entornos limpios o con flujos moderados ($\text{incrustaci\'on} < 1171.06\;\Omega\text{/d\'ia}$), el temporizador logra mayor recuperaci\'on porque lava la membrana antes de que la sal se consolide, a costa de degradarla r\'apidamente.
+
+Es imprescindible advertir una consideraci\'on metodol\'ogica se\~nalada en el documento 04 (\S 7.8): la coherencia de clasificaci\'on perfecta observada en los datos abiertos (donde las combinaciones caen consistentemente seg\'un la regla de zonas) se cumple en gran medida \emph{por construcci\'on}, puesto que el intervalo de transici\'on $[1171.06,\, 2365.34)\;\Omega\text{/d\'ia}$ se deriv\'o precisamente de los barridos factoriales calculados con la semilla 42. Una verificaci\'on emp\'irica formalmente independiente requerir\'a contrastar este intervalo con semillas no ensayadas previamente o con cin\'eticas de pulso no coincidentes con los nodos de la malla factorial.
+
+\subsection{Seguridad operativa y protecci\'on del territorio}
+El cumplimiento del $100\,\%$ en las restricciones de seguridad f\'isica y ecol\'ogica obedece al car\'acter determinista y jer\'arquico de las reglas 1 y 2. Al situarse en la c\'uspide del \'arbol de decisi\'on y anteponerse a cualquier orden de optimizaci\'on hidr\'aulica o instrucci\'on manual, el motor garantiza matem\'aticamente que ninguna decisi\'on pueda sobrecalentar la membrana por encima de $45.0\;\si{\celsius}$ ni sustraer humedad en per\'iodos de estr\'es clim\'atico cr\'itico ($\text{HR} < 30.0\,\%$).
+
+\section{Validaci\'on de software, cobertura y calidad del artefacto}
+La implementaci\'on computacional de \emph{Axioma-H Engine} se rigi\'o por est\'andares estrictos de ingenier\'ia de software cient\'ifico y buenas pr\'acticas de investigaci\'on reproducible:
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Suite de pruebas automatizadas y cobertura total:} la suite desarrollada con \texttt{pytest} \parencite{pytest} y \texttt{httpx} \parencite{httpx} ejecuta 828 pruebas unitarias, de integraci\'on y de contrato. La medici\'on con \texttt{pytest-cov} \parencite{pytestcov} certifica una cobertura del $\SI{100}{\percent}$ de l\'ineas y ramas en todos los m\'odulos medidos del backend y frontend.
+  \item \textbf{Verificaci\'on de datos y reproducibilidad:} el script \texttt{scripts/generar\_resultados\_referencia.py} verifica num\'ericamente (con tolerancia $10^{-6}$) que los archivos CSV y JSON de \texttt{docs/datos/} coincidan con la ejecuci\'on determinista del modelo.
+  \item \textbf{Integraci\'on continua (CI) y SonarQube Cloud:} cada modificaci\'on en el repositorio activa un flujo en GitHub Actions que ejecuta las 828 pruebas, valida la cobertura total y analiza la calidad del c\'odigo en SonarQube Cloud. El proyecto mantiene el estado de \emph{Quality Gate Passed} con cero errores (bugs), cero vulnerabilidades, cero puntos cr\'iticos de seguridad (\emph{security hotspots}) y cero olores de c\'odigo (\emph{code smells}).
+  \item \textbf{Verificaci\'on p\'ublica del despliegue en la nube:} los servicios est\'an desplegados en Render (API y Dashboard). El script independiente \texttt{scripts/verificar\_despliegue.py} ejecuta 31 comprobaciones de conectividad, c\'alculo y contratos sobre las instancias p\'ublicas, habiendo certificado 31 de 31 pruebas exitosas en la versi\'on 0.5.0 (commit \texttt{5ea4015}).
+\end{enumerate}
+

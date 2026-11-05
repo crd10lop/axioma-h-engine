@@ -1,0 +1,71 @@
+\chapter{Conjeturas, hip\'otesis y metodolog\'ia de evaluaci\'on}
+\label{cap:metodologia}
+
+\section{Conjeturas iniciales del proyecto}
+En la formulaci\'on del Ciclo 2 (documento 01, secciones 2.3 y 2.4), el equipo estableci\'o tres conjeturas iniciales formuladas a priori para evaluar el comportamiento del motor de reglas bajo la corrida de referencia del PRD (escenario \texttt{DIA\_NORMAL}, humedad relativa inicial $85.0\,\%$, semilla 42):
+\begin{description}[leftmargin=*]
+  \item[\textbf{Conjetura 1 (Eficiencia y energ\'ia):}] En condiciones operativas normales, el sistema basado en reglas supera el $90.0\,\%$ de recuperaci\'on post-pulso ($R_{\text{rec}} \ge 90.0\,\%$) y alcanza un ahorro energ\'etico de al menos el $35.0\,\%$ respecto al temporizador peri\'odico ($A_{\text{en}} \ge 35.0\,\%$).
+  \item[\textbf{Conjetura 2 (Cin\'etica y seguridad t\'ermica):}] La aplicaci\'on del pulso t\'ermico a $44.0\;\si{\celsius}$ logra la regeneraci\'on de la impedancia superficial ($Z \le 1.10\,Z_{\text{nom}} = 1100.0\;\Omega$) en un tiempo $t_{95} \le 120.0\;\text{s}$, con una p\'erdida de integridad por degradaci\'on t\'ermica irreversible del $0.0\,\%$.
+  \item[\textbf{Conjetura 3 (Sostenibilidad y rendimiento ecol\'ogico):}] Durante per\'iodos de baja humedad ($\text{HR} < 30.0\,\%$) o sequ\'ia diurna, el sistema registra cero violaciones ecol\'ogicas ($V_{\text{eco}} = 0$), limitando la extracci\'on al $33.0\,\%$ del vapor local y manteniendo un rendimiento nocturno sostenido no inferior a $12.0\;\text{L/m}^2\text{/noche}$.
+\end{description}
+
+\section{Hip\'otesis de trabajo e hip\'otesis derivada H1-Ciclo 3}
+La hip\'otesis de trabajo general sosten\'ia que el control reactivo basado en reglas optimiza integralmente tanto el volumen de agua recuperada como la integridad f\'isica de la membrana frente al temporizador peri\'odico en todas las condiciones de salinidad.
+
+Sin embargo, los an\'alisis multiescenario, de robustez y de calibraci\'on obligaron a reformular dicha afirmaci\'on en la \textbf{Hip\'otesis Derivada H1-Ciclo 3}:
+\begin{quote}
+\itshape
+El control reactivo basado en reglas reduce de forma robusta la degradaci\'on acumulada de la membrana frente al temporizador convencional (reducci\'on entre $73.3\,\%$ y $100\,\%$ en el barrido principal y entre $61.5\,\%$ y $100\,\%$ al explorar el espacio de fatiga y degradaci\'on t\'ermica), pero \'unicamente supera al temporizador en recuperaci\'on post-pulso cuando la incrustaci\'on salina diaria excede un umbral cr\'itico situado entre $1633$ y $1867\;\Omega\text{/d\'ia}$ (un rango estimado por interpolaci\'on en una cuadr\'icula con niveles separados entre $617$ y $1165\;\Omega\text{/d\'ia}$, cuyo cruce real en cada combinaci\'on ocurre en alg\'un punto entre $1171.06$ y $2365.34\;\Omega\text{/d\'ia}$). Con los flujos de niebla medidos en proyectos reales ($3$ a $10\;\text{L/m}^2\text{/d\'ia}$), la incrustaci\'on diaria se mantiene t\'ipicamente por debajo de este umbral, por lo que la ventaja principal del control radica en la preservaci\'on de la vida \'util y no en el incremento de agua colectada.
+\end{quote}
+
+\noindent\textbf{Criterios expl\'icitos de refutaci\'on de H1-Ciclo 3:}
+\begin{enumerate}
+  \item Si ensayos de fatiga t\'ermica en laboratorio sobre la membrana a $44.0\;\si{\celsius}$ arrojan una tasa de fatiga por pulso superior al $2.0\,\%$ por pulso (punto cr\'itico donde el control pierde su ventaja de desgaste frente a los 36 pulsos del temporizador).
+  \item Si mediciones de campo en Cabo de la Vela evidencian tasas de incrustaci\'on diaria superiores a $2365.34\;\Omega\text{/d\'ia}$ bajo flujos reales de niebla moderados.
+  \item Si la eficacia m\'axima de desprendimiento por pulso resulta experimentalmente inferior a $0.80$.
+\end{enumerate}
+
+\section{Matriz de operacionalizaci\'on de variables}
+La evaluaci\'on cuantitativa articula variables independientes, dependientes y de control, sintetizadas en el \cref{tab:operacionalizacion}.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Matriz de operacionalizaci\'on de variables del experimento de simulaci\'on.}
+\label{tab:operacionalizacion}
+\begin{tabularx}{\textwidth}{@{}L{3.2cm}L{3.8cm}L{2.5cm}Y@{}}
+\toprule
+\textbf{Categor\'ia} & \textbf{Variable} & \textbf{Unidad} & \textbf{Definici\'on operacional} \\
+\midrule
+\textbf{Independientes} & Estrategia de control & Nominal & Reglas deterministas vs. temporizador fijo de 120 min. \\
+& Carga salina ambiental & $\Omega\text{ por L/m}^2$ & Tasa de aerosol salino depositado: 20 a 240. \\
+& Flujo m\'aximo de niebla & $\text{L/m}^2\text{/h}$ & Flujo con $\text{HR}=100\,\%$: 6.0 (supuesto), 1.83 y 0.49. \\
+& Eficacia de pulso & Adimensional & Fracci\'on de ensuciamiento removido: 0.80 a 1.00. \\
+& Par\'ametros mec\'anicos & $\SI{}{\percent}$, $\SI{}{\percent\per(\celsius\cdot\minute)}$ & Fatiga por pulso y degradaci\'on t\'ermica. \\
+\midrule
+\textbf{Dependientes} & Recuperaci\'on post-pulso & $\SI{}{\percent}$ & Fracci\'on media de regeneraci\'on de flujo tras pulso. \\
+& Degradaci\'on acumulada & $\SI{}{\percent}$ & P\'erdida acumulada de integridad f\'isica ($100 - I$). \\
+& Volumen colectado & $\text{L/m}^2$ & Agua total acumulada en el tanque durante 72 h. \\
+& Pulsos t\'ermicos & Conteo entero & N\'umero total de activaciones t\'ermicas en 72 h. \\
+& Consumo energ\'etico & $\text{Wh}$ & Energ\'ia total consumida por electr\'onica y calentamiento. \\
+& Violaciones ecol\'ogicas & Conteo entero & Pasos de tiempo con extracci\'on activa bajo $\text{HR}<30\,\%$. \\
+\midrule
+\textbf{Controladas /} & \'Area del colector & $\text{m}^2$ & $1.0\;\text{m}^2$ por nodo est\'andar. \\
+\textbf{Constantes} & Umbrales de seguridad & $\si{\celsius}$, $\SI{}{\percent}$, $\Omega$, $\text{s}$ & $T_{\text{corte}}=45.0$, $\text{HR}_{\text{min}}=30.0$, $Z_{\text{umb}}=1500.0$, $t_{\text{pulso}}=90$. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Decisi\'on de dise\~no D5: pol\'itica cient\'ifica de no sobreajuste}
+Una decisi\'on metodol\'ogica medular del proyecto es la \textbf{Decisi\'on D5}: mantener intactos los par\'ametros f\'isicos por defecto del modelo (en particular $\text{FLUJO\_NIEBLA\_MAXIMO\_L\_M2\_H} = 6.0\;\text{L/m}^2\text{/h}$) en la l\'inea base. Esta decisi\'on preserva la integridad cient\'ifica de la investigaci\'on: habr\'ia sido trivial ajustar arbitrariamente el flujo por defecto a un valor intermedio para forzar que todas las conjeturas iniciales resultasen verdaderas. Por el contrario, el modelo documenta con rigor d\'onde y por qu\'e el supuesto inicial difiere de los datos de la literatura, utilizando endpoints de an\'alisis y calibraci\'on dedicados sin alterar los resultados por defecto ya auditados.
+
+\section{Metodolog\'ia de simulaci\'on y dise\~no experimental}
+La simulaci\'on computacional se implement\'o con un paso temporal discreto de $\Delta t = 60\;\text{s}$ sobre un horizonte de $72\;\text{horas}$ continuas ($4320\;\text{pasos}$ por corrida). La evaluaci\'on abarca:
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Barrido de salinidad (6 escenarios, 5 semillas estoc\'asticas):} evaluaci\'on de 20 a $240\;\Omega\text{ por L/m}^2$ promediando semillas 42, 101, 202, 303 y 404 para aislar el ruido clim\'atico.
+  \item \textbf{An\'alisis global de sensibilidad e incertidumbre (62 muestras):} exploraci\'on por hipercubo latino y cuadr\'icula sobre el espacio de flujo de niebla y eficacia del pulso t\'ermico.
+  \item \textbf{Robustez del cruce de recuperaci\'on (54 combinaciones):} evaluaci\'on factorial completa de 3 flujos de niebla ($6.0$, $1.83$, $0.49\;\text{L/m}^2\text{/h}$), 3 eficacias de pulso ($0.80$, $0.90$, $1.00$) y 6 tasas de salinidad con las semillas 42 y 1 a 3.
+  \item \textbf{Robustez de la reducci\'on de desgaste (18 combinaciones):} exploraci\'on cruzada de 2 flujos, 3 niveles de fatiga mec\'anica ($0.01$, $0.02$, $0.04\,\%$) y 3 tasas de degradaci\'on t\'ermica ($0.025$, $0.05$, $0.10\,\%/(\si{\celsius}\cdot\text{min})$).
+  \item \textbf{Calibraci\'on inversa y dimensionamiento en 18 entornos:} inversi\'on num\'erica contra el rango de \textcite{klemm2012fog} ($3$ a $10\;\text{L/m}^2\text{/d\'ia}$) y estimaci\'on de bater\'ias de colectores para $50$ personas (OMS/Sphere) y equivalencia con la entrega asistencial del ICBF \parencite{icbf2025agua}.
+\end{enumerate}
+

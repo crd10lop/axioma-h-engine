@@ -1,0 +1,62 @@
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{fontspec}
+\usepackage[spanish,es-tabla,es-noquoting,es-noshorthands]{babel}
+\spanishplainpercent
+\usepackage{csquotes}
+\usepackage{setspace}
+\setstretch{1.15}
+
+\usepackage{microtype}
+\usepackage{amsmath,amssymb}
+\usepackage{siunitx}
+\sisetup{
+  detect-all,
+  output-decimal-marker = {.},
+  group-digits = none,
+  per-mode = symbol
+}
+
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf}
+
+\usepackage{xcolor}
+\definecolor{azulUdeA}{HTML}{1B4F72}
+\definecolor{grisOscuro}{HTML}{2C3E50}
+\definecolor{verdeControl}{HTML}{1E8449}
+\definecolor{naranjaTemp}{HTML}{CA6F1E}
+\definecolor{grisClaro}{HTML}{F4F6F7}
+
+\usepackage{tikz}
+\usetikzlibrary{babel,arrows.meta,positioning,shapes.geometric,calc}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=1.18}
+
+\usepackage[backend=biber,style=apa,sorting=nyt]{biblatex}
+\addbibresource{referencias.bib}
+
+\usepackage[
+  colorlinks=true,
+  linkcolor=azulUdeA,
+  citecolor=azulUdeA,
+  urlcolor=azulUdeA,
+  pdftitle={Control basado en reglas, primera etapa de una arquitectura neuro-simbólica, para un captador pasivo de agua atmosférica: evaluación por simulación frente a un temporizador convencional},
+  pdfauthor={Cristian David Diez Lopez, Juan Esteban Gil Quintero, Cristian Andres Monterrosa Durango}
+]{hyperref}
+
+\usepackage[spanish]{cleveref}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\setlength{\parskip}{0.4em}
+\setlength{\parindent}{0pt}
+\emergencystretch=1.5em
+

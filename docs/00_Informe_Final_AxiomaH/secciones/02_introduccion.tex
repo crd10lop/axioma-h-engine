@@ -1,0 +1,31 @@
+\chapter{Introducci\'on}
+\label{cap:introduccion}
+
+\section{Contexto geogr\'afico y social: La Guajira y Cabo de la Vela}
+El departamento de La Guajira, situado en el extremo norte de Colombia, enfrenta una situaci\'on cr\'onica de escasez de agua potable agravada por su condici\'on clim\'atica semi\'arida, la prolongada estacionalidad de las precipitaciones y la limitada cobertura de redes p\'ublicas de acueducto en zonas rurales dispersas. En asentamientos litorales ind\'igenas como Cabo de la Vela (municipio de Uribia), la precipitaci\'on anual suele ser inferior a $300\;\text{mm}$, mientras que la evaporaci\'on potencial excede ampliamente dicho valor. En este contexto, las comunidades wayuu dependen en gran medida del suministro peri\'odico mediante carrotanques de programas gubernamentales y de peque\~nos pozos o reservorios artesanales (\emph{jag\"ueyes}), cuya disponibilidad y calidad bacteriol\'ogica y fisicoqu\'imica son variables y altamente vulnerables a la sequ\'ia.
+
+De acuerdo con reportes institucionales recientes del Instituto Colombiano de Bienestar Familiar \parencite{icbf2025agua}, en los municipios priorizados por la Sentencia T-302 de 2017 de la Corte Constitucional (Riohacha, Maicao, Manaure y Uribia), el abastecimiento asistencial para unidades comunitarias opera t\'ipicamente con una asignaci\'on mensual de $1000\;\text{L}$ por comunidad, complementada con hasta $30\;\text{L}$ adicionales por raci\'on alimentaria para la preparaci\'on de alimentos en el hogar. Esta cifra ilustra la severa restricci\'on h\'idrica que condiciona la vida cotidiana y la soberan\'ia alimentaria de la poblaci\'on.
+
+\section{El potencial de la captaci\'on pasiva de agua atmosf\'erica}
+Frente a la escasez de agua superficial y subterr\'anea dulce, la atm\'osfera representa un recurso continuo. En las zonas costeras de La Guajira, la combinaci\'on del r\'egimen nocturno de brisa marina y los vientos alisios propicia eventos recurrentes de alta humedad relativa ($\text{HR} > 80\,\%$) y niebla advectiva rasante, a pesar de la aridez del suelo. La captaci\'on pasiva de agua atmosf\'erica, ya sea mediante mallas de niebla convencionales tipo Raschel o mediante colectores basados en membranas sorbentes y superficies funcionalizadas, constituye una alternativa tecnol\'ogica aut\'onoma que no exige infraestructura de red centralizada ni consumo masivo de energ\'ia de la red el\'ectrica.
+
+En la literatura cient\'ifica internacional sobre proyectos operativos de captaci\'on de niebla, \textcite{klemm2012fog} documentan que las instalaciones de campo sostenidas en diversos pa\'ises del mundo reportan rendimientos promedio t\'ipicos situados entre $3$ y $10\;\text{L}$ de agua por metro cuadrado de superficie colectora al d\'ia ($3\text{ a }10\;\text{L/m}^2\text{/d\'ia}$). Estos valores proporcionan una referencia emp\'irica tangible para calibrar cualquier modelo f\'isico o computacional.
+
+\section{El problema de la incrustaci\'on salina y la regeneraci\'on t\'ermica}
+No obstante la disponibilidad de humedad en el aire, el entorno marino-costero introduce un factor de degradaci\'on cr\'itico: el aerosol marino (\emph{sea spray}). Las microgotas arrastradas por el viento transportan cloruro de sodio y otros iones que se depositan continuamente sobre la superficie colectora. Al evaporarse el agua superficial o durante los ciclos diurnos de calentamiento solar y baja humedad, las sales precipitan y cristalizan en los poros y microestructuras de la membrana, fen\'omeno conocido como ensuciamiento o incrustaci\'on salina (\emph{salt fouling}).
+
+La incrustaci\'on salina obstruye progresivamente los sitios de adsorci\'on y nucleaci\'on, incrementa la impedancia superficial de la membrana y reduce sensiblemente el caudal de agua colectada. Para restaurar la capacidad operativa, los sistemas contemplan pulsos t\'ermicos suaves que elevan la temperatura de la membrana hasta un nivel controlado (del orden de $44\;\si{\celsius}$), facilitando la dilataci\'on t\'ermica diferencial y el desprendimiento o redisoluci\'on de la costra salina.
+
+\section{La limitaci\'on del control convencional por temporizador}
+En la pr\'actica usual de la ingenier\'ia de campo, la regeneraci\'on t\'ermica se gestiona mediante temporizadores fijos (por ejemplo, disparando un ciclo de calentamiento cada dos horas). Sin embargo, este esquema de lazo abierto presenta graves inconvenientes en un ambiente altamente variable:
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Desgaste mec\'anico y t\'ermico innecesario:} activa pulsos en momentos en que la membrana est\'a limpia o cuando no hay acumulaci\'on salina suficiente, acumulando fatiga por ciclos t\'ermicos y degradaci\'on polim\'erica prescindible.
+  \item \textbf{Riesgo de agotamiento energ\'etico:} en sistemas aislados que operan con bater\'ias solares de capacidad modesta, un pulso disparado durante la noche profunda con la reserva el\'ectrica comprometida puede inducir un apagado total del nodo de captaci\'on.
+  \item \textbf{Riesgo de evaporaci\'on de agua \'util y da\~no ecol\'ogico:} si se activa calor en pleno per\'iodo \'optimo de condensaci\'on nocturna o en condiciones de sequ\'ia extrema, el calentamiento puede degradar el h\'abitat microclim\'atico local o destruir la pel\'icula de agua reci\'en condensada.
+\end{enumerate}
+
+\section{Propuesta del proyecto: motor de reglas determinista de Axioma-H}
+Para mitigar estas deficiencias, el equipo AXIOMA formul\'o el proyecto \emph{Axioma-H}, cuyo prop\'osito es concebir y evaluar un esquema de control reactivo basado en sensores de temperatura, humedad relativa, impedancia superficial y nivel de reserva el\'ectrica. Como primera etapa determinista de una arquitectura neuro-simb\'olica orientada a sistemas embebidos de bajo consumo, se estructur\'o un motor de seis reglas con prioridades estrictas de seguridad f\'isica, viabilidad energ\'etica y protecci\'on ambiental.
+
+El presente informe expone la formalizaci\'on te\'orica, la implementaci\'on computacional del artefacto \emph{Axioma-H Engine} (versi\'on 0.5.0), la verificaci\'on de conjeturas en simulaci\'on multiescenario, el contraste con la literatura y la evaluaci\'on del impacto en escenarios de niebla y salinidad calibrados.
+

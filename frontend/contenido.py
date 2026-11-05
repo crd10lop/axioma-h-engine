@@ -72,8 +72,13 @@ RESPUESTA_PRELIMINAR: list[str] = [
     "fatiga por pulso y de la degradación térmica, lo reduce entre 61.5 % y 100 % en 108 puntos. La ventaja "
     "en recuperación no depende de la carga salina por litro sino de la incrustación diaria (la carga salina "
     "por el agua captada en un día): en las seis combinaciones en que aparece, el cruce está entre 1633 y 1839 Ohm por "
-    "día, mientras que la carga por litro del cruce va de 50 a 191. Con el flujo calibrado mínimo esa "
-    "incrustación no se alcanza y el temporizador recupera más en todos los niveles en que hay pulsos.",
+    "día (estimado por interpolación: el cruce de cada combinación está en algún punto entre 1171 y 2365 Ohm por día), "
+    "mientras que la carga por litro del cruce va de 50 a 191. Con el flujo calibrado mínimo esa "
+    "incrustación no se alcanza y el temporizador recupera más en todos los niveles en que hay pulsos; en la "
+    "incertidumbre con flujos calibrados solo hay 3 de 62 muestras con ventaja en recuperación. Para 50 personas "
+    "con 20 L diarios hacen falta 32 nodos con el flujo supuesto y de 100 a 332 con el calibrado (100 a 333 m² en la "
+    "literatura), y en los 18 entornos de niebla y salinidad igualar la entrega mensual de 1000 L por comunidad con "
+    "carrotanque del ICBF toma de 2 a 13 nodos de 1 m².",
 ]
 
 # Nota única de la vista 3 sobre el código del modo en la API (backend/schemas.py, ModoOperacion).
@@ -589,7 +594,8 @@ LECTURA_BREVE: dict[str, str] = {
         "Con la niebla típica de los proyectos reales, de 3 a 10 L por m² al día, abastecer a 50 personas con "
         "20 L diarios necesita entre 100 y 333 m² de malla. Para igualar la entrega mensual de 1000 L por "
         "comunidad con carrotanque del ICBF hacen falta de 3 a 4 m² con 10 L/m² al día y de 11 a 13 m² con "
-        "3 L/m² al día."
+        "3 L/m² al día. Esa entrega acompaña las raciones de alimentos y no es toda el agua de la comunidad: la "
+        "batería de nodos sería un complemento, no un reemplazo."
     ),
     "falta": (
         "Medir en laboratorio el efecto del pulso de calor, y consultar a la comunidad antes de cualquier "

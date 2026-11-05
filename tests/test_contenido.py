@@ -572,7 +572,9 @@ def test_lectura_breve_no_usa_unidades_tecnicas_ni_codigos(termino_prohibido):
         assert termino_prohibido.casefold() not in texto.casefold()
 
 
-@pytest.mark.parametrize("cifra", ["61 %", "100 y 333", "1000 L", "3 a 4", "11 a 13"])
+@pytest.mark.parametrize(
+    "cifra", ["61 %", "100 y 333", "1000 L", "3 a 4", "11 a 13", "no es toda el agua de la comunidad", "complemento"]
+)
 def test_lectura_breve_conserva_las_cifras_clave(cifra):
     unido = " ".join(list(contenido.LECTURA_BREVE.values()) + list(contenido.LECTURA_BREVE_PARTES.values()))
     assert cifra in unido

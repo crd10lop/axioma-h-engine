@@ -1,0 +1,83 @@
+\chapter{Resultados experimentales y an\'alisis cuantitativo}
+\label{cap:resultados}
+
+\section{Tablero sint\'etico de veredictos}
+La evaluaci\'on multivariada del artefacto permite articular una respuesta integral a la pregunta de investigaci\'on. El \cref{tab:veredictos} sintetiza los cuatro veredictos obtenidos a partir de los datos abiertos del proyecto.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Tablero de veredictos del desempe\~no de Axioma-H Engine (versi\'on 0.5.0).}
+\label{tab:veredictos}
+\begin{tabularx}{\textwidth}{@{}L{3.2cm}L{3.5cm}Y@{}}
+\toprule
+\textbf{Dimensi\'on de evaluaci\'on} & \textbf{Veredicto sint\'etico} & \textbf{Evidencia cuantitativa de soporte} \\
+\midrule
+\textbf{Parte a: Desgaste mec\'anico y t\'ermico} & \textbf{Robusto a favor del control por reglas} & Reducci\'on de degradaci\'on acumulada entre el $\SI{73.3}{\percent}$ y el $\SI{100}{\percent}$ en el barrido de salinidad, y entre el $\SI{61.5}{\percent}$ y el $\SI{100}{\percent}$ en 18 combinaciones de fatiga y degradaci\'on t\'ermica (semillas 42 y 1 a 3). El punto de empate mec\'anico exigir\'ia una fatiga por pulso de $\SI{2.0}{\percent}$ (100 veces el supuesto). \\
+\midrule
+\textbf{Parte b: Recuperaci\'on post-pulso} & \textbf{Condicional a la incrustaci\'on diaria} & El cruce de ventaja se ubica entre $1633$ y $1867\;\Omega\text{/d\'ia}$ (estimaci\'on interpolada en cuadr\'icula con niveles separados entre $617$ y $1165\;\Omega\text{/d\'ia}$ en $[1171.06,\,2365.34)\;\Omega\text{/d\'ia}$). Con flujos calibrados ($3\text{ a }10\;\text{L/m}^2\text{/d\'ia}$), el control solo supera al temporizador en 3 de 62 muestras de incertidumbre. \\
+\midrule
+\textbf{Parte c: Seguridad y viabilidad} & \textbf{Cumplimiento total por construcci\'on} & Cero emergencias t\'ermicas, cero violaciones ecol\'ogicas ($\text{HR}<30\,\%$) y preservaci\'on de la reserva de bater\'ia en todos los escenarios evaluados. \\
+\midrule
+\textbf{Parte d: Impacto comunitario e ICBF} & \textbf{Complemento local, no reemplazo} & Para 50 personas con $20\;\text{L/d\'ia}$, se requieren 32 nodos con flujo supuesto y entre 100 y 332 nodos con flujo calibrado. Para igualar la entrega mensual de $1000\;\text{L}$ del ICBF se requieren 2 nodos (flujo supuesto) o entre 3 y 13 nodos (flujo calibrado). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Barrido de salinidad y recuperaci\'on frente al desgaste}
+El barrido en seis escenarios de salinidad creciente (promediando cinco semillas estoc\'asticas) ilustra el comportamiento divergente entre la recuperaci\'on hidr\'aulica y la integridad f\'isica de la membrana (\cref{fig:barrido_salinidad}).
+
+\begin{figure}[htbp]
+\centering
+\input{figuras/barrido_recuperacion_desgaste.tex}
+\caption{Barrido de salinidad (promedio de 5 semillas): (a) recuperaci\'on post-pulso media mostrando el cruce de ventaja en $56.2\;\Omega\text{ por L/m}^2$; (b) degradaci\'on acumulada de integridad.}
+\label{fig:barrido_salinidad}
+\end{figure}
+
+En baja salinidad ($20\;\Omega\text{ por L/m}^2$), el temporizador fijo recupera $95.9\,\%$ de flujo aplicando 36 pulsos ciegos, frente al $88.9\,\%$ del control por reglas que solo activa 8 pulsos. Sin embargo, el costo de esa recuperaci\'on marginal es una degradaci\'on del $2.15\,\%$ en el temporizador frente a solo $0.02\,\%$ en el control por reglas ($\SI{99.1}{\percent}$ de reducci\'on de desgaste). En alta salinidad ($240\;\Omega\text{ por L/m}^2$), la acumulaci\'on salina es tan r\'apida que el temporizador colapsa en recuperaci\'on ($63.2\,\%$) mientras el control por reglas preserva $85.9\,\%$ con una reducci\'on de desgaste del $\SI{74.3}{\percent}$.
+
+\section{Robustez de la respuesta y la banda de transici\'on de incrustaci\'on}
+Para evaluar la generalidad del cruce, se analizaron 54 combinaciones factoriales de flujo, eficacia de pulso y salinidad. La \cref{fig:robustez_respuesta} grafica la ventaja en recuperaci\'on como funci\'on de la tasa diaria de incrustaci\'on.
+
+\begin{figure}[htbp]
+\centering
+\input{figuras/robustez_cruce_incrustacion.tex}
+\caption{Robustez del cruce de recuperaci\'on en 54 combinaciones factoriales (semilla 42). La zona sombreada delimita la banda de transici\'on $[1171.06,\, 2365.34)\;\Omega\text{/d\'ia}$.}
+\label{fig:robustez_respuesta}
+\end{figure}
+
+Se evidencia con precisi\'on que la ventaja en recuperaci\'on no depende de la carga salina volum\'etrica sino de la incrustaci\'on diaria acumulada:
+\begin{itemize}[leftmargin=*]
+  \item Por debajo de $1171.06\;\Omega\text{/d\'ia}$ (\texttt{BAJO\_TRANSICION}), el temporizador siempre obtiene mayor recuperaci\'on debido a la mayor frecuencia de lavado.
+  \item Entre $1171.06$ y $2365.34\;\Omega\text{/d\'ia}$ (\texttt{TRANSICION}), ocurre el cruce f\'isico para todas las combinaciones analizadas.
+  \item Por encima de $2365.34\;\Omega\text{/d\'ia}$ (\texttt{SOBRE\_TRANSICION}), el control reactivo supera holgadamente al temporizador en todos los casos.
+\end{itemize}
+
+\section{Robustez de la reducci\'on de desgaste ante variaciones mec\'anicas}
+La \cref{fig:robustez_desgaste} presenta la reducci\'on de desgaste al variar la fatiga por pulso ($\SI{0.01}{\percent}$ a $\SI{0.04}{\percent}$) y la degradaci\'on t\'ermica ($\SI{0.025}{\percent}$ a $\SI{0.100}{\percent\per(\celsius\cdot\minute)}$).
+
+\begin{figure}[htbp]
+\centering
+\input{figuras/robustez_desgaste_fatiga.tex}
+\caption{Robustez de la reducci\'on de desgaste frente a par\'ametros mec\'anicos y t\'ermicos en 18 combinaciones: (a) flujo supuesto ($6.0\;\text{L/m}^2\text{/h}$); (b) flujo calibrado m\'aximo ($1.83\;\text{L/m}^2\text{/h}$).}
+\label{fig:robustez_desgaste}
+\end{figure}
+
+En las 18 combinaciones y en las 4 semillas analizadas (42, 1, 2 y 3), la reducci\'on de desgaste es estrictamente positiva ($\ge \SI{61.5}{\percent}$ y alcanzando el $\SI{100}{\percent}$ cuando no se activan pulsos innecesarios con flujo calibrado). Para que el control por reglas iguale el desgaste del temporizador en la corrida base (36 pulsos del temporizador vs. 8 pulsos de reglas), la fatiga individual deber\'ia satisfacer:
+\begin{equation}
+  \Delta I_{\text{fatiga,empate}} \approx \frac{2.15\,\% - 0.0\,\%}{36 - 8} \approx 0.0768\,\% \implies \SI{2.0}{\percent}\text{ por pulso en el peor escenario}
+\end{equation}
+lo que demuestra una tolerancia de dos \'ordenes de magnitud frente al par\'ametro nominal asumido.
+
+\section{Impacto comunitario en 18 entornos y comparaci\'on con el ICBF}
+La \cref{fig:impacto_entornos} sintetiza el dimensionamiento de captadores en 18 entornos y su contraste con la asignaci\'on del ICBF \parencite{icbf2025agua}.
+
+\begin{figure}[htbp]
+\centering
+\input{figuras/impacto_entornos_nodos.tex}
+\caption{Impacto en 18 entornos de niebla y salinidad: (a) bater\'ia de colectores de $1\;\text{m}^2$ para abastecer a 50 personas ($20\;\text{L/d\'ia}$); (b) nodos requeridos para igualar la entrega de $1000\;\text{L/mes}$ del ICBF.}
+\label{fig:impacto_entornos}
+\end{figure}
+
+Bajo flujos reales calibrados ($0.49\text{ a }1.83\;\text{L/m}^2\text{/h}$, equivalentes a rendimientos de $3\text{ a }10\;\text{L/m}^2\text{/d\'ia}$ seg\'un \textcite{klemm2012fog}), abastecer un asentamiento t\'ipico de 50 personas demanda entre 100 y 332 nodos de $1\;\text{m}^2$. Por su parte, complementar o igualar la cuota asistencial mensual de $1000\;\text{L}$ reportada por el ICBF requiere \'unicamente entre 3 y 4 nodos bajo buen r\'egimen de niebla, y entre 11 y 13 nodos bajo r\'egimen bajo.
+

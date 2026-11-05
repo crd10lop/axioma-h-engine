@@ -1,0 +1,5 @@
+$pdf_mode = 4;
+$lualatex = 'lualatex -interaction=nonstopmode -halt-on-error %O %S';
+$biber = 'biber %O %B';
+@default_files = ('informe.tex');
+

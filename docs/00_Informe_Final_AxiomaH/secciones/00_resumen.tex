@@ -1,0 +1,38 @@
+\chapter*{Resumen}
+\addcontentsline{toc}{chapter}{Resumen}
+
+Los captadores pasivos de agua atmosf\'erica instalados en zonas costeras semi\'aridas como Cabo de la Vela (La Guajira, Colombia) sufren incrustaci\'on salina sobre su superficie de captaci\'on. Los sistemas convencionales limpian la membrana mediante pulsos t\'ermicos activados por un temporizador fijo, sin considerar la humedad relativa, la impedancia superficial ni la reserva energ\'etica. Este trabajo eval\'ua por simulaci\'on un motor de control basado en seis reglas deterministas ---primera etapa simb\'olica de una arquitectura neuro-simb\'olica--- frente a un temporizador convencional de dos horas en un horizonte de tres d\'ias. El artefacto (\emph{Axioma-H Engine}, versi\'on 0.5.0) integra una API REST en FastAPI y un tablero en Streamlit, respaldados por 828 pruebas automatizadas con cobertura del 100\,\% en los m\'odulos medidos.
+
+Los resultados muestran una respuesta condicional. Primero, la reducci\'on del desgaste de la membrana es robusta: el control por reglas reduce la degradaci\'on acumulada entre 73.3\,\% y 100\,\% en el barrido de robustez de la respuesta (y entre 61.5\,\% y 100\,\% al variar la fatiga por pulso y la degradaci\'on t\'ermica en 18 combinaciones con las semillas 42 y 1 a 3), y solo perder\'ia esa ventaja si la fatiga por pulso a $44\;\si{\celsius}$ alcanzara el 2.0\,\% por pulso (100 veces el supuesto). Segundo, la ventaja en recuperaci\'on post-pulso depende de la incrustaci\'on diaria y aparece por encima de unos $1633$ a $1867\;\Omega\text{/d\'ia}$ (cruce interpolado entre niveles separados por $617$ a $1165\;\Omega\text{/d\'ia}$ dentro del intervalo $[1171.06,\,2365.34)\;\Omega\text{/d\'ia}$). Con el flujo de niebla calibrado con la literatura ($3$ a $10\;\text{L/m}^2\text{/d\'ia}$), el control por reglas supera al temporizador en recuperaci\'on en solo 3 de 62 muestras de incertidumbre, abastecer a 50 personas con $20\;\text{L/d\'ia}$ requiere entre 100 y 332 nodos de $1\;\text{m}^2$, e igualar la entrega mensual de $1000\;\text{L}$ por carrotanque reportada por el ICBF toma de 3 a 13 nodos.
+
+\medskip
+\noindent\textbf{Palabras clave:} captaci\'on de agua atmosf\'erica, control basado en reglas, arquitectura neuro-simb\'olica, incrustaci\'on salina, regeneraci\'on t\'ermica, La Guajira.
+
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+
+Passive atmospheric water harvesters deployed in coastal semi-arid regions such as Cabo de la Vela (La Guajira, Colombia) experience salt fouling on their capture surface. Conventional systems clean the membrane through thermal pulses triggered by a fixed timer, disregarding relative humidity, surface impedance, and energy reserves. This work evaluates by simulation a rule-based control engine comprising six deterministic rules---the first symbolic stage of a neuro-symbolic architecture---against a conventional two-hour timer over a three-day horizon. The software artifact (\emph{Axioma-H Engine}, version 0.5.0) integrates a FastAPI REST service and a Streamlit dashboard, supported by 828 automated tests with 100\,\% coverage across all measured modules.
+
+The simulation yields a conditional answer. First, membrane wear reduction is robust: rule-based control reduces cumulative degradation by 73.3\,\% to 100\,\% across the response robustness sweep (and by 61.5\,\% to 100\,\% when varying pulse fatigue and thermal degradation across 18 combinations with seeds 42 and 1 to 3), losing this advantage only if pulse fatigue at $44\;\si{\celsius}$ reached 2.0\,\% per pulse (100 times the nominal assumption). Second, post-pulse recovery advantage is governed by daily salt incrustation and emerges above approximately $1633$ to $1867\;\Omega\text{/day}$ (interpolated between grid levels separated by $617$ to $1165\;\Omega\text{/day}$ within $[1171.06,\,2365.34)\;\Omega\text{/day}$). Under literature-calibrated fog flow ($3$ to $10\;\text{L/m}^2\text{/day}$), rule-based control outperforms the timer in recovery in only 3 of 62 uncertainty samples, supplying 50 people with $20\;\text{L/day}$ requires 100 to 332 nodes of $1\;\text{m}^2$, and matching the $1000\;\text{L}$ monthly water-truck delivery reported by ICBF requires 3 to 13 nodes.
+
+\medskip
+\noindent\textbf{Keywords:} atmospheric water harvesting, rule-based control, neuro-symbolic architecture, salt fouling, thermal regeneration, La Guajira.
+
+\chapter*{Glosario de siglas y abreviaturas}
+\addcontentsline{toc}{chapter}{Glosario de siglas y abreviaturas}
+
+\begin{tabularx}{\textwidth}{@{}L{2.5cm}Y@{}}
+\toprule
+\textbf{Sigla} & \textbf{Significado y uso en el informe} \\
+\midrule
+API & \emph{Application Programming Interface} (interfaz de programaci\'on de aplicaciones). Servicio HTTP REST en FastAPI que centraliza los c\'alculos del modelo. \\
+CI & \emph{Continuous Integration} (integraci\'on continua). Flujo automatizado en GitHub Actions que ejecuta las pruebas, verifica la cobertura del 100\,\% y env\'ia el reporte a SonarQube Cloud. \\
+D5 & Decisi\'on de dise\~no D5 del documento 04: no modificar los par\'ametros por defecto del modelo sin datos experimentales para evitar ajustar los supuestos a las conjeturas. \\
+HR & Humedad relativa del aire ambiente, expresada en porcentaje (\%). \\
+ICBF & Instituto Colombiano de Bienestar Familiar. Entidad p\'ublica cuya nota de 2025 reporta la entrega mensual de $1000\;\text{L}$ por comunidad mediante carrotanque en La Guajira. \\
+MOF & \emph{Metal-Organic Framework} (estructura metal-org\'anica). Material sorbente mencionado en la formulaci\'on general del curso; en este artefacto los par\'ametros de la membrana son supuestos de orden de magnitud sin fuente experimental sobre un MOF espec\'ifico. \\
+OMS & Organizaci\'on Mundial de la Salud. Define el est\'andar de acceso b\'asico de $20\;\text{L}$ por persona al d\'ia \parencite{howard2020domestic}. \\
+TRL & \emph{Technology Readiness Level} (nivel de madurez tecnol\'ogica). El proyecto se ubica en TRL 2--3 (formulaci\'on del concepto y validaci\'on anal\'itica por simulaci\'on). \\
+\bottomrule
+\end{tabularx}
+

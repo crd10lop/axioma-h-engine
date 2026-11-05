@@ -1,0 +1,41 @@
+\chapter{Marco te\'orico y contraste con el estado del arte}
+\label{cap:marco_teorico}
+
+\section{Captaci\'on pasiva de agua atmosf\'erica y l\'imites reportados}
+La captaci\'on pasiva de agua atmosf\'erica engloba procesos f\'isicos en los cuales el vapor o las microgotas suspendidas en el aire se condensan o coalescen sobre una superficie s\'olida sin aporte mec\'anico directo de energ\'ia de bombeo. En el caso de la niebla, las gotas l\'iquidas microsc\'opicas (con di\'ametros t\'ipicos entre $1$ y $40\;\si{\micro\meter}$) son transportadas por corrientes de viento advectivas e impactan sobre filamentos de malla o membranas microestructuradas.
+
+A nivel internacional, la revisi\'on exhaustiva de \textcite{klemm2012fog} sobre colectores de niebla operativos en Sudam\'erica, \'Africa y Oriente Medio establece que el rendimiento promedio anual de instalaciones reales se ubica de manera consistente en el rango de:
+\begin{equation}
+  R_{\text{lit}} \in [3.0,\, 10.0]\;\text{L/m}^2\text{/d\'ia}
+\end{equation}
+Este intervalo emp\'irico constituye la referencia fundamental del presente estudio para contrastar los supuestos de flujo de dise\~no y evaluar la viabilidad de la tecnolog\'ia en condiciones reales.
+
+\section{Incrustaci\'on salina e impedancia superficial}
+En \'areas litorales semi\'aridas, el aerosol marino transporta sales disueltas que se depositan sobre la membrana durante los episodios de viento y niebla. Conforme el agua captada drena o se evapora durante los lapsos diurnos de radiaci\'on solar y baja humedad relativa, la concentraci\'on salina superficial alcanza la saturaci\'on, induciendo la cristalizaci\'on de microcristales de cloruro de sodio en los intersticios y poros del material.
+
+La formaci\'on de esta costra salina produce dos efectos acoplados:
+\begin{enumerate}
+  \item \textbf{Aumento de la impedancia el\'ectrica superficial ($Z$):} la acumulaci\'on salina y la p\'erdida de continuidad en la pel\'icula l\'iquida modifican la respuesta el\'ectrica de la superficie, elevando la impedancia por encima de su valor nominal en limpio ($1000.0\;\Omega$).
+  \item \textbf{Obstrucci\'on de microcanales de drenaje:} la resistencia hidr\'aulica superficial se incrementa, reduciendo dr\'asticamente la fracci\'on de agua drenada y recuperada despu\'es de cada ciclo.
+\end{enumerate}
+
+Para revertir la incrustaci\'on, se induce un pulso t\'ermico suave mediante elementos resistivos integrados, elevando la temperatura de la superficie hasta un valor controlado ($44.0\;\si{\celsius}$ durante $90\;\text{s}$). Dicho incremento facilita el desprendimiento mec\'anico de los cristales y la redisoluci\'on r\'apida al restablecerse la humedad.
+
+\section{Control por temporizador frente a control reactivo por reglas}
+En los sistemas tradicionales de mitigaci\'on de ensuciamiento en plantas de filtraci\'on y captadores experimentales, la pr\'actica habitual consiste en emplear temporizadores de lazo abierto (\emph{blind timers}). En la configuraci\'on modelada, el temporizador dispara un ciclo de calentamiento cada 120 minutos de forma invariable, elevando la temperatura de la matriz t\'ermica sin registrar la impedancia, la temperatura ambiente ni la reserva energ\'etica.
+
+Por el contrario, el control reactivo basado en reglas formaliza un lazo cerrado que eval\'ua continuamente el vector de telemetr\'ia en tiempo real. Esto permite restringir la aplicaci\'on de calor exclusivamente a aquellos instantes en los que la incrustaci\'on salina sobrepasa el umbral cr\'itico ($Z \ge 1500.0\;\Omega$), siempre que exista reserva el\'ectrica suficiente ($E_{\text{bat}} \ge 30.0\,\%$) y no se vulneren los l\'imites t\'ermicos ni ecol\'ogicos.
+
+\section{Arquitectura neuro-simb\'olica y rol de la etapa de reglas}
+Las arquitecturas neuro-simb\'olicas integran la capacidad de optimizaci\'on y aprendizaje adaptativo de los modelos conexionistas (redes neuronales) con el determinismo, la explicabilidad y las garant\'ias formales de seguridad de los sistemas basados en l\'ogica simb\'olica. En sistemas cr\'iticos aut\'onomos de bajo consumo energ\'etico, la etapa de reglas act\'ua como un \emph{guardarra\'il de seguridad} infranqueable: ning\'un comando predictivo generado por una red neuronal puede violar las restricciones de temperatura m\'axima, reserva de energ\'ia o preservaci\'on ecol\'ogica.
+
+El motor de reglas de Axioma-H constituye la implementaci\'on y validaci\'on formal de dicha base simb\'olica determinista, garantizando que el comportamiento b\'asico del colector sea plenamente auditable y seguro antes de introducir agentes de aprendizaje adaptativo en ciclos futuros.
+
+\section{Contraste con la literatura y declaraci\'on de vac\'io bibliogr\'afico}
+Al contrastar la propuesta con el estado del arte publicado, es imperativo establecer las siguientes precisiones:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Ausencia de controladores automatizados de regeneraci\'on en captadores pasivos:} una b\'usqueda rigurosa en las bases de datos cient\'ificas revela que no existen estudios publicados revisados por pares que describan, caractericen o comparen sistemas de control automatizado para la regeneraci\'on t\'ermica de captadores pasivos de niebla o humedad atmosf\'erica frente a temporizadores. Por esta raz\'on, el presente informe no contrasta su modelo con otros sistemas de control de la literatura, ya que la comparaci\'on ser\'ia artificial o carente de base verificable.
+  \item \textbf{Carencia de modelos cin\'eticos experimentales de degradaci\'on:} la cin\'etica de ensuciamiento salino superficial, la tasa de disoluci\'on por pulso t\'ermico a $44\;\si{\celsius}$ y las tasas de degradaci\'on polim\'erica por fatiga t\'ermica y cristalizaci\'on no cuentan con formulaciones cin\'eticas validadas en literatura externa para membranas compuestas en captadores de niebla. En consecuencia, las ecuaciones cin\'eticas empleadas en el artefacto constituyen supuestos de orden de magnitud y modelos anal\'iticos fenomenol\'ogicos propuestos por el equipo, cuya calibraci\'on experimental definitiva constituye el hito central del Ciclo 3.
+  \item \textbf{La incrustaci\'on diaria como variable gobernante:} un aporte anal\'itico fundamental de este trabajo radica en demostrar que la ventaja en recuperaci\'on no est\'a determinada por la concentraci\'on salina est\'atica por litro de niebla ($\Omega\text{ por L/m}^2$), sino por la \emph{tasa din\'amica de incrustaci\'on diaria} ($\Omega\text{/d\'ia}$), magnitud que integra el flujo de agua colectada con la concentraci\'on del aerosol marino depositado.
+\end{itemize}
+

@@ -1,0 +1,50 @@
+\begin{tikzpicture}[
+  node distance=0.9cm and 1.1cm,
+  bloque/.style={
+    rectangle,
+    rounded corners=3pt,
+    draw=azulUdeA,
+    thick,
+    fill=grisClaro,
+    text width=3.1cm,
+    align=center,
+    minimum height=1.3cm,
+    font=\small
+  },
+  subbloque/.style={
+    rectangle,
+    rounded corners=2pt,
+    draw=grisOscuro,
+    fill=white,
+    text width=2.8cm,
+    align=center,
+    minimum height=0.9cm,
+    font=\footnotesize
+  },
+  flecha/.style={
+    -{Stealth[length=2.5mm]},
+    thick,
+    draw=azulUdeA
+  }
+]
+
+\node[bloque] (sensores) {\textbf{Telemetr\'ia y configuraci\'on}\\Sensores simulados ($T$, $\text{HR}$, $Z$, reserva) y par\'ametros};
+
+\node[bloque, right=1.3cm of sensores, text width=3.6cm, minimum height=3.8cm, fill=white] (api) {};
+\node[anchor=north, font=\small\bfseries, text=azulUdeA] at ([yshift=-0.15cm]api.north) {API REST (FastAPI :8000)};
+
+\node[subbloque] (reglas) at ([yshift=0.7cm]api.center) {\textbf{Motor de reglas}\\(\texttt{motor\_reglas.py})};
+\node[subbloque] (fisico) at ([yshift=-0.4cm]api.center) {\textbf{Modelo f\'isico y simulador}\\(\texttt{modelo\_fisico.py}, \texttt{simulador.py})};
+\node[subbloque] (analisis) at ([yshift=-1.5cm]api.center) {\textbf{An\'alisis e impacto}\\(\texttt{analisis.py}, \texttt{impacto.py})};
+
+\node[bloque, right=1.3cm of api] (dashboard) {\textbf{Dashboard (Streamlit :8501)}\\5 vistas interactivas\\2 niveles de lectura\\(\texttt{frontend/})};
+
+\node[subbloque, below=0.8cm of api, text width=3.6cm] (datos) {\textbf{Datos abiertos y contrato}\\CSV, JSON, Data Package y OpenAPI 3.1 (\texttt{docs/})};
+
+\draw[flecha] (sensores.east) -- node[above, font=\scriptsize] {JSON / HTTP} (api.west);
+\draw[flecha] ([yshift=0.15cm]api.east) -- node[above, font=\scriptsize] {Respuestas JSON} ([yshift=0.15cm]dashboard.west);
+\draw[flecha] ([yshift=-0.15cm]dashboard.west) -- node[below, font=\scriptsize] {Solicitudes HTTP} ([yshift=-0.15cm]api.east);
+\draw[flecha] (api.south) -- node[right, font=\scriptsize] {Generaci\'on verificable} (datos.north);
+
+\end{tikzpicture}
+

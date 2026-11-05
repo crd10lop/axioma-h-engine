@@ -11,6 +11,7 @@ It is developed by team AXIOMA for the Research Fundamentals course at the Unive
 | Resource | Link |
 |---|---|
 | Source code | https://github.com/crd10lop/axioma-h-engine |
+| Final report (PDF and LaTeX source, in Spanish) | [docs/00_Informe_Final_AxiomaH.pdf](docs/00_Informe_Final_AxiomaH.pdf) ([LaTeX source](docs/00_Informe_Final_AxiomaH/README.md)) |
 | Deployed dashboard | https://axioma-h-dashboard.onrender.com |
 | Deployed API (interactive docs) | https://axioma-h-api.onrender.com/docs |
 | Versioned OpenAPI contract | [docs/api/openapi.json](docs/api/openapi.json) |
@@ -61,7 +62,7 @@ Two services run separately:
 | POST | `/api/v1/analisis/impacto-entornos` | Impact across 18 fog and salinity environments, crossing zone classification and comparison with the 1000 L/month water-truck delivery (ICBF, 2025) |
 | GET | `/api/v1/sitios` | Reference site profiles (Cabo de la Vela with the assumed flux and with the calibrated extremes) |
 
-`POST /api/v1/simulacion/ejecutar` also accepts an optional `sitio` profile (name, maximum fog flux, mean temperature and daily temperature and humidity amplitudes) and an optional `eficacia_maxima_pulso`. Without them, the Cabo de la Vela values are used and results do not change. The response reports the values used in `parametros_usados`.
+The OpenAPI contract ([docs/api/openapi.json](docs/api/openapi.json)) publishes 13 routes in total: the 12 listed above plus `GET /` (engine root status). `POST /api/v1/simulacion/ejecutar` also accepts an optional `sitio` profile (name, maximum fog flux, mean temperature and daily temperature and humidity amplitudes) and an optional `eficacia_maxima_pulso`. Without them, the Cabo de la Vela values are used and results do not change. The response reports the values used in `parametros_usados`.
 
 ## Installation and local use
 
@@ -138,8 +139,9 @@ The 0.2.0 features were added incrementally while the service still reported 0.1
 
 ## Documentation
 
-The documents in `docs/` are numbered in reading order (all in Spanish):
+The documents in `docs/` are numbered in reading order (all in Spanish). As the recommended first reading, the complete academic report compiled from LaTeX is available at [docs/00_Informe_Final_AxiomaH.pdf](docs/00_Informe_Final_AxiomaH.pdf) (LaTeX source in [docs/00_Informe_Final_AxiomaH/](docs/00_Informe_Final_AxiomaH/README.md)):
 
+0. [00_Informe_Final_AxiomaH.pdf](docs/00_Informe_Final_AxiomaH.pdf) ([00_Informe_Final_AxiomaH/](docs/00_Informe_Final_AxiomaH/README.md)): complete academic report in LaTeX, community brief reading, methodology, physical and control models, results and appendices.
 1. [01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md): research question, conjectures, variables, study perspectives, scope and milestones.
 2. [02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md](docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md): API specification and implementation status.
 3. [03_Funcionamiento_General_AxiomaH.md](docs/03_Funcionamiento_General_AxiomaH.md): plain-language explanation of the application and the dashboard.

@@ -1,0 +1,44 @@
+\chapter{Perspectivas \'eticas, limitaciones, conclusiones y trabajo futuro}
+\label{cap:conclusiones}
+
+\section{Perspectivas \'eticas, sociales y culturales}
+El desarrollo de artefactos tecnol\'ogicos orientados a comunidades hist\'oricamente vulneradas exige una reflexi\'on \'etica rigurosa que trascienda la mera optimizaci\'on de indicadores f\'isicos:
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Respeto ecol\'ogico intr\'inseco:} el dise\~no del motor consagra la regla de pausa ecol\'ogica ($\text{HR} < 30.0\,\%$) y el tope m\'aximo de extracci\'on ($33.0\,\%$ del vapor local) para impedir que la instalaci\'on tecnol\'ogica compita por humedad con la flora xerof\'itica o altere los microclimas nocturnos esenciales para la fauna del desierto.
+  \item \textbf{Gobernanza territorial y consulta previa:} Cabo de la Vela pertenece al resguardo ind\'igena de la Alta y Media Guajira. Ning\'un piloto de campo puede concebirse sin un proceso aut\'entico de Consulta Previa, Libre e Informada (Convenio 169 de la OIT y jurisprudencia de la Sentencia T-302 de 2017). La tecnolog\'ia debe subordinarse a las estructuras tradicionales de decisi\'on de las autoridades wayuu.
+  \item \textbf{Prevenci\'on del extractivismo epist\'emico y barreras ling\"u\'isticas:} el equipo reconoce expl\'icitamente que el presente informe y el tablero interactivo est\'an redactados en castellano (con resumen acad\'emico en ingl\'es). La ausencia de una versi\'on formal en \emph{wayuunaiki} constituye una limitaci\'on \'etica evidente. Es imperativo que la transici\'on a fases experimentales incorpore la traducci\'on y validaci\'on ling\"u\'istica comunitaria de conceptos y alertas del colector con hablantes nativos.
+  \item \textbf{No mercantilizaci\'on del agua:} el agua cosechada debe considerarse un bien com\'un esencial para la vida, la salud y la alimentaci\'on en la rancher\'ia, garantizando que el mantenimiento sea aut\'ogestivo y no genere nuevas dependencias comerciales externas.
+\end{enumerate}
+
+\section{Limitaciones del estudio}
+Conforme a los compromisos de transparencia del proyecto, se declaran formalmente las siguientes limitaciones:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Nivel de madurez tecnol\'ogica (TRL 2--3):} el artefacto constituye un modelo anal\'itico computacional y una arquitectura de control validada en simulaci\'on num\'erica; no se dispone a\'un de validaci\'on f\'isica en banco de pruebas ni prototipos de campo.
+  \item \textbf{Par\'ametros f\'isicos de orden de magnitud:} tal como se declar\'o en el \cref{cap:marco_teorico}, las cin\'eticas de disoluci\'on salina, fatiga mec\'anica y degradaci\'on de la membrana no proceden de literatura experimental externa de captadores, sino de supuestos anal\'iticos formulados para el modelo.
+  \item \textbf{R\'egimen meteorol\'ogico idealizado:} las simulaciones emplean un ciclo diario sint\'etico caracter\'istico de Cabo de la Vela con modulaci\'on arm\'onica y ruido gaussiano, sin incorporar series temporales meteorol\'ogicas multianuales con fen\'omenos extremos de El Ni\~no/La Ni\~na.
+  \item \textbf{Estimaci\'on mensual simplificada:} la proyecci\'on de producci\'on mensual para la comparaci\'on asistencial asume un mes est\'andar de 30 d\'ias id\'enticos sin variabilidad estacional.
+  \item \textbf{Dependencia de infraestructura:} el tablero interactivo depende operativamente de la disponibilidad del servicio HTTP de la API REST para renderizar las series temporales.
+\end{itemize}
+
+\section{Conclusiones}
+En atenci\'on a los objetivos propuestos y dando respuesta directa a cada parte de la pregunta de investigaci\'on, se concluye:
+\begin{enumerate}[label=\alph*)]
+  \item \textbf{En cuanto a la reducci\'on del desgaste:} el control basado en reglas supera de forma categ\'orica y robusta al temporizador convencional, logrando reducciones de degradaci\'on acumulada entre el $\SI{61.5}{\percent}$ y el $\SI{100}{\percent}$ en todas las combinaciones mec\'anicas y ambientales evaluadas. La protecci\'on f\'isica de la membrana es una propiedad inherente a la decisi\'on por umbrales de impedancia.
+  \item \textbf{En cuanto a la recuperaci\'on hidr\'aulica:} la ventaja del control reactivo es estrictamente condicional y est\'a regida por la tasa de incrustaci\'on diaria, manifest\'andose \'unicamente por encima de una banda cr\'itica de transici\'on situada entre $1171.06$ y $2365.34\;\Omega\text{/d\'ia}$ (con cruces individuales interpolados entre $1633$ y $1867\;\Omega\text{/d\'ia}$). Con los flujos de niebla medidos en proyectos reales en el mundo ($3$ a $10\;\text{L/m}^2\text{/d\'ia}$), el control reactivo solo supera al temporizador en el $\SI{4.8}{\percent}$ de los casos (3 de 62 muestras de incertidumbre).
+  \item \textbf{En cuanto a la seguridad operativa y l\'imites ecol\'ogicos:} la implementaci\'on determinista de las reglas 1 y 2 asegura un cumplimiento del $100\,\%$ sin excepciones f\'isicas, garantizando cero emergencias t\'ermicas, cero violaciones ecol\'ogicas y viabilidad energ\'etica nocturna.
+  \item \textbf{En cuanto al impacto comunitario y dimensionamiento:} abastecer a una comunidad t\'ipica de 50 personas bajo el est\'andar b\'asico de la OMS ($20\;\text{L/persona/d\'ia}$) demanda entre $100$ y $332\;\text{m}^2$ de superficie colectora con flujos calibrados. Frente a los programas de asistencia mediante carrotanques del ICBF ($1000\;\text{L/comunidad/mes}$), una peque\~na bater\'ia de 3 a 13 nodos de $1\;\text{m}^2$ permite igualar o complementar dicha cuota mensual, demostrando su utilidad como soluci\'on complementaria y resiliente para el hogar, sin sustituir la obligaci\'on estatal de infraestructura permanente de agua potable.
+\end{enumerate}
+
+\noindent\textbf{Conclusi\'on general:}
+El motor de reglas determinista de Axioma-H proporciona una arquitectura de control segura, matem\'aticamente auditable y energ\'eticamente viable para captadores de niebla costeros. Su beneficio fundamental reside en multiplicar la vida \'util de la membrana al eliminar ciclos t\'ermicos destructivos, aportando una base simb\'olica s\'olida para integrar agentes de aprendizaje adaptativo en sistemas desatendidos.
+
+\section{Trabajo futuro (Ciclo 3)}
+Para dar continuidad a la investigaci\'on en el Ciclo 3, se definen las siguientes l\'ineas prioritarias:
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Ensayos mec\'anicos y t\'ermicos de laboratorio:} dise\~nar un banco de pruebas para someter muestras de membranas compuestas a pulsos c\'iclicos a $44.0\;\si{\celsius}$, midiendo emp\'iricamente la fatiga por pulso ($\Delta I_{\text{fatiga}}$) para contrastarla frente al l\'imite cr\'itico de refutaci\'on del $\SI{2.0}{\percent}$.
+  \item \textbf{Campa\~na de medici\'on micrometeorol\'ogica y salina en Cabo de la Vela:} instalar una estaci\'on de monitoreo aut\'onoma en la zona costera para registrar series reales de deposici\'on salina diaria ($\Omega\text{/d\'ia}$) y flujo de agua l\'iquida atmosf\'erica.
+  \item \textbf{Integraci\'on neuro-simb\'olica completa:} acoplar un m\'odulo neuronal ligero (red neuronal recurrente o transformador embebido) para predicci\'on de frentes de niebla a corto plazo (2--4 horas), manteniendo el motor de reglas actual como guardarra\'il de decisi\'on inviolable.
+  \item \textbf{Evaluaci\'on econ\'omica y de ciclo de vida (LCA):} estimar el costo nivelado del litro de agua cosechada (\$COP/L) frente a los costos log\'isticos de acarreo mediante carrotanques diesel en La Guajira.
+  \item \textbf{Co-dise\~no e interfaz en wayuunaiki:} desarrollar colaborativamente con docentes y l\'ideres wayuu una versi\'on biling\"ue de la interfaz de supervisi\'on del captador adaptada a los requerimientos de la comunidad.
+\end{enumerate}
+

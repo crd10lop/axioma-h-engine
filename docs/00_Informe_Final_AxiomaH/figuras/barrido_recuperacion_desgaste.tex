@@ -1,0 +1,60 @@
+\pgfplotstableread[col sep=comma]{../datos/barrido_salinidad.csv}\tablabarrido
+\begin{tikzpicture}
+\begin{axis}[
+  name=axrec,
+  width=0.47\textwidth,
+  height=5.6cm,
+  xlabel={Carga salina ($\Omega\text{ por L/m}^2$)},
+  ylabel={Recuperaci\'on post-pulso (\%)},
+  xmin=10, xmax=250,
+  ymin=60, ymax=100,
+  xtick={20,60,120,240},
+  grid=major,
+  grid style={dashed,gray!40},
+  legend style={at={(0.5,1.03)},anchor=south,legend columns=2,font=\scriptsize,draw=none},
+  title style={yshift=0.5cm,font=\footnotesize\bfseries},
+  title={(a) Recuperaci\'on media (5 semillas)},
+  tick label style={font=\scriptsize},
+  label style={font=\footnotesize}
+]
+\addplot[color=azulUdeA, thick, mark=*, mark size=1.8pt]
+  table[x=carga_salina_ohm_l_m2, y=recuperacion_neuro_media] {\tablabarrido};
+\addlegendentry{Control por reglas}
+
+\addplot[color=naranjaTemp, thick, dashed, mark=square*, mark size=1.8pt]
+  table[x=carga_salina_ohm_l_m2, y=recuperacion_temporizador_media] {\tablabarrido};
+\addlegendentry{Temporizador}
+
+\draw[dotted, thick, grisOscuro] (axis cs:56.2,60) -- (axis cs:56.2,100);
+\node[anchor=west, font=\scriptsize, text=grisOscuro] at (axis cs:60,65) {Cruce: $56.2$};
+\end{axis}
+
+\begin{axis}[
+  at={(axrec.south east)},
+  anchor=south west,
+  xshift=1.4cm,
+  width=0.47\textwidth,
+  height=5.6cm,
+  xlabel={Carga salina ($\Omega\text{ por L/m}^2$)},
+  ylabel={Degradaci\'on acumulada (\%)},
+  xmin=10, xmax=250,
+  ymin=0, ymax=4.6,
+  xtick={20,60,120,240},
+  grid=major,
+  grid style={dashed,gray!40},
+  legend style={at={(0.5,1.03)},anchor=south,legend columns=2,font=\scriptsize,draw=none},
+  title style={yshift=0.5cm,font=\footnotesize\bfseries},
+  title={(b) Degradaci\'on de integridad (5 semillas)},
+  tick label style={font=\scriptsize},
+  label style={font=\footnotesize}
+]
+\addplot[color=azulUdeA, thick, mark=*, mark size=1.8pt]
+  table[x=carga_salina_ohm_l_m2, y=degradacion_neuro_media] {\tablabarrido};
+\addlegendentry{Control por reglas}
+
+\addplot[color=naranjaTemp, thick, dashed, mark=square*, mark size=1.8pt]
+  table[x=carga_salina_ohm_l_m2, y=degradacion_temporizador_media] {\tablabarrido};
+\addlegendentry{Temporizador}
+\end{axis}
+\end{tikzpicture}
+

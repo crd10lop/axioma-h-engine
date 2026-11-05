@@ -1,5 +1,8 @@
 # Datos de referencia del modelo Axioma-H
 
+**Repositorio:** https://github.com/crd10lop/axioma-h-engine  
+**Aplicación desplegada:** [Dashboard](https://axioma-h-dashboard.onrender.com) | [API](https://axioma-h-api.onrender.com/docs)
+
 Esta carpeta contiene los resultados de referencia del simulador como datos abiertos. Se generan ejecutando el backend localmente, sin red y sin la API desplegada, con el script `scripts/generar_resultados_referencia.py`. Los archivos están en UTF-8, con fin de línea LF y punto decimal.
 
 ## 1. Cómo regenerarlos

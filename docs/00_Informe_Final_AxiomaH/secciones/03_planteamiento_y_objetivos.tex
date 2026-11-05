@@ -1,0 +1,48 @@
+\chapter{Planteamiento del problema y objetivos}
+\label{cap:planteamiento}
+
+\section{Planteamiento del problema}
+El despliegue de tecnolog\'ias de captaci\'on pasiva de agua atmosf\'erica en regiones \'aridas y semi\'aridas costeras se enfrenta a un doble desaf\'io f\'isico: la necesidad de maximizar el volumen de agua condensada y recolectada durante los episodios de niebla y alta humedad, frente a la acelerada degradaci\'on de la membrana colectora provocada por la deposici\'on y cristalizaci\'on de aerosoles marinos. En la actualidad, las estrategias convencionales de mitigaci\'on basadas en temporizadores ciegos operan sin retroalimentaci\'on del estado f\'isico de la superficie ni de las condiciones del entorno circundante. Esto resulta en ciclos t\'ermicos infructuosos que disipan energ\'ia de reserva, inducen fatiga t\'ermica acumulativa y no garantizan la regeneraci\'on de la capacidad de flujo cuando la concentraci\'on salina sobrepasa los umbrales cr\'iticos.
+
+Surge as\'i la necesidad de formalizar un esquema de control reactivo, computable en hardware embebido de ultra bajo consumo, que tome decisiones a partir de par\'ametros f\'isicos medibles (temperatura de la matriz, humedad relativa ambiental, impedancia el\'ectrica superficial y estado de carga de la bater\'ia), jerarquizando la integridad de los componentes y la preservaci\'on del equilibrio ecol\'ogico.
+
+\section{Pregunta de investigaci\'on}
+Con base en lo anterior, el proyecto define la siguiente pregunta central de investigaci\'on:
+
+\begin{quote}
+\itshape
+?`En qu\'e medida un sistema de control reactivo basado en reglas, como primera etapa de una arquitectura neuro-simb\'olica, optimiza la eficiencia de captaci\'on pasiva de agua atmosf\'erica y previene la degradaci\'on por incrustaci\'on salina en un colector de niebla ubicado en una zona semi\'arida y costera como Cabo de la Vela (La Guajira), en comparaci\'on con un sistema convencional de temporizaci\'on peri\'odica?
+\end{quote}
+
+De esta pregunta general se derivan cuatro subpreguntas operativas:
+\begin{enumerate}[label=\alph*)]
+  \item ?`C\'omo incide el control basado en reglas en la reducci\'on del desgaste y la degradaci\'on acumulada de la membrana frente al temporizador peri\'odico?
+  \item ?`A partir de qu\'e nivel de carga e incrustaci\'on salina diaria el control basado en reglas logra una ventaja efectiva en la recuperaci\'on post-pulso frente al temporizador?
+  \item ?`En qu\'e medida garantiza el control basado en reglas la seguridad t\'ermica, la viabilidad energ\'etica y la no violaci\'on de restricciones ecol\'ogicas en comparaci\'on con el control tradicional?
+  \item ?`Cu\'al es el impacto y dimensionamiento requerido en t\'erminos de personas abastecidas y equivalencia con la entrega de agua asistencial (ICBF) en distintos entornos de niebla y salinidad?
+\end{enumerate}
+
+\section{Objetivos}
+
+\subsection{Objetivo general}
+Evaluar mediante simulaci\'on computacional comparativa el desempe\~no de un motor de control reactivo basado en reglas, como primera etapa de una arquitectura neuro-simb\'olica, frente a un sistema de temporizaci\'on peri\'odica, en t\'erminos de eficiencia de captaci\'on pasiva de agua atmosf\'erica, mitigaci\'on de la degradaci\'on por incrustaci\'on salina, seguridad operativa e impacto potencial en zonas costeras semi\'aridas como Cabo de la Vela.
+
+\subsection{Objetivos espec\'ificos}
+\begin{enumerate}[leftmargin=*]
+  \item Dise\~nar e implementar un motor de seis reglas deterministas jerarquizadas seg\'un criterios de seguridad f\'isica, conservaci\'on ecol\'ogica, protecci\'on energ\'etica y regeneraci\'on por impedancia superficial.
+  \item Desarrollar un modelo f\'isico-ambiental y un simulador continuo que reproduzca la din\'amica clim\'atica nocturna/diurna de Cabo de la Vela, la formaci\'on de pel\'icula de agua, la acumulaci\'on salina y la degradaci\'on estructural de la membrana.
+  \item Realizar barridos de salinidad, an\'alisis de sensibilidad global, propagaci\'on de incertidumbre y pruebas de robustez del cruce de recuperaci\'on y de la reducci\'on del desgaste ante variaciones en los par\'ametros mec\'anicos y ambientales.
+  \item Calibrar el flujo de niebla del modelo contra los rendimientos documentados en la literatura internacional y estimar el dimensionamiento f\'isico del sistema y su equivalencia frente a las entregas de agua por carrotanque reportadas en el territorio.
+\end{enumerate}
+
+\section{Justificaci\'on multidimensional}
+
+\subsection{Perspectiva t\'ecnica}
+Desde la \'optica del dise\~no de sistemas de control para dispositivos desatendidos, el uso de reglas l\'ogicas deterministas en sistemas embebidos garantiza tiempos de ejecuci\'on acotados, consumo el\'ectrico despreciable ($<0.6\;\text{W}$) y total auditabilidad matem\'atica. Constituye, adem\'as, el anclaje simb\'olico de seguridad indispensable para incorporar posteriormente modelos neuronales predictivos sin riesgo de comportamientos err\'aticos en campo.
+
+\subsection{Perspectiva social y humana}
+El acceso al agua potable es un derecho humano fundamental reconocido internacionalmente. En La Guajira, la insuficiencia de agua segura incide directamente en la morbilidad infantil por enfermedades diarreicas y desnutrici\'on. Dimensionar sistemas aut\'onomos de captaci\'on pasiva con est\'andares claros de la OMS ($20\;\text{L/persona/d\'ia}$) y Sphere ($15\;\text{L/persona/d\'ia}$) permite transformar hip\'otesis tecnol\'ogicas en par\'ametros tangibles de bienestar humano.
+
+\subsection{Perspectiva \'etica y cultural}
+Cabo de la Vela es territorio ancestral de la naci\'on Wayuu. Cualquier innovaci\'on tecnol\'ogica debe respetar el r\'egimen jur\'idico de consulta previa, libre e informada, as\'i como las pautas de gobernanza territorial comunitaria. El agua no es concebida \'unicamente como un recurso termodin\'amico o insumo econ\'omico, sino como un elemento vital indivisible del equilibrio territorial. El dise\~no del artefacto incorpora expl\'icitamente restricciones \'eticas como el l\'imite de extracci\'on ecol\'ogica y la pausa en sequ\'ia extrema para salvaguardar el microclima circundante.
+

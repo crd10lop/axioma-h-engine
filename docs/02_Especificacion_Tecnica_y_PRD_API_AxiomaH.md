@@ -115,7 +115,7 @@ Estos endpoints se agregaron en la implementación del Ciclo 2 y no forman parte
 
 #### Respuestas calculadas de los endpoints generales, de evaluación y de simulación
 
-Los ejemplos de las secciones 3.1 y 3.2 conservan los valores ilustrativos del PRD original. Los siguientes son los que calcula el modelo con la versión 0.4.0 y la semilla 42; los valores de `timestamp` y `tiempo_actividad_seg` dependen del momento de la consulta.
+Los ejemplos de las secciones 3.1 y 3.2 conservan los valores ilustrativos del PRD original. Los siguientes son los que calcula el modelo con la versión 0.5.0 y la semilla 42; los valores de `timestamp` y `tiempo_actividad_seg` dependen del momento de la consulta.
 
 ##### GET /api/v1/health
 
@@ -123,7 +123,7 @@ Los ejemplos de las secciones 3.1 y 3.2 conservan los valores ilustrativos del P
 {
   "estado": "SALUDABLE",
   "servicio": "Axioma-H Engine",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "timestamp": "2026-10-28T03:01:23.035280+00:00",
   "tiempo_actividad_seg": 0.05
 }

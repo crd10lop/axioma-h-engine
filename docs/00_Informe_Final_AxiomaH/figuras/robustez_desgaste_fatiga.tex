@@ -1,0 +1,81 @@
+\pgfplotstableread[col sep=comma]{../datos/robustez_desgaste.csv}\tablarobustezdesg
+\begin{tikzpicture}
+\begin{axis}[
+  name=axdesg1,
+  width=0.47\textwidth,
+  height=5.6cm,
+  xlabel={Fatiga por pulso (\%)},
+  ylabel={Reducci\'on m\'inima del desgaste (\%)},
+  xmin=0.008, xmax=0.042,
+  ymin=58, ymax=102,
+  xtick={0.01,0.02,0.04},
+  xticklabels={0.01,0.02,0.04},
+  unbounded coords=discard,
+  grid=major,
+  grid style={dashed,gray!40},
+  legend style={at={(0.5,1.03)},anchor=south,legend columns=3,font=\scriptsize,draw=none},
+  title style={yshift=0.5cm,font=\footnotesize\bfseries},
+  title={(a) Flujo supuesto ($6.0\text{ L/m}^2\text{/h}$)},
+  tick label style={font=\scriptsize},
+  label style={font=\footnotesize}
+]
+\addplot[
+  color=naranjaTemp, thick, mark=square*, mark size=1.8pt,
+  x filter/.code={\pgfmathparse{(\thisrow{flujo_niebla_maximo_l_m2_h}>4.0 && \thisrow{degradacion_termica_pct_por_c_min}<0.03) ? \pgfmathresult : nan}}
+] table[x=fatiga_por_pulso_pct, y=reduccion_desgaste_min_pct] {\tablarobustezdesg};
+\addlegendentry{$0.025$}
+
+\addplot[
+  color=azulUdeA, thick, mark=*, mark size=1.8pt,
+  x filter/.code={\pgfmathparse{(\thisrow{flujo_niebla_maximo_l_m2_h}>4.0 && \thisrow{degradacion_termica_pct_por_c_min}>0.03 && \thisrow{degradacion_termica_pct_por_c_min}<0.08) ? \pgfmathresult : nan}}
+] table[x=fatiga_por_pulso_pct, y=reduccion_desgaste_min_pct] {\tablarobustezdesg};
+\addlegendentry{$0.050$}
+
+\addplot[
+  color=verdeControl, thick, mark=triangle*, mark size=2.1pt,
+  x filter/.code={\pgfmathparse{(\thisrow{flujo_niebla_maximo_l_m2_h}>4.0 && \thisrow{degradacion_termica_pct_por_c_min}>0.08) ? \pgfmathresult : nan}}
+] table[x=fatiga_por_pulso_pct, y=reduccion_desgaste_min_pct] {\tablarobustezdesg};
+\addlegendentry{$0.100\text{ \%/(\si{\celsius}\cdot min)}$}
+\end{axis}
+
+\begin{axis}[
+  at={(axdesg1.south east)},
+  anchor=south west,
+  xshift=1.4cm,
+  width=0.47\textwidth,
+  height=5.6cm,
+  xlabel={Fatiga por pulso (\%)},
+  ylabel={Reducci\'on m\'inima del desgaste (\%)},
+  xmin=0.008, xmax=0.042,
+  ymin=58, ymax=102,
+  xtick={0.01,0.02,0.04},
+  xticklabels={0.01,0.02,0.04},
+  unbounded coords=discard,
+  grid=major,
+  grid style={dashed,gray!40},
+  legend style={at={(0.5,1.03)},anchor=south,legend columns=3,font=\scriptsize,draw=none},
+  title style={yshift=0.5cm,font=\footnotesize\bfseries},
+  title={(b) Flujo calibrado m\'ax. ($1.83\text{ L/m}^2\text{/h}$)},
+  tick label style={font=\scriptsize},
+  label style={font=\footnotesize}
+]
+\addplot[
+  color=naranjaTemp, thick, mark=square*, mark size=1.8pt,
+  x filter/.code={\pgfmathparse{(\thisrow{flujo_niebla_maximo_l_m2_h}<4.0 && \thisrow{degradacion_termica_pct_por_c_min}<0.03) ? \pgfmathresult : nan}}
+] table[x=fatiga_por_pulso_pct, y=reduccion_desgaste_min_pct] {\tablarobustezdesg};
+\addlegendentry{$0.025$}
+
+\addplot[
+  color=azulUdeA, thick, mark=*, mark size=1.8pt,
+  x filter/.code={\pgfmathparse{(\thisrow{flujo_niebla_maximo_l_m2_h}<4.0 && \thisrow{degradacion_termica_pct_por_c_min}>0.03 && \thisrow{degradacion_termica_pct_por_c_min}<0.08) ? \pgfmathresult : nan}}
+] table[x=fatiga_por_pulso_pct, y=reduccion_desgaste_min_pct] {\tablarobustezdesg};
+\addlegendentry{$0.050$}
+
+\addplot[
+  color=verdeControl, thick, mark=triangle*, mark size=2.1pt,
+  x filter/.code={\pgfmathparse{(\thisrow{flujo_niebla_maximo_l_m2_h}<4.0 && \thisrow{degradacion_termica_pct_por_c_min}>0.08) ? \pgfmathresult : nan}}
+] table[x=fatiga_por_pulso_pct, y=reduccion_desgaste_min_pct] {\tablarobustezdesg};
+\addlegendentry{$0.100\text{ \%/(\si{\celsius}\cdot min)}$}
+\end{axis}
+\end{tikzpicture}
+
