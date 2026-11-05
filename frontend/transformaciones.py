@@ -17,8 +17,11 @@ MODO_TEMPORIZADOR = "modo_temporizador_fijo"
 MODO_REFERENCIA = "modo_temporizador_tope_ecologico"
 CLAVE_LITROS = "litros_totales_agua"
 
+# Nombre visible del modo NEURO_SIMBOLICO de la API en las frases del dashboard.
+CONTROL_REGLAS = "el control basado en reglas"
+
 NOMBRES_MODO = {
-    "neuro": "Neuro-simbólico",
+    "neuro": "Control basado en reglas",
     "temporizador": "Temporizador fijo",
 }
 
@@ -290,7 +293,7 @@ def resumen_impacto(resultado: dict) -> list[str] | None:
     if neuro is None:
         return None
     frases = [
-        f"Con el agua captada por el control neuro-simbólico, la red simulada abastecería a "
+        f"Con el agua captada por {CONTROL_REGLAS}, la red simulada abastecería a "
         f"{neuro['personas_acceso_basico']:.1f} personas al nivel de acceso básico de la OMS "
         f"({config.CONSUMO_ACCESO_BASICO_L_PERSONA_DIA:g} L por persona al día), o a "
         f"{neuro['personas_supervivencia']:.1f} con el mínimo humanitario de Sphere "
@@ -512,17 +515,17 @@ def lectura_barrido(resultado: dict) -> list[str]:
     cruce = carga_cruce_recuperacion(resultado)
     if cruce is None:
         frase_recuperacion = (
-            "En el rango evaluado, la recuperación del neuro-simbólico no supera a la del temporizador."
+            f"En el rango evaluado, la recuperación con {CONTROL_REGLAS} no supera a la del temporizador."
         )
     else:
         frase_recuperacion = (
-            f"Desde una carga salina de {cruce:g} Ohm por L/m², la recuperación del neuro-simbólico "
+            f"Desde una carga salina de {cruce:g} Ohm por L/m², la recuperación con {CONTROL_REGLAS} "
             "supera a la del temporizador."
         )
     reducciones = [p["reduccion_desgaste_pct"] for p in puntos if p.get("reduccion_desgaste_pct") is not None]
     if reducciones:
         frase_desgaste = (
-            f"La reducción del desgaste del neuro-simbólico frente al temporizador va de "
+            f"La reducción del desgaste con {CONTROL_REGLAS} frente al temporizador va de "
             f"{min(reducciones):.1f} % a {max(reducciones):.1f} %."
         )
     else:
@@ -559,7 +562,7 @@ def _frase_agua(resultado: dict) -> str:
     neuro = comparativa[MODO_NEURO][CLAVE_LITROS]
     temporizador = comparativa[MODO_TEMPORIZADOR][CLAVE_LITROS]
     frase = (
-        f"Agua: el neuro-simbólico captó {neuro:.1f} L, {_variacion(neuro, temporizador)} "
+        f"Agua: {CONTROL_REGLAS} captó {neuro:.1f} L, {_variacion(neuro, temporizador)} "
         f"que el temporizador ({temporizador:.1f} L)."
     )
     brecha = texto_brecha_agua(resultado)
@@ -572,7 +575,7 @@ def _frase_degradacion(comparativa: dict) -> str:
     neuro = comparativa[MODO_NEURO][clave]
     temporizador = comparativa[MODO_TEMPORIZADOR][clave]
     return (
-        f"Desgaste: la degradación de la membrana fue {neuro:.3f} % con el neuro-simbólico y "
+        f"Desgaste: la degradación de la membrana fue {neuro:.3f} % con {CONTROL_REGLAS} y "
         f"{temporizador:.3f} % con el temporizador ({_variacion(neuro, temporizador)})."
     )
 
@@ -583,7 +586,7 @@ def _frase_energia(comparativa: dict) -> str:
     neuro = comparativa[MODO_NEURO][clave]
     temporizador = comparativa[MODO_TEMPORIZADOR][clave]
     return (
-        f"Energía: el neuro-simbólico consumió {neuro:.1f} Wh, {_variacion(neuro, temporizador)} "
+        f"Energía: {CONTROL_REGLAS} consumió {neuro:.1f} Wh, {_variacion(neuro, temporizador)} "
         f"que el temporizador ({temporizador:.1f} Wh)."
     )
 
@@ -592,8 +595,8 @@ def _frase_violaciones(comparativa: dict) -> str:
     """Episodios de violación ecológica de ambos modos."""
     clave = "violaciones_ecologicas"
     return (
-        f"Límite ecológico: {comparativa[MODO_NEURO][clave]} violaciones del neuro-simbólico y "
-        f"{comparativa[MODO_TEMPORIZADOR][clave]} del temporizador."
+        f"Límite ecológico: {comparativa[MODO_NEURO][clave]} violaciones con {CONTROL_REGLAS} y "
+        f"{comparativa[MODO_TEMPORIZADOR][clave]} con el temporizador."
     )
 
 
@@ -647,7 +650,7 @@ MUESTRAS_INCERTIDUMBRE_POR_DEFECTO = 20
 # Clave del resumen en la respuesta, etiqueta y unidad de cada indicador.
 INDICADORES_INCERTIDUMBRE = [
     ("recuperacion", "Recuperación tras pulso", "%"),
-    ("rendimiento", "Rendimiento del neuro-simbólico", "L/m² al día"),
+    ("rendimiento", f"Rendimiento con {CONTROL_REGLAS}", "L/m² al día"),
     ("reduccion_degradacion", "Reducción de la degradación frente al temporizador", "%"),
 ]
 
@@ -727,7 +730,7 @@ def lectura_incertidumbre(resultado: dict) -> list[str]:
     sin_pulsos = total - resultado["recuperacion"]["n_validos"]
     if sin_pulsos:
         frases.append(
-            f"En {sin_pulsos} de {total} muestras el neuro-simbólico no aplicó pulsos: sin pulsos no hay "
+            f"En {sin_pulsos} de {total} muestras {CONTROL_REGLAS} no aplicó pulsos: sin pulsos no hay "
             "recuperación ni tiempo de regeneración que medir, y las Conjeturas 1 y 2 no se validan por "
             "falta de datos, no por un mal resultado."
         )
@@ -770,7 +773,6 @@ def frase_ventaja_incertidumbre(resultado: dict) -> str | None:
 # ---------------------------------------------------------------------------
 _TOLERANCIA_CERO = 1e-9
 CLAVE_DETALLE = "detalle_verificacion"
-CONTROL_REGLAS = "el control basado en reglas"
 
 # Qué cambiaría un indicador que no cumple y qué haría fallar uno que cumple.
 # Origen: docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md, secciones 6.2, 6.3, 7.4, 8.6 y 8.10.

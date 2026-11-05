@@ -54,14 +54,15 @@ HIPOTESIS_DERIVADA = (
 )
 
 RESPUESTA_PRELIMINAR: list[str] = [
-    "Desgaste. El control basado en reglas (modo neuro-simbólico en la API y el dashboard) reduce la "
-    "degradación acumulada entre 74 % y 99 % frente al temporizador en los seis niveles de salinidad. La reducción es mayor con salinidad baja, "
+    "Desgaste. El control basado en reglas reduce la degradación acumulada entre 74 % y 99 % frente al "
+    "temporizador en los seis niveles de salinidad. La reducción es mayor con salinidad baja, "
     "donde el temporizador aplica pulsos que no hacen falta.",
     "Recuperación. El control basado en reglas mantiene la recuperación entre 85.9 % y 88.9 % en todos "
     "los niveles. La del temporizador cae de 95.8 % a 63.2 % a medida que aumenta la salinidad. Con "
-    "salinidad baja el temporizador recupera más, porque limpia una membrana casi limpia. Desde una "
-    "carga de 60 Ohm por L/m² el control basado en reglas lo supera, y la diferencia llega a 22.7 puntos con "
-    "la carga más alta.",
+    "salinidad baja el temporizador recupera más, porque limpia una membrana casi limpia. Con el flujo de "
+    "niebla supuesto (6.0 L/m²/h), el control basado en reglas supera al temporizador desde una carga de "
+    "60 Ohm por L/m². Con la carga más alta, la diferencia llega a 22.7 puntos. Con otros flujos el cruce "
+    "cambia de carga, pero ocurre con una incrustación diaria parecida (ver la tesis).",
     "Robustez frente a los parámetros supuestos. Repetido con tres flujos de niebla (el supuesto y los dos "
     "extremos calibrados contra la literatura) y tres eficacias del pulso (0.80, 0.90 y 1.00), el control "
     "basado en reglas reduce el desgaste entre 73.3 % y 100 % en los 54 puntos. La ventaja en recuperación "
@@ -69,12 +70,10 @@ RESPUESTA_PRELIMINAR: list[str] = [
     "captada en un día): en las seis combinaciones en que aparece, el cruce está entre 1633 y 1839 Ohm por "
     "día, mientras que la carga por litro del cruce va de 50 a 191. Con el flujo calibrado mínimo esa "
     "incrustación no se alcanza y el temporizador recupera más en todos los niveles en que hay pulsos.",
-    "La respuesta es condicional. La reducción del desgaste es robusta: se observa en todos los niveles "
-    "de salinidad y con todos los parámetros evaluados. La ventaja en recuperación aparece solo por encima "
-    "de una incrustación diaria de unos 1633 a 1867 Ohm por día, que con rendimientos como los de la "
-    "literatura solo se alcanza con la carga salina más alta. Estos resultados dependen de parámetros "
-    "físicos supuestos, en particular la eficacia del pulso, que deben medirse en laboratorio.",
 ]
+
+# Nota única de la vista 3 sobre el código del modo en la API (backend/schemas.py, ModoOperacion).
+NOTA_CODIGO_MODO = "En la API este modo se identifica como NEURO_SIMBOLICO."
 
 
 # ---------------------------------------------------------------------------
@@ -92,7 +91,7 @@ _NO_EQUIVALE_A_REFUTADA = (
 
 CONJETURAS: list[dict[str, str]] = [
     _conjetura(
-        "Conjetura 1: Control neuro-simbólico vs. control fijo",
+        "Conjetura 1: Control basado en reglas frente a control fijo",
         "El control neuro-simbólico local extiende la vida útil de la membrana biomimética más que "
         "un temporizador estático al prevenir la saturación salina.",
         "Recuperación de caudal >= 90 % tras cada pulso y ahorro de energía en pulsos >= 35 % "
@@ -102,7 +101,7 @@ CONJETURAS: list[dict[str, str]] = [
         "remueva al menos el 78 % de la costra salina. " + _NO_EQUIVALE_A_REFUTADA,
     ),
     _conjetura(
-        "Conjetura 2: Autorreparación por pulso resonante",
+        "Conjetura 2: Autorreparación por pulso resistivo (en la Matriz, pulso resonante)",
         "El pulso térmico controlado (<= 45 °C) disuelve las costras de NaCl sin degradar la matriz "
         "de acuaporinas sintéticas.",
         "Tiempo de regeneración < 120 s (impedancia de vuelta a 1100 Ω o menos) y 0 % de "
@@ -480,8 +479,8 @@ GLOSARIO: dict[str, str] = {
     ),
     "control neuro-simbólico": (
         "Arquitectura objetivo del proyecto, que combina reglas explícitas con un componente neuronal. Por "
-        "compatibilidad, la API y el dashboard usan este nombre (modo NEURO_SIMBOLICO) para el control "
-        "basado en reglas, que es su primera etapa."
+        "compatibilidad, la API usa este nombre (modo NEURO_SIMBOLICO) para el control basado en reglas, "
+        "que es su primera etapa; el dashboard lo muestra como control basado en reglas."
     ),
     "temporizador fijo": (
         "Control tradicional de comparación: aplica un pulso cada 120 min sin leer sensores, con una "
@@ -511,6 +510,10 @@ REFERENCIAS: list[str] = [
     (
         "Sphere Association (2018). The Sphere Handbook: Humanitarian Charter and Minimum Standards in "
         "Humanitarian Response (4.ª ed.), estándar 2.1 de abastecimiento de agua. https://spherestandards.org"
+    ),
+    (
+        "Klemm, O., Schemenauer, R. S., Lummerich, A., et al. (2012). Fog as a fresh-water resource: overview "
+        "and perspectives. Ambio, 41, 221-234. https://doi.org/10.1007/s13280-012-0247-8"
     ),
 ]
 

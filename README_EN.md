@@ -22,7 +22,7 @@ It is developed by team AXIOMA for the Research Fundamentals course at the Unive
 
 **Working hypothesis.** The neuro-symbolic control keeps a stable flow recovery and a lower accumulated degradation than the timer, and its advantage grows with salinity.
 
-**Nature of the control.** The implemented engine is symbolic: explicit rules evaluated by priority, plus an explicit physical model. The "neural module" of the target architecture is not implemented and is left as future work. "Neuro-symbolic" describes the target architecture, not the current implementation. For compatibility, the API and the dashboard keep the mode name neuro-symbolic (`NEURO_SIMBOLICO`, `modo_neuro_simbolico`) for the rule-based control; in result tables, the mode is labelled "Control basado en reglas (modo neuro-simbólico)".
+**Nature of the control.** The implemented engine is symbolic: explicit rules evaluated by priority, plus an explicit physical model. The "neural module" of the target architecture is not implemented and is left as future work. "Neuro-symbolic" describes the target architecture, not the current implementation. For compatibility, the API keeps the mode name neuro-symbolic (`NEURO_SIMBOLICO`, `modo_neuro_simbolico`) for the rule-based control. The dashboard uses a single visible name for the mode, "Control basado en reglas" (Rule-based control), with one note in the comparative simulation view stating the API code; in the result tables of the documentation, the mode is labelled "Control basado en reglas (modo neuro-simbólico)".
 
 ## Control rules
 

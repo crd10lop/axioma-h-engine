@@ -20,6 +20,8 @@ from backend.simulador import ejecutar_simulacion
 from frontend import config
 from frontend import transformaciones as tr
 
+MODO_REGLAS = "Control basado en reglas"
+
 
 @pytest.fixture(scope="module")
 def resultado():
@@ -71,8 +73,8 @@ def test_series_formato_largo(resultado):
     df = tr.series_a_dataframe(resultado)
     largo = tr.series_formato_largo(df, "litros_acumulados_neuro", "litros_acumulados_temporizador")
     assert len(largo) == 2 * len(df)
-    assert set(largo["Modo"]) == {"Neuro-simbólico", "Temporizador fijo"}
-    ultimo_neuro = largo[largo["Modo"] == "Neuro-simbólico"]["valor"].iloc[-1]
+    assert set(largo["Modo"]) == {MODO_REGLAS, "Temporizador fijo"}
+    ultimo_neuro = largo[largo["Modo"] == MODO_REGLAS]["valor"].iloc[-1]
     assert ultimo_neuro == pytest.approx(df["litros_acumulados_neuro"].iloc[-1])
 
 
@@ -82,14 +84,14 @@ def test_comparativa_a_dataframe(resultado):
     fila = df[df["clave"] == "litros_totales_agua"].iloc[0]
     neuro = resultado["comparativa"]["modo_neuro_simbolico"]["litros_totales_agua"]
     temporizador = resultado["comparativa"]["modo_temporizador_fijo"]["litros_totales_agua"]
-    assert fila["Neuro-simbólico"] == neuro
+    assert fila[MODO_REGLAS] == neuro
     assert fila["Diferencia (%)"] == pytest.approx((neuro - temporizador) / temporizador * 100.0)
 
 
 def test_totales_a_dataframe(resultado):
     df = tr.totales_a_dataframe(resultado)
     assert len(df) == 6
-    assert set(df["Modo"]) == {"Neuro-simbólico", "Temporizador fijo"}
+    assert set(df["Modo"]) == {MODO_REGLAS, "Temporizador fijo"}
     assert df["Valor"].notna().all()
 
 
@@ -202,7 +204,7 @@ def test_comparativa_tolera_recuperacion_sin_datos(resultado):
     copia["comparativa"]["modo_neuro_simbolico"]["recuperacion_caudal_promedio_pct"] = None
     df = tr.comparativa_a_dataframe(copia)
     fila = df[df["clave"] == "recuperacion_caudal_promedio_pct"].iloc[0]
-    assert pd.isna(fila["Neuro-simbólico"])
+    assert pd.isna(fila[MODO_REGLAS])
     assert pd.isna(fila["Diferencia (%)"])
 
 
@@ -432,11 +434,11 @@ def test_carga_cruce_ignora_puntos_sin_datos():
 def test_lectura_barrido_con_datos_reales(barrido_real):
     frases = tr.lectura_barrido(barrido_real)
     assert frases[0] == (
-        "Desde una carga salina de 60 Ohm por L/m², la recuperación del neuro-simbólico "
+        "Desde una carga salina de 60 Ohm por L/m², la recuperación con el control basado en reglas "
         "supera a la del temporizador."
     )
     assert frases[1] == (
-        "La reducción del desgaste del neuro-simbólico frente al temporizador va de 73.9 % a 99.0 %."
+        "La reducción del desgaste con el control basado en reglas frente al temporizador va de 73.9 % a 99.0 %."
     )
     assert "1 semilla(s)" in frases[2]
 
@@ -514,14 +516,18 @@ def test_resumen_ejecutivo_tiene_entre_3_y_5_frases(resultado_prd):
 
 def test_resumen_ejecutivo_con_la_corrida_del_prd(resultado_prd):
     agua, desgaste, energia, violaciones, conjeturas = tr.resumen_ejecutivo(resultado_prd)
-    assert agua.startswith("Agua: el neuro-simbólico captó 81.7 L, 32.2 % menos que el temporizador (120.4 L).")
+    assert agua.startswith(
+        "Agua: el control basado en reglas captó 81.7 L, 32.2 % menos que el temporizador (120.4 L)."
+    )
     assert "28.6 L (73.9 %) se deben al tope ecológico de 33 %" in agua
     assert desgaste == (
-        "Desgaste: la degradación de la membrana fue 0.048 % con el neuro-simbólico y "
+        "Desgaste: la degradación de la membrana fue 0.048 % con el control basado en reglas y "
         "2.906 % con el temporizador (98.4 % menos)."
     )
-    assert energia == "Energía: el neuro-simbólico consumió 323.2 Wh, 69.7 % menos que el temporizador (1065.1 Wh)."
-    assert violaciones == "Límite ecológico: 0 violaciones del neuro-simbólico y 8 del temporizador."
+    assert energia == (
+        "Energía: el control basado en reglas consumió 323.2 Wh, 69.7 % menos que el temporizador (1065.1 Wh)."
+    )
+    assert violaciones == "Límite ecológico: 0 violaciones con el control basado en reglas y 8 con el temporizador."
     assert conjeturas == "Conjeturas validadas: 0 de 3."
 
 
@@ -535,7 +541,7 @@ def test_resumen_ejecutivo_sin_modo_de_referencia(resultado_prd):
     antiguo = copy.deepcopy(resultado_prd)
     antiguo["comparativa"].pop(tr.MODO_REFERENCIA)
     agua = tr.resumen_ejecutivo(antiguo)[0]
-    assert agua == "Agua: el neuro-simbólico captó 81.7 L, 32.2 % menos que el temporizador (120.4 L)."
+    assert agua == "Agua: el control basado en reglas captó 81.7 L, 32.2 % menos que el temporizador (120.4 L)."
 
 
 @pytest.mark.parametrize(
@@ -571,7 +577,7 @@ def _respuesta_impacto(rendimiento: float, con_temporizador: bool = True) -> dic
 def test_resumen_impacto_con_respuesta_real(resultado_prd):
     personas, temporizador, rendimiento, area = tr.resumen_impacto(resultado_prd)
     assert personas == (
-        "Con el agua captada por el control neuro-simbólico, la red simulada abastecería a 4.1 personas "
+        "Con el agua captada por el control basado en reglas, la red simulada abastecería a 4.1 personas "
         "al nivel de acceso básico de la OMS (20 L por persona al día), o a 5.4 con el mínimo humanitario "
         "de Sphere (15 L por persona al día)."
     )
@@ -678,7 +684,7 @@ def test_lectura_incertidumbre_con_muestras_sin_pulsos(incertidumbre_dia_normal)
     assert frases[0].startswith("Conjetura 1. Eficiencia: se valida en ")
     assert "de 20 muestras (probabilidad " in frases[0]
     assert "entre los percentiles 5 y 95" in frases[4]
-    assert frases[-2].startswith(f"En {sin_pulsos} de 20 muestras el neuro-simbólico no aplicó pulsos")
+    assert frases[-2].startswith(f"En {sin_pulsos} de 20 muestras el control basado en reglas no aplicó pulsos")
     assert frases[-1].startswith("El control basado en reglas recupera más que el temporizador en 0 de 8 muestras")
 
 
@@ -711,7 +717,7 @@ def test_lectura_incertidumbre_indicador_sin_datos():
     frases = tr.lectura_incertidumbre(resultado)
     assert frases[3] == "Recuperación tras pulso: ninguna muestra tiene datos."
     assert frases[4] == (
-        "Rendimiento del neuro-simbólico: de 2.10 a 5.30 L/m² al día entre los percentiles 5 y 95 "
+        "Rendimiento con el control basado en reglas: de 2.10 a 5.30 L/m² al día entre los percentiles 5 y 95 "
         "(mediana 3.40; 1 de 1 muestras con datos)."
     )
     assert frases[-1].startswith("En 1 de 1 muestras")
@@ -1120,3 +1126,34 @@ def test_frase_ventaja_sin_resumen():
     frase = tr.frase_ventaja_incertidumbre(resultado)
     assert "en 1 de 1 muestras" in frase
     assert "percentiles" not in frase
+
+
+# ---------------------------------------------------------------------------
+# Nombre visible único del modo de control
+# ---------------------------------------------------------------------------
+@pytest.fixture(scope="module")
+def barrido_sin_cruce():
+    """Barrido sintético en que el temporizador recupera más y no hay reducción del desgaste."""
+    return _barrido(_punto_barrido(20.0, 88.0, 95.0, reduccion=None))
+
+
+@pytest.fixture(scope="module")
+def impacto_sintetico():
+    """Respuesta con impacto comunitario mínimo, con el temporizador como comparación."""
+    return _respuesta_impacto(3.0)
+
+
+@pytest.mark.parametrize(
+    ("funcion", "nombre_fixture"),
+    [
+        (tr.resumen_ejecutivo, "resultado_prd"),
+        (tr.resumen_ejecutivo, "resultado"),
+        (tr.lectura_barrido, "barrido_real"),
+        (tr.lectura_barrido, "barrido_sin_cruce"),
+        (tr.resumen_impacto, "resultado_prd"),
+        (tr.resumen_impacto, "impacto_sintetico"),
+    ],
+)
+def test_frases_visibles_no_usan_el_nombre_neuro_simbolico(funcion, nombre_fixture, request):
+    texto = " ".join(funcion(request.getfixturevalue(nombre_fixture)))
+    assert "neuro-simbólico" not in texto.casefold()

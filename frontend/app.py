@@ -27,7 +27,7 @@ st.set_page_config(page_title="Axioma-H Engine - Simulador", layout="wide")
 
 NODOS = [f"NODO_{i:02d}" for i in range(1, 9)]
 MODO_NEURO = "NEURO_SIMBOLICO"
-MODOS = {MODO_NEURO: "Neuro-simbólico", "TEMPORIZADOR_FIJO": "Temporizador fijo"}
+MODOS = {MODO_NEURO: "Control basado en reglas", "TEMPORIZADOR_FIJO": "Temporizador fijo"}
 ESCENARIOS = {
     "DIA_NORMAL": "Día normal",
     "INCRUSTACION_SALINA_RAPIDA": "Incrustación salina rápida",
@@ -360,9 +360,9 @@ def vista_investigacion() -> None:
     st.markdown(f"**Hipótesis de trabajo.** {contenido.HIPOTESIS}")
     st.success(f"**Tesis actual.** {contenido.TESIS}")
     st.info(f"**Hipótesis derivada.** {contenido.HIPOTESIS_DERIVADA}")
-
-    st.subheader("Respuesta preliminar del simulador")
-    st.markdown(contenido.lista_markdown(contenido.RESPUESTA_PRELIMINAR))
+    with st.expander("Detalle de la respuesta por análisis"):
+        st.markdown("**Respuesta preliminar del simulador**")
+        st.markdown(contenido.lista_markdown(contenido.RESPUESTA_PRELIMINAR))
 
     st.subheader("Conjeturas")
     tabla_textos(contenido.CONJETURAS, contenido.COLUMNAS_CONJETURAS)
@@ -621,9 +621,10 @@ def formatear_valor(clave: str, valor: Optional[float]) -> str:
 
 
 def seccion_comparativa(resultado: dict) -> None:
-    """Tarjetas de ambos modos con la diferencia porcentual del neuro-simbólico."""
+    """Tarjetas de ambos modos con la diferencia porcentual del control basado en reglas."""
     st.subheader("Comparativa de modos")
-    st.caption("Valor principal: modo neuro-simbólico. La variación se calcula frente al temporizador fijo.")
+    st.caption("Valor principal: control basado en reglas. La variación se calcula frente al temporizador fijo.")
+    st.caption(contenido.NOTA_CODIGO_MODO)
     filas = tr.comparativa_a_dataframe(resultado).to_dict("records")
     tarjetas_por_fila = 4
     columnas = []
@@ -751,8 +752,8 @@ def seccion_graficos(df: pd.DataFrame, resultado: dict) -> None:
 
 
 def seccion_bitacora(resultado: dict) -> None:
-    """Consola de decisiones del modo neuro-simbólico con filtros."""
-    with st.expander("Consola de decisiones (modo neuro-simbólico)"):
+    """Consola de decisiones del control basado en reglas con filtros."""
+    with st.expander("Consola de decisiones (control basado en reglas)"):
         bitacora = resultado["bitacora"]
         columnas = st.columns(2)
         nodos = sorted({e["nodo_id"] for e in bitacora})
@@ -810,13 +811,13 @@ def dibujar_paso(marcador, punto: dict) -> None:
         columnas = st.columns(5)
         columnas[0].metric("Humedad relativa", f"{punto['humedad_relativa_pct']:.1f} %")
         columnas[0].metric("Temperatura ambiente", f"{punto['temperatura_c']:.1f} °C")
-        columnas[1].metric("Impedancia neuro", f"{punto['impedancia_promedio_neuro_ohms']:.1f} Ω")
+        columnas[1].metric("Impedancia con reglas", f"{punto['impedancia_promedio_neuro_ohms']:.1f} Ω")
         columnas[1].metric("Impedancia temporizador", f"{punto['impedancia_promedio_temporizador_ohms']:.1f} Ω")
-        columnas[2].metric("Agua neuro", f"{punto['litros_acumulados_neuro']:.2f} L")
+        columnas[2].metric("Agua con reglas", f"{punto['litros_acumulados_neuro']:.2f} L")
         columnas[2].metric("Agua temporizador", f"{punto['litros_acumulados_temporizador']:.2f} L")
-        columnas[3].metric("Energía neuro", f"{punto['energia_acumulada_neuro_wh']:.1f} Wh")
+        columnas[3].metric("Energía con reglas", f"{punto['energia_acumulada_neuro_wh']:.1f} Wh")
         columnas[3].metric("Energía temporizador", f"{punto['energia_acumulada_temporizador_wh']:.1f} Wh")
-        columnas[4].metric("Integridad neuro", f"{punto['integridad_promedio_neuro_pct']:.3f} %")
+        columnas[4].metric("Integridad con reglas", f"{punto['integridad_promedio_neuro_pct']:.3f} %")
         columnas[4].metric("Integridad temporizador", f"{punto['integridad_promedio_temporizador_pct']:.3f} %")
 
 
@@ -1323,7 +1324,10 @@ def main() -> None:
     """Construye la página según la vista seleccionada."""
     inicializar_estado()
     st.title("Axioma-H Engine")
-    st.caption("Simulador del motor de control neuro-simbólico para captación pasiva de agua atmosférica.")
+    st.caption(
+        "Simulador del control basado en reglas (primera etapa de una arquitectura neuro-simbólica) para "
+        "captación pasiva de agua atmosférica."
+    )
 
     api_disponible = panel_conexion()
     st.sidebar.divider()

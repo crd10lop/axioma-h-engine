@@ -19,6 +19,7 @@ REGLA_03 = "REGLA_03_DESPRENDIMIENTO_SAL_POR_IMPEDANCIA"
 REGLA_04 = "REGLA_04_PROTECCION_RESERVA_CRITICA"
 REGLA_06 = "REGLA_06_SUPERVISION_HUMANA"
 ACCESO_BASICO = "acceso básico al agua"
+RUTA_DOCS = RUTA_APP.parent.parent / "docs"
 
 
 def _constantes_app() -> dict[str, str]:
@@ -95,8 +96,35 @@ def test_respuesta_preliminar_conserva_las_cifras():
 
 def test_respuesta_preliminar_incluye_la_robustez():
     texto = " ".join(contenido.RESPUESTA_PRELIMINAR)
-    for cifra in ("73.3 %", "54 puntos", "1633 y 1839 Ohm", "1867 Ohm"):
+    for cifra in ("73.3 %", "54 puntos", "1633 y 1839 Ohm"):
         assert cifra in texto
+
+
+def test_respuesta_preliminar_no_repite_la_tesis():
+    assert len(contenido.RESPUESTA_PRELIMINAR) == 3
+    assert "La respuesta es condicional" not in " ".join(contenido.RESPUESTA_PRELIMINAR)
+
+
+FRASE_CRUCE_FLUJO_SUPUESTO = (
+    "Con el flujo de niebla supuesto (6.0 L/m²/h), el control basado en reglas supera al temporizador "
+    "desde una carga de 60 Ohm por L/m²."
+)
+
+
+@pytest.mark.parametrize(
+    "fragmento",
+    [
+        FRASE_CRUCE_FLUJO_SUPUESTO,
+        "Con otros flujos el cruce cambia de carga, pero ocurre con una incrustación diaria parecida (ver la tesis).",
+    ],
+)
+def test_recuperacion_no_contradice_la_tesis(fragmento):
+    assert fragmento in contenido.RESPUESTA_PRELIMINAR[1]
+
+
+def test_recuperacion_coincide_con_docs_01():
+    documento = (RUTA_DOCS / "01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md").read_text(encoding="utf-8")
+    assert FRASE_CRUCE_FLUJO_SUPUESTO in documento
 
 
 @pytest.mark.parametrize("fragmento", ["H1-Ciclo 3", "incrustación diaria", "1633 y 1867 Ohm por día"])
@@ -110,6 +138,21 @@ def test_conjeturas_completas():
         assert set(conjetura) == set(contenido.COLUMNAS_CONJETURAS)
         for valor in conjetura.values():
             assert valor.strip()
+
+
+@pytest.mark.parametrize(
+    ("indice", "titulo"),
+    [
+        (0, "Conjetura 1: Control basado en reglas frente a control fijo"),
+        (1, "Conjetura 2: Autorreparación por pulso resistivo (en la Matriz, pulso resonante)"),
+    ],
+)
+def test_titulos_de_las_conjeturas(indice, titulo):
+    assert contenido.CONJETURAS[indice]["nombre"] == titulo
+
+
+def test_enunciado_de_la_conjetura_1_conserva_la_matriz():
+    assert contenido.CONJETURAS[0]["enunciado"].startswith("El control neuro-simbólico local extiende")
 
 
 @pytest.mark.parametrize("indice", [0, 1])
@@ -158,9 +201,11 @@ def test_referencias_incluyen_repositorio_y_documento():
         "https://www.who.int/publications/i/item/9789240015241",
         "Sphere Association (2018)",
         "estándar 2.1 de abastecimiento de agua",
+        "Klemm, O., Schemenauer, R. S., Lummerich, A., et al. (2012)",
+        "https://doi.org/10.1007/s13280-012-0247-8",
     ],
 )
-def test_referencias_incluyen_oms_y_sphere(cita):
+def test_referencias_incluyen_oms_sphere_y_klemm(cita):
     assert cita in " ".join(contenido.REFERENCIAS)
 
 
@@ -449,7 +494,28 @@ def test_intro_del_explorador_cita_la_decision_d5():
 
 
 def test_guia_por_disciplina_coincide_con_docs_03():
-    documento = (RUTA_APP.parent.parent / "docs" / "03_Funcionamiento_General_AxiomaH.md").read_text(encoding="utf-8")
+    documento = (RUTA_DOCS / "03_Funcionamiento_General_AxiomaH.md").read_text(encoding="utf-8")
     for guia in contenido.GUIA_DISCIPLINAS.values():
         assert guia["donde"] in documento
         assert guia["pregunta"] in documento
+
+
+# ---------------------------------------------------------------------------
+# Nombre visible único del modo de control
+# ---------------------------------------------------------------------------
+def test_nota_del_codigo_del_modo():
+    assert contenido.NOTA_CODIGO_MODO == "En la API este modo se identifica como NEURO_SIMBOLICO."
+
+
+def test_app_muestra_la_nota_del_codigo_una_sola_vez():
+    assert RUTA_APP.read_text(encoding="utf-8").count("contenido.NOTA_CODIGO_MODO") == 1
+
+
+def test_app_no_muestra_el_nombre_neuro_simbolico_del_modo():
+    assert "neuro-simbólico" not in RUTA_APP.read_text(encoding="utf-8").casefold()
+
+
+def test_klemm_coincide_con_docs_06():
+    documento = (RUTA_DOCS / "06_Referencias_y_Trazabilidad_AxiomaH.md").read_text(encoding="utf-8")
+    assert "https://doi.org/10.1007/s13280-012-0247-8" in documento
+    assert "Fog as a fresh-water resource: overview and perspectives" in documento
