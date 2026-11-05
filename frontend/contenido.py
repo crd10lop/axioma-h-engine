@@ -534,6 +534,99 @@ REFERENCIAS: list[str] = [
 ]
 
 # ---------------------------------------------------------------------------
+# Públicos, lectura breve y tablero de veredictos (docs/03, sección 5; docs/04, secciones 7 y 8)
+# ---------------------------------------------------------------------------
+NIVEL_LECTURA_BREVE = "Lectura breve"
+NIVEL_LECTURA_COMPLETA = "Lectura completa"
+NIVELES_LECTURA: list[str] = [NIVEL_LECTURA_BREVE, NIVEL_LECTURA_COMPLETA]
+
+
+def _publico(publico: str, que_leer: str, donde: str) -> dict[str, str]:
+    """Agrupa los textos de un perfil de público con las claves que usa la tabla del dashboard."""
+    return {"publico": publico, "que_leer": que_leer, "donde": donde}
+
+
+PUBLICOS: list[dict[str, str]] = [
+    _publico(
+        "Comunidad",
+        NIVEL_LECTURA_BREVE,
+        "Vistas 1 y 4, parte d (impacto en distintos entornos).",
+    ),
+    _publico(
+        "Evaluador no técnico",
+        NIVEL_LECTURA_BREVE,
+        "Vistas 1 y 4, y README, sección Respuesta.",
+    ),
+    _publico(
+        "Investigador",
+        NIVEL_LECTURA_COMPLETA,
+        "Vistas 4 y 5, docs/04, secciones 7 y 8.",
+    ),
+]
+
+COLUMNAS_PUBLICOS = {
+    "publico": "Público",
+    "que_leer": "Qué leer",
+    "donde": "Dónde",
+}
+
+LECTURA_BREVE: dict[str, str] = {
+    "pregunta": (
+        "¿Un control que decide con sensores cuida mejor la membrana de un captador de niebla, y le saca más "
+        "agua, que un temporizador fijo, cuando el aire trae mucha sal?"
+    ),
+    "hallazgo": (
+        "En la simulación, el control por reglas desgasta la membrana entre 61 % y 100 % menos que el "
+        "temporizador en todas las condiciones probadas. Recuperar más agua después de cada limpieza solo lo "
+        "logra cuando entra mucha sal cada día; con la niebla que se mide en proyectos reales, eso ocurre solo "
+        "con el aire más salino."
+    ),
+    "certeza": (
+        "Es un resultado de computador, no de campo. Depende sobre todo de cuánto limpia un pulso de calor y de "
+        "cuánto desgasta cada pulso, dos valores que hay que medir en laboratorio."
+    ),
+    "comunidad": (
+        "Con la niebla típica de los proyectos reales, de 3 a 10 L por m² al día, abastecer a 50 personas con "
+        "20 L diarios necesita entre 100 y 333 m² de malla. Para igualar la entrega mensual de 1000 L por "
+        "comunidad con carrotanque del ICBF hacen falta de 3 a 4 m² con 10 L/m² al día y de 11 a 13 m² con "
+        "3 L/m² al día."
+    ),
+    "falta": (
+        "Medir en laboratorio el efecto del pulso de calor, y consultar a la comunidad antes de cualquier "
+        "piloto: el diseño no se ha probado en campo."
+    ),
+}
+
+TITULOS_LECTURA_BREVE: dict[str, str] = {
+    "pregunta": "Pregunta",
+    "hallazgo": "Hallazgo principal",
+    "certeza": "Nivel de certeza",
+    "comunidad": "Qué significa para una comunidad",
+    "falta": "Qué falta antes de ir a campo",
+}
+
+LECTURA_BREVE_PARTES: dict[str, str] = {
+    "desgaste": "Sí: desgasta mucho menos en todas las condiciones probadas.",
+    "recuperacion": "Depende: solo cuando entra mucha sal cada día.",
+    "seguridad": "Moderada: depende de valores que hay que medir.",
+    "personas": "Entre 100 y 333 m² de malla para 50 personas, según la niebla del lugar.",
+}
+
+
+def _veredicto(parte: str, veredicto: str, cifra: str, falta_medir: str) -> dict[str, str]:
+    """Agrupa el veredicto de una parte de la vista 4 con su cifra y la medición pendiente."""
+    return {"parte": parte, "veredicto": veredicto, "cifra": cifra, "falta_medir": falta_medir}
+
+
+VEREDICTOS: list[dict[str, str]] = [
+    _veredicto("desgaste", "Se reduce", "61.5 % a 100 %", "Fatiga real por pulso a 44 °C"),
+    _veredicto("recuperacion", "Condicional", "Cruce entre 1171 y 2365 Ohm por día", "Eficacia del pulso"),
+    _veredicto("seguridad", "Moderada", "3 de 62 muestras con ventaja en recuperación", "Eficacia y flujo del sitio"),
+    _veredicto("personas", "100 a 333 m²", "50 personas con 20 L al día", "Rendimiento de niebla del sitio"),
+]
+
+
+# ---------------------------------------------------------------------------
 # Recorrido guiado
 # ---------------------------------------------------------------------------
 VISTAS: list[str] = [

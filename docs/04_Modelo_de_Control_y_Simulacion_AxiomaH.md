@@ -457,7 +457,7 @@ La sección 7.6 responde cuántas personas abastece una red de 8 m². El dimensi
 
 **Interpretación.**
 
-- **Con el flujo supuesto el área queda subestimada.** Con 85 %, 32 nodos bastarían para 50 personas al nivel de acceso básico: entre 3.2 y 10.6 veces menos área que con los rendimientos de la literatura.
+- **Con el flujo supuesto el área queda subestimada.** Con 85 %, 32 nodos bastarían para 50 personas con 20 L al día (nivel de acceso básico): entre 3.2 y 10.6 veces menos área que con los rendimientos de la literatura.
 - **Con el flujo calibrado el área coincide con la literatura por construcción.** La calibración de la sección 8.6 se hizo en DIA_NORMAL con 85 %, de modo que los extremos calibrados reproducen 10 y 3 L/m² al día y el área cae en el rango de 100 a 333 m². No es una validación independiente: confirma que el dimensionamiento usa el mismo rendimiento que la calibración.
 - **Con 45 % el área crece de forma marcada.** Con el flujo calibrado mínimo harían falta 976 m² para 50 personas, unas 122 redes de 8 nodos. Una red de 8 m² con los flujos calibrados abastecería entre 1.2 y 4.0 personas con 85 %.
 - **Alcance.** Hereda las limitaciones de la sección 7.6. Además, los flujos de referencia son los de Cabo de la Vela: para otro sitio, el rendimiento se obtiene con una simulación con su perfil (sección 8.10) y se aplica la misma fórmula.
@@ -754,12 +754,12 @@ Estrechar el rango exige agregar niveles de carga salina entre 40 y 60 Ohm por L
 | TORMENTA_DE_ARENA | 20 de 20 | -18.86 / -14.67 / -9.88 | 0.00 |
 | TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 14 de 20 | -9.60 / -6.54 / -4.37 | 0.00 |
 
-Con los flujos calibrados, el control basado en reglas supera al temporizador en recuperación solo en 3 de las 62 muestras con ambas recuperaciones, todas en INCRUSTACION_SALINA_RAPIDA. Multiplicando la carga salina de cada escenario (240, 120 y 80 Ohm por L/m²) por el rendimiento de cada muestra, en DIA_NORMAL, INCRUSTACION_SALINA_RAPIDA y TORMENTA_DE_SAL_Y_CALOR_EXTREMO las 42 muestras con ambas recuperaciones se separan por la incrustación diaria: la ventaja es negativa en todas las que tienen 1628.9 Ohm/día o menos y positiva en las tres que tienen 2014.9 Ohm/día o más. Es una comprobación independiente de la grilla, porque usa valores de eficacia y flujo distintos, y es coherente con el rango de cruce. En TORMENTA_DE_ARENA la ventaja es negativa en todas las muestras, porque el pulso no remueve el polvo (sección 8.5).
+Con los flujos calibrados, el control basado en reglas supera al temporizador en recuperación solo en 3 de las 62 muestras con ambas recuperaciones (3 de 62 muestras con ventaja en recuperación), todas en INCRUSTACION_SALINA_RAPIDA. Multiplicando la carga salina de cada escenario (240, 120 y 80 Ohm por L/m²) por el rendimiento de cada muestra, en DIA_NORMAL, INCRUSTACION_SALINA_RAPIDA y TORMENTA_DE_SAL_Y_CALOR_EXTREMO las 42 muestras con ambas recuperaciones se separan por la incrustación diaria: la ventaja es negativa en todas las que tienen 1628.9 Ohm/día o menos y positiva en las tres que tienen 2014.9 Ohm/día o más. Es una comprobación independiente de la grilla, porque usa valores de eficacia y flujo distintos, y es coherente con el rango de cruce. En TORMENTA_DE_ARENA la ventaja es negativa en todas las muestras, porque el pulso no remueve el polvo (sección 8.5).
 
 **Respuesta robusta a la pregunta.** En el modelo, y en los rangos evaluados de flujo de niebla y eficacia del pulso:
 
 1. el control basado en reglas reduce el desgaste de la membrana frente al temporizador en todos los niveles de salinidad, con una reducción de 73.3 % a 100 %, y la reducción se mantiene con la mitad y el doble de la fatiga por pulso y de la degradación térmica, de 61.5 % a 100 % (sección 8.11);
-2. su ventaja en recuperación no depende de la carga salina por litro, sino de la incrustación diaria, y aparece solo por encima de unos 1633 a 1867 Ohm/día, un rango obtenido por interpolación entre niveles separados de 617 a 1165 Ohm/día (resolución del cruce);
+2. su ventaja en recuperación no depende de la carga salina por litro, sino de la incrustación diaria, y aparece solo por encima de unos 1633 a 1867 Ohm/día, un rango obtenido por interpolación entre niveles separados de 617 a 1165 Ohm/día (cruce entre 1171 y 2365 Ohm por día, resolución del cruce);
 3. con rendimientos como los de la literatura (flujo calibrado), esa incrustación diaria solo se alcanza con la carga salina más alta, por lo que en la mayoría de las condiciones el temporizador recupera igual o más. Esa recuperación mayor no indica una membrana mejor mantenida (sección 7.5): el temporizador pulsa con la membrana casi limpia, a costa de más desgaste.
 
 ### 8.9 Hipótesis derivada H1-Ciclo 3

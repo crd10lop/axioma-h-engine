@@ -1043,23 +1043,61 @@ def lectura_robustez(resultado: dict) -> list[str]:
 # ---------------------------------------------------------------------------
 # Robustez del desgaste frente a la fatiga y la degradación térmica (docs/04, sección 8.11)
 # ---------------------------------------------------------------------------
+COLUMNA_FLUJO_GRAFICO_DESGASTE = "Flujo de niebla (L/m²/h)"
+COLUMNA_FATIGA_DESGASTE = "Fatiga por pulso (%)"
+COLUMNA_DEGRADACION_TERMICA_DESGASTE = "Degradación térmica (% por °C y min)"
+COLUMNA_REDUCCION_MIN_GRAFICO_DESGASTE = "Reducción mínima del desgaste (%)"
 COLUMNA_PUNTOS_MENOR_DESGASTE = "Puntos con menor desgaste"
 COLUMNAS_ROBUSTEZ_DESGASTE = [
     COLUMNA_FLUJO,
-    "Fatiga por pulso (%)",
-    "Degradación térmica (% por °C y min)",
+    COLUMNA_FATIGA_DESGASTE,
+    COLUMNA_DEGRADACION_TERMICA_DESGASTE,
     COLUMNA_REDUCCION_MIN,
     COLUMNA_REDUCCION_MAX,
     COLUMNA_PUNTOS_MENOR_DESGASTE,
+]
+COLUMNAS_GRAFICO_ROBUSTEZ_DESGASTE = [
+    COLUMNA_FLUJO_GRAFICO_DESGASTE,
+    COLUMNA_FATIGA_DESGASTE,
+    COLUMNA_DEGRADACION_TERMICA_DESGASTE,
+    COLUMNA_REDUCCION_MIN_GRAFICO_DESGASTE,
 ]
 CLAVE_FATIGA = "fatiga_por_pulso_pct"
 CLAVE_DEGRADACION_TERMICA = "degradacion_termica_pct_por_c_min"
 CLAVE_REDUCCION_MIN = "reduccion_desgaste_min_pct"
 
 
+def tarjetas_veredictos() -> list[dict[str, str]]:
+    """Tarjetas del tablero de veredictos de la vista 4 con el título de cada parte."""
+    return [
+        {
+            "parte": item["parte"],
+            "titulo": contenido.PARTES_RESPUESTA[item["parte"]]["titulo"],
+            "veredicto": item["veredicto"],
+            "cifra": item["cifra"],
+            "falta_medir": item["falta_medir"],
+        }
+        for item in contenido.VEREDICTOS
+    ]
+
+
 def configuracion_robustez_desgaste(humedad: float, numero_semillas: int) -> dict:
     """Carga de la robustez del desgaste con semillas consecutivas desde 1, acotadas al máximo del dashboard."""
     return _configuracion_con_semillas(humedad, numero_semillas, config.MAXIMO_SEMILLAS_ROBUSTEZ_DESGASTE)
+
+
+def datos_grafico_robustez_desgaste(resultado: dict) -> pd.DataFrame:
+    """Una fila por combinación con flujo, fatiga por pulso, degradación térmica y reducción mínima del desgaste."""
+    filas = [
+        {
+            COLUMNA_FLUJO_GRAFICO_DESGASTE: combinacion.get("flujo_niebla_maximo_l_m2_h"),
+            COLUMNA_FATIGA_DESGASTE: combinacion.get(CLAVE_FATIGA),
+            COLUMNA_DEGRADACION_TERMICA_DESGASTE: combinacion.get(CLAVE_DEGRADACION_TERMICA),
+            COLUMNA_REDUCCION_MIN_GRAFICO_DESGASTE: combinacion.get(CLAVE_REDUCCION_MIN),
+        }
+        for combinacion in resultado.get(CLAVE_COMBINACIONES, [])
+    ]
+    return pd.DataFrame(filas, columns=COLUMNAS_GRAFICO_ROBUSTEZ_DESGASTE)
 
 
 def _fila_robustez_desgaste(combinacion: dict) -> dict:

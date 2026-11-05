@@ -1382,3 +1382,54 @@ def test_lectura_impacto_entornos_sin_ventaja_ni_produccion():
 
 def test_lectura_impacto_entornos_sin_resultados():
     assert tr.lectura_impacto_entornos({}) == ["La estimación de impacto por entorno no devolvió resultados."]
+
+
+# ---------------------------------------------------------------------------
+# Tablero de veredictos y gráfico de la robustez del desgaste
+# ---------------------------------------------------------------------------
+def test_tarjetas_veredictos():
+    tarjetas = tr.tarjetas_veredictos()
+    assert len(tarjetas) == 4
+    assert [t["parte"] for t in tarjetas] == ["desgaste", "recuperacion", "seguridad", "personas"]
+    assert tarjetas[0]["titulo"] == "a) ¿Reduce el desgaste?"
+    assert tarjetas[0]["veredicto"] == "Se reduce"
+    assert tarjetas[0]["cifra"] == "61.5 % a 100 %"
+    assert tarjetas[0]["falta_medir"] == "Fatiga real por pulso a 44 °C"
+
+
+def test_datos_grafico_robustez_desgaste_con_dos_combinaciones():
+    ejemplo = {
+        "combinaciones": [
+            {
+                "flujo_niebla_maximo_l_m2_h": 6.0,
+                "fatiga_por_pulso_pct": 0.02,
+                "degradacion_termica_pct_por_c_min": 0.05,
+                "reduccion_desgaste_min_pct": 73.94,
+            },
+            {
+                "flujo_niebla_maximo_l_m2_h": 1.83,
+                "fatiga_por_pulso_pct": 0.04,
+                "degradacion_termica_pct_por_c_min": 0.025,
+                "reduccion_desgaste_min_pct": 86.58,
+            },
+        ]
+    }
+    df = tr.datos_grafico_robustez_desgaste(ejemplo)
+    assert list(df.columns) == [
+        "Flujo de niebla (L/m²/h)",
+        "Fatiga por pulso (%)",
+        "Degradación térmica (% por °C y min)",
+        "Reducción mínima del desgaste (%)",
+    ]
+    assert len(df) == 2
+    assert df.iloc[0]["Flujo de niebla (L/m²/h)"] == pytest.approx(6.0)
+    assert df.iloc[0]["Fatiga por pulso (%)"] == pytest.approx(0.02)
+    assert df.iloc[0]["Degradación térmica (% por °C y min)"] == pytest.approx(0.05)
+    assert df.iloc[0]["Reducción mínima del desgaste (%)"] == pytest.approx(73.94)
+    assert df.iloc[1]["Reducción mínima del desgaste (%)"] == pytest.approx(86.58)
+
+
+def test_datos_grafico_robustez_desgaste_vacio():
+    df = tr.datos_grafico_robustez_desgaste({})
+    assert df.empty
+    assert list(df.columns) == tr.COLUMNAS_GRAFICO_ROBUSTEZ_DESGASTE

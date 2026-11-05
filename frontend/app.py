@@ -40,6 +40,9 @@ VISTA_SIMULACION = "Simulación comparativa"
 VISTA_INVESTIGACION = contenido.VISTAS[0]
 VISTA_RESPUESTA = contenido.VISTAS[3]
 VISTA_EXPLORADOR = contenido.VISTAS[4]
+LECTURA_BREVE = "Lectura breve"
+LECTURA_COMPLETA = "Lectura completa"
+NIVELES_LECTURA = [LECTURA_BREVE, LECTURA_COMPLETA]
 TASAS = ["BAJA", "MEDIA", "ALTA"]
 ETIQUETA_ESCENARIO = "Escenario"
 # Clave de session_state de cada campo editable del perfil de sitio en el explorador.
@@ -182,6 +185,7 @@ def inicializar_estado() -> None:
         "exp_eficacia": config.EFICACIA_SUPUESTA,
         "exp_perfil": config.PERFIL_SITIO_POR_DEFECTO["nombre"],
         "exp_rendimiento": config.RENDIMIENTO_LITERATURA_MAX_L_M2_DIA,
+        "nivel_lectura": LECTURA_COMPLETA,
     }
     widgets.update({CONTROLES[campo]: valor for campo, valor in TELEMETRIA_PRD.items()})
     widgets.update(
@@ -374,14 +378,23 @@ def tabla_textos(filas: list[dict], columnas: dict[str, str]) -> None:
     st.table(df.set_index(df.columns[0]))
 
 
+def es_lectura_breve() -> bool:
+    """Indica si el nivel de lectura elegido en la barra lateral es el breve."""
+    return st.session_state.get("nivel_lectura") == LECTURA_BREVE
+
+
 # ---------------------------------------------------------------------------
 # Vista de investigación y guía
 # ---------------------------------------------------------------------------
-def vista_investigacion() -> None:
-    """Pregunta, conjeturas, reglas, perspectivas y alcance del estudio. No depende de la API."""
-    st.header(VISTA_INVESTIGACION)
-    st.caption("Contexto del estudio antes de usar el simulador. Las vistas 2 a 5 requieren la API.")
+def _contenido_investigacion_breve() -> None:
+    """Resumen en lenguaje llano de la pregunta, el hallazgo, la certeza, la comunidad y lo pendiente."""
+    for clave, titulo in contenido.TITULOS_LECTURA_BREVE.items():
+        st.subheader(titulo)
+        st.markdown(contenido.LECTURA_BREVE[clave])
 
+
+def _contenido_investigacion_completo() -> None:
+    """Contenido completo de la vista de investigación y guía."""
     st.subheader("Pregunta de investigación")
     st.info(contenido.PREGUNTA_INVESTIGACION)
     st.markdown(f"**Versión divulgativa.** {contenido.VERSION_DIVULGATIVA}")
@@ -421,6 +434,21 @@ def vista_investigacion() -> None:
             st.markdown(f"**{termino}:** {definicion}")
     with st.expander("Referencias"):
         st.markdown(contenido.lista_markdown(contenido.REFERENCIAS))
+
+
+def vista_investigacion() -> None:
+    """Pregunta, conjeturas, reglas, perspectivas y alcance del estudio. No depende de la API."""
+    st.header(VISTA_INVESTIGACION)
+    st.caption("Contexto del estudio antes de usar el simulador. Las vistas 2 a 5 requieren la API.")
+    with st.expander("¿A quién se dirige cada nivel de lectura?"):
+        tabla_textos(contenido.PUBLICOS, contenido.COLUMNAS_PUBLICOS)
+
+    if es_lectura_breve():
+        _contenido_investigacion_breve()
+        with st.expander("Ver la lectura completa"):
+            _contenido_investigacion_completo()
+    else:
+        _contenido_investigacion_completo()
 
     boton_siguiente_vista(VISTA_INVESTIGACION)
 
@@ -990,11 +1018,65 @@ def ejecutar_analisis(funcion, carga: dict, clave: str, mensaje: str) -> None:
             st.session_state[f"error_{clave}"] = error
 
 
+def tablero_veredictos() -> None:
+    """Tablero de veredictos en cuatro columnas al inicio de la vista 4."""
+    columnas = st.columns(len(contenido.VEREDICTOS))
+    for columna, item in zip(columnas, contenido.VEREDICTOS):
+        with columna.container(border=True):
+            st.metric(
+                label=contenido.PARTES_RESPUESTA[item["parte"]]["titulo"],
+                value=item["veredicto"],
+                help=item["falta_medir"],
+            )
+            st.caption(item["cifra"])
+
+
 def encabezado_parte(clave: str) -> None:
     """Título de una parte de la respuesta y la frase que dice qué parte de la pregunta responde."""
     parte = contenido.PARTES_RESPUESTA[clave]
     st.subheader(parte["titulo"])
+    if es_lectura_breve():
+        st.info(contenido.LECTURA_BREVE_PARTES[clave])
     st.markdown(parte["frase"])
+
+
+def grafico_robustez_desgaste(df: pd.DataFrame):
+    """Reducción mínima del desgaste frente a la fatiga por pulso, por degradación térmica y flujo."""
+    return (
+        alt.Chart(df)
+        .mark_line(point=True)
+        .encode(
+            x=alt.X(
+                field=tr.COLUMNA_FATIGA_DESGASTE,
+                type="quantitative",
+                title=tr.COLUMNA_FATIGA_DESGASTE,
+            ),
+            y=alt.Y(
+                field=tr.COLUMNA_REDUCCION_MIN_GRAFICO_DESGASTE,
+                type="quantitative",
+                title=tr.COLUMNA_REDUCCION_MIN_GRAFICO_DESGASTE,
+                scale=alt.Scale(zero=False),
+            ),
+            color=alt.Color(
+                field=tr.COLUMNA_DEGRADACION_TERMICA_DESGASTE,
+                type="nominal",
+                title=tr.COLUMNA_DEGRADACION_TERMICA_DESGASTE,
+                legend=alt.Legend(orient="bottom"),
+            ),
+            column=alt.Column(
+                field=tr.COLUMNA_FLUJO_GRAFICO_DESGASTE,
+                type="nominal",
+                title=tr.COLUMNA_FLUJO_GRAFICO_DESGASTE,
+            ),
+            tooltip=[
+                alt.Tooltip(field=tr.COLUMNA_FLUJO_GRAFICO_DESGASTE, type="quantitative", format=".2f"),
+                alt.Tooltip(field=tr.COLUMNA_FATIGA_DESGASTE, type="quantitative", format=".2f"),
+                alt.Tooltip(field=tr.COLUMNA_DEGRADACION_TERMICA_DESGASTE, type="quantitative", format=".3f"),
+                alt.Tooltip(field=tr.COLUMNA_REDUCCION_MIN_GRAFICO_DESGASTE, type="quantitative", format=".2f"),
+            ],
+        )
+        .properties(height=260)
+    )
 
 
 def grafico_incrustacion(serie: pd.DataFrame, cruce: float | None):
@@ -1067,6 +1149,7 @@ def seccion_robustez_desgaste(api_disponible: bool) -> None:
     if resultado is None:
         st.info("Ejecute la robustez del desgaste para ver si la reducción depende de la fatiga y la degradación supuestas.")
         return
+    st.altair_chart(grafico_robustez_desgaste(tr.datos_grafico_robustez_desgaste(resultado)))
     st.dataframe(tr.tabla_robustez_desgaste(resultado), hide_index=True, width="stretch")
     st.markdown(contenido.lista_markdown(tr.lectura_robustez_desgaste(resultado)))
 
@@ -1291,6 +1374,7 @@ def vista_respuesta(api_disponible: bool) -> None:
     st.header(VISTA_RESPUESTA)
     st.info(contenido.PREGUNTA_INVESTIGACION)
     st.markdown(f"**Hipótesis de trabajo.** {contenido.HIPOTESIS}")
+    tablero_veredictos()
     st.warning(contenido.AVISO_EXPLORATORIO)
     encabezado_parte("desgaste")
     seccion_robustez(api_disponible)
@@ -1463,6 +1547,7 @@ def main() -> None:
     api_disponible = panel_conexion()
     st.sidebar.divider()
     vista = st.sidebar.radio("Recorrido", contenido.VISTAS, format_func=contenido.etiqueta_vista, key="vista")
+    st.sidebar.radio("Nivel de lectura", NIVELES_LECTURA, key="nivel_lectura")
 
     if vista == VISTA_INVESTIGACION:
         vista_investigacion()

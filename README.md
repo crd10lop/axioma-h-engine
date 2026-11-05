@@ -40,6 +40,8 @@ La respuesta es condicional: la reducción del desgaste es robusta, y la ventaja
 
 ## Cómo leer este artefacto
 
+En la barra lateral del dashboard, el selector **Nivel de lectura** adapta las vistas 1 y 4 a tres públicos: **Comunidad** (lectura breve; vistas 1 y 4, parte d, impacto en distintos entornos), **Evaluador no técnico** (lectura breve; vistas 1 y 4, y la sección [Respuesta](#respuesta) de este documento) e **Investigador** (lectura completa, seleccionada por defecto; vistas 4 y 5, y [docs/04](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), secciones 7 y 8).
+
 1. **Pregunta y tesis.** La vista 1 del dashboard, "Investigación y guía", y [docs/01](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2. La vista incluye los supuestos clave con la medición que reemplazaría a cada uno y una guía de lectura por disciplina.
 2. **Funcionamiento.** Las vistas 2 y 3 muestran cómo decide un nodo y cómo se comparan ambos controles; [docs/03](docs/03_Funcionamiento_General_AxiomaH.md) lo explica en lenguaje general.
 3. **Respuesta por partes.** La vista 4 responde la pregunta en cuatro partes: ¿reduce el desgaste?, ¿mejora la recuperación y desde qué salinidad?, ¿qué tan seguro es? y ¿para cuántas personas alcanza? Las tablas completas están en [docs/04](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), secciones 5 a 8.

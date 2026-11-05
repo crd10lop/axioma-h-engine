@@ -537,3 +537,58 @@ def test_klemm_coincide_con_docs_06():
     documento = (RUTA_DOCS / "06_Referencias_y_Trazabilidad_AxiomaH.md").read_text(encoding="utf-8")
     assert "https://doi.org/10.1007/s13280-012-0247-8" in documento
     assert "Fog as a fresh-water resource: overview and perspectives" in documento
+
+
+# ---------------------------------------------------------------------------
+# Públicos, lectura breve y tablero de veredictos
+# ---------------------------------------------------------------------------
+def test_publicos_tiene_tres_filas_con_las_tres_claves():
+    assert len(contenido.PUBLICOS) == 3
+    claves_esperadas = {"publico", "que_leer", "donde"}
+    assert set(contenido.COLUMNAS_PUBLICOS) == claves_esperadas
+    for fila in contenido.PUBLICOS:
+        assert set(fila) == claves_esperadas
+        for valor in fila.values():
+            assert valor.strip()
+    assert [fila["publico"] for fila in contenido.PUBLICOS] == [
+        "Comunidad",
+        "Evaluador no técnico",
+        "Investigador",
+    ]
+
+
+def test_lectura_breve_y_partes_tienen_las_claves_esperadas():
+    assert set(contenido.LECTURA_BREVE) == {"pregunta", "hallazgo", "certeza", "comunidad", "falta"}
+    assert set(contenido.TITULOS_LECTURA_BREVE) == set(contenido.LECTURA_BREVE)
+    assert set(contenido.LECTURA_BREVE_PARTES) == set(contenido.PARTES_RESPUESTA)
+    for texto in list(contenido.LECTURA_BREVE.values()) + list(contenido.LECTURA_BREVE_PARTES.values()):
+        assert texto.strip()
+
+
+@pytest.mark.parametrize("termino_prohibido", ["Ohm", "NEURO_SIMBOLICO", "incrustación"])
+def test_lectura_breve_no_usa_unidades_tecnicas_ni_codigos(termino_prohibido):
+    textos = list(contenido.LECTURA_BREVE.values()) + list(contenido.LECTURA_BREVE_PARTES.values())
+    for texto in textos:
+        assert termino_prohibido.casefold() not in texto.casefold()
+
+
+@pytest.mark.parametrize("cifra", ["61 %", "100 y 333", "1000 L", "3 a 4", "11 a 13"])
+def test_lectura_breve_conserva_las_cifras_clave(cifra):
+    unido = " ".join(list(contenido.LECTURA_BREVE.values()) + list(contenido.LECTURA_BREVE_PARTES.values()))
+    assert cifra in unido
+
+
+def test_veredictos_cubren_las_cuatro_partes_de_la_respuesta():
+    assert [item["parte"] for item in contenido.VEREDICTOS] == list(contenido.PARTES_RESPUESTA)
+    for item in contenido.VEREDICTOS:
+        assert set(item) == {"parte", "veredicto", "cifra", "falta_medir"}
+        for valor in item.values():
+            assert valor.strip()
+
+
+def test_cifras_de_veredictos_aparecen_en_docs_04():
+    ruta_04 = Path(__file__).resolve().parent.parent / "docs" / "04_Modelo_de_Control_y_Simulacion_AxiomaH.md"
+    documento = ruta_04.read_text(encoding="utf-8").casefold()
+    for item in contenido.VEREDICTOS:
+        assert item["cifra"].casefold() in documento
+    assert contenido.VEREDICTOS[3]["veredicto"].casefold() in documento
