@@ -3,7 +3,7 @@
   "info": {
     "title": "Axioma-H Engine",
     "description": "Motor de control neuro-simbólico para la captación pasiva de agua atmosférica.",
-    "version": "0.4.0"
+    "version": "0.5.0"
   },
   "paths": {
     "/api/v1/nodo/evaluar": {
@@ -373,6 +373,41 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/analisis/impacto-entornos": {
+      "post": {
+        "tags": [
+          "Análisis de robustez"
+        ],
+        "summary": "Impacto Entornos",
+        "description": "Estima el impacto del control basado en reglas en los 18 entornos de niebla y salinidad y lo compara con la entrega por carrotanque.",
+        "operationId": "impacto_entornos_api_v1_analisis_impacto_entornos_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImpactoEntornosConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpactoEntornosResultado"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Datos de entrada no válidos."
           }
         }
       }
@@ -1158,6 +1193,145 @@
         "title": "DimensionamientoResultado",
         "description": "Dimensionamiento con los tres flujos de referencia y el rango de área de la literatura."
       },
+      "EntornoImpacto": {
+        "properties": {
+          "origen_flujo": {
+            "type": "string",
+            "title": "Origen Flujo",
+            "description": "SUPUESTO, CALIBRADO_MAX o CALIBRADO_MIN."
+          },
+          "flujo_niebla_maximo_l_m2_h": {
+            "type": "number",
+            "title": "Flujo Niebla Maximo L M2 H",
+            "description": "Flujo máximo de niebla en L/m²/h."
+          },
+          "escenario": {
+            "$ref": "#/components/schemas/Escenario",
+            "description": "Escenario ambiental."
+          },
+          "tasa_salinizacion": {
+            "$ref": "#/components/schemas/TasaSalinizacion",
+            "description": "Velocidad de incrustación salina."
+          },
+          "carga_salina_ohm_l_m2": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Carga Salina Ohm L M2",
+            "description": "Aporte de sal por litro filtrado (Ohm·m²/L)."
+          },
+          "rendimiento_neuro_l_m2_dia": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento Neuro L M2 Dia",
+            "description": "Rendimiento del modo neuro-simbólico en L/m²/día."
+          },
+          "incrustacion_diaria_ohm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incrustacion Diaria Ohm",
+            "description": "Impedancia salina depositada por día en el modo neuro-simbólico (Ohm/día)."
+          },
+          "zona_incrustacion": {
+            "$ref": "#/components/schemas/ZonaIncrustacion",
+            "description": "Posición de la incrustación diaria frente al intervalo de transición del cruce."
+          },
+          "ventaja_recuperacion_pts": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ventaja Recuperacion Pts",
+            "description": "Recuperación del modo neuro-simbólico menos la del temporizador (puntos)."
+          },
+          "reduccion_desgaste_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reduccion Desgaste Pct",
+            "description": "Reducción del desgaste del modo neuro-simbólico frente al temporizador (%)."
+          },
+          "area_colector_m2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area Colector M2",
+            "description": "Área de colector requerida en m²; nula si el rendimiento no es positivo."
+          },
+          "nodos_requeridos": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nodos Requeridos",
+            "description": "Nodos de 1 m² requeridos para las personas y el estándar elegidos."
+          },
+          "litros_mes_por_nodo": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Litros Mes Por Nodo",
+            "description": "Litros producidos al mes por un nodo de 1 m² (30 días)."
+          },
+          "nodos_equivalentes_entrega": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nodos Equivalentes Entrega",
+            "description": "Nodos de 1 m² que igualan la entrega mensual por carrotanque (ENTREGA_CARROTANQUE_L_COMUNIDAD_MES)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "origen_flujo",
+          "flujo_niebla_maximo_l_m2_h",
+          "escenario",
+          "tasa_salinizacion",
+          "carga_salina_ohm_l_m2",
+          "zona_incrustacion"
+        ],
+        "title": "EntornoImpacto",
+        "description": "Impacto del control basado en reglas en un entorno de flujo de niebla y nivel de salinidad."
+      },
       "Escenario": {
         "type": "string",
         "enum": [
@@ -1379,6 +1553,107 @@
         ],
         "title": "ImpactoComunitario",
         "description": "Estimación del abastecimiento que permitiría el agua captada por un modo de control.\n\nEs un indicador informativo: no interviene en la validación de las conjeturas."
+      },
+      "ImpactoEntornosConfig": {
+        "properties": {
+          "personas": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Personas",
+            "description": "Personas que se quiere abastecer.",
+            "default": 50
+          },
+          "estandar": {
+            "$ref": "#/components/schemas/EstandarConsumo",
+            "description": "Estándar de consumo diario.",
+            "default": "OMS_20"
+          },
+          "humedad_ambiente_inicial_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Humedad Ambiente Inicial Pct",
+            "description": "Humedad relativa al inicio de la simulación (18:00 hora local).",
+            "default": 85.0
+          },
+          "semilla": {
+            "type": "integer",
+            "title": "Semilla",
+            "description": "Semilla del generador aleatorio del entorno.",
+            "default": 42
+          }
+        },
+        "type": "object",
+        "title": "ImpactoEntornosConfig",
+        "description": "Parámetros de la estimación de impacto en distintos entornos de niebla y salinidad.",
+        "examples": [
+          {
+            "estandar": "OMS_20",
+            "personas": 50
+          }
+        ]
+      },
+      "ImpactoEntornosResultado": {
+        "properties": {
+          "personas": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Personas",
+            "description": "Personas que se quiere abastecer."
+          },
+          "consumo_l_persona_dia": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Consumo L Persona Dia",
+            "description": "Consumo diario por persona del estándar elegido."
+          },
+          "entrega_referencia_l_comunidad_mes": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Entrega Referencia L Comunidad Mes",
+            "description": "Entrega mensual de referencia por carrotanque (L/comunidad/mes, ICBF, 2025)."
+          },
+          "entornos": {
+            "items": {
+              "$ref": "#/components/schemas/EntornoImpacto"
+            },
+            "type": "array",
+            "title": "Entornos",
+            "description": "Los 18 entornos en el orden de los flujos de referencia y de los niveles del barrido."
+          },
+          "entornos_con_ventaja_esperada": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Entornos Con Ventaja Esperada",
+            "description": "Entornos cuya incrustación diaria cae en la zona SOBRE_TRANSICION."
+          },
+          "entornos_coherentes_con_simulacion": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Entornos Coherentes Con Simulacion",
+            "description": "Entornos clasificables donde la regla de la zona coincide con el signo simulado de la ventaja."
+          },
+          "entornos_clasificables": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Entornos Clasificables",
+            "description": "Entornos con zona BAJO_TRANSICION o SOBRE_TRANSICION y ventaja de recuperación no nula."
+          }
+        },
+        "type": "object",
+        "required": [
+          "personas",
+          "consumo_l_persona_dia",
+          "entrega_referencia_l_comunidad_mes",
+          "entornos",
+          "entornos_con_ventaja_esperada",
+          "entornos_coherentes_con_simulacion",
+          "entornos_clasificables"
+        ],
+        "title": "ImpactoEntornosResultado",
+        "description": "Impacto del control basado en reglas en los 18 entornos de referencia y comparación con entrega por carrotanque."
       },
       "IncertidumbreConfig": {
         "properties": {
@@ -2884,6 +3159,17 @@
         ],
         "title": "VerificacionConjetura",
         "description": "Detalle de la verificación de una conjetura."
+      },
+      "ZonaIncrustacion": {
+        "type": "string",
+        "enum": [
+          "BAJO_TRANSICION",
+          "TRANSICION",
+          "SOBRE_TRANSICION",
+          "SIN_DATOS"
+        ],
+        "title": "ZonaIncrustacion",
+        "description": "Posición de la incrustación diaria de un entorno frente al intervalo de transición del cruce (docs/04, sección 8.8)."
       }
     }
   }

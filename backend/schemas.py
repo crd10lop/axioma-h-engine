@@ -958,3 +958,101 @@ class IncertidumbreResultado(BaseModel):
             "nula si ninguna muestra tiene ambas."
         ),
     )
+
+
+# ---------------------------------------------------------------------------
+# Impacto en distintos entornos y comparación con abastecimiento por carrotanque
+# ---------------------------------------------------------------------------
+class ZonaIncrustacion(str, Enum):
+    """Posición de la incrustación diaria de un entorno frente al intervalo de transición del cruce (docs/04, sección 8.8)."""
+
+    BAJO_TRANSICION = "BAJO_TRANSICION"  # incrustación < INCRUSTACION_TRANSICION_MIN_OHM_DIA: no se espera ventaja en recuperación
+    TRANSICION = "TRANSICION"  # dentro del intervalo: el barrido no resuelve el signo
+    SOBRE_TRANSICION = "SOBRE_TRANSICION"  # incrustación >= INCRUSTACION_TRANSICION_MAX_OHM_DIA: se espera ventaja
+    SIN_DATOS = "SIN_DATOS"  # incrustación nula
+
+
+class ImpactoEntornosConfig(BaseModel):
+    """Parámetros de la estimación de impacto en distintos entornos de niebla y salinidad."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "personas": 50,
+                    "estandar": "OMS_20",
+                }
+            ]
+        }
+    )
+
+    personas: int = Field(default=50, ge=1, le=1000, description="Personas que se quiere abastecer.")
+    estandar: EstandarConsumo = Field(default=EstandarConsumo.OMS_20, description="Estándar de consumo diario.")
+    humedad_ambiente_inicial_pct: float = Field(
+        default=85.0, ge=0, le=100, description=_DESCRIPCION_HUMEDAD_INICIAL
+    )
+    semilla: int = Field(default=42, description=_DESCRIPCION_SEMILLA)
+
+
+class EntornoImpacto(BaseModel):
+    """Impacto del control basado en reglas en un entorno de flujo de niebla y nivel de salinidad."""
+
+    origen_flujo: str = Field(..., description="SUPUESTO, CALIBRADO_MAX o CALIBRADO_MIN.")
+    flujo_niebla_maximo_l_m2_h: float = Field(..., description=_DESCRIPCION_FLUJO)
+    escenario: Escenario = Field(..., description=_DESCRIPCION_ESCENARIO)
+    tasa_salinizacion: TasaSalinizacion = Field(..., description=_DESCRIPCION_TASA)
+    carga_salina_ohm_l_m2: float = Field(..., ge=0, description="Aporte de sal por litro filtrado (Ohm·m²/L).")
+    rendimiento_neuro_l_m2_dia: float | None = Field(
+        default=None, description="Rendimiento del modo neuro-simbólico en L/m²/día."
+    )
+    incrustacion_diaria_ohm: float | None = Field(
+        default=None, description="Impedancia salina depositada por día en el modo neuro-simbólico (Ohm/día)."
+    )
+    zona_incrustacion: ZonaIncrustacion = Field(
+        ..., description="Posición de la incrustación diaria frente al intervalo de transición del cruce."
+    )
+    ventaja_recuperacion_pts: float | None = Field(
+        default=None, description="Recuperación del modo neuro-simbólico menos la del temporizador (puntos)."
+    )
+    reduccion_desgaste_pct: float | None = Field(
+        default=None, description="Reducción del desgaste del modo neuro-simbólico frente al temporizador (%)."
+    )
+    area_colector_m2: float | None = Field(
+        default=None, description="Área de colector requerida en m²; nula si el rendimiento no es positivo."
+    )
+    nodos_requeridos: int | None = Field(
+        default=None, description="Nodos de 1 m² requeridos para las personas y el estándar elegidos."
+    )
+    litros_mes_por_nodo: float | None = Field(
+        default=None, description="Litros producidos al mes por un nodo de 1 m² (30 días)."
+    )
+    nodos_equivalentes_entrega: int | None = Field(
+        default=None,
+        description="Nodos de 1 m² que igualan la entrega mensual por carrotanque (ENTREGA_CARROTANQUE_L_COMUNIDAD_MES).",
+    )
+
+
+class ImpactoEntornosResultado(BaseModel):
+    """Impacto del control basado en reglas en los 18 entornos de referencia y comparación con entrega por carrotanque."""
+
+    personas: int = Field(..., ge=1, le=1000, description="Personas que se quiere abastecer.")
+    consumo_l_persona_dia: float = Field(..., gt=0, description="Consumo diario por persona del estándar elegido.")
+    entrega_referencia_l_comunidad_mes: float = Field(
+        ..., gt=0, description="Entrega mensual de referencia por carrotanque (L/comunidad/mes, ICBF, 2025)."
+    )
+    entornos: list[EntornoImpacto] = Field(
+        ..., description="Los 18 entornos en el orden de los flujos de referencia y de los niveles del barrido."
+    )
+    entornos_con_ventaja_esperada: int = Field(
+        ..., ge=0, description="Entornos cuya incrustación diaria cae en la zona SOBRE_TRANSICION."
+    )
+    entornos_coherentes_con_simulacion: int = Field(
+        ...,
+        ge=0,
+        description="Entornos clasificables donde la regla de la zona coincide con el signo simulado de la ventaja.",
+    )
+    entornos_clasificables: int = Field(
+        ...,
+        ge=0,
+        description="Entornos con zona BAJO_TRANSICION o SOBRE_TRANSICION y ventaja de recuperación no nula.",
+    )

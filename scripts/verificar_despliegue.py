@@ -45,6 +45,7 @@ RUTA_DIMENSIONAMIENTO = "/api/v1/analisis/dimensionamiento"
 RUTA_SITIOS = "/api/v1/sitios"
 RUTA_ROBUSTEZ_DESGASTE = "/api/v1/analisis/robustez-desgaste"
 RUTA_CALIBRACION = "/api/v1/analisis/calibracion"
+RUTA_IMPACTO_ENTORNOS = "/api/v1/analisis/impacto-entornos"
 
 # Una sola semilla mantiene el barrido (12 simulaciones) dentro del tiempo de espera.
 BARRIDO_EJEMPLO = {"humedad_ambiente_inicial_pct": 85.0, "semillas": [42]}
@@ -77,6 +78,10 @@ COMBINACIONES_ROBUSTEZ_DESGASTE = 18
 # Ejemplo del esquema DimensionamientoConfig; un dimensionamiento por flujo de referencia.
 DIMENSIONAMIENTO_EJEMPLO = {**CONDICIONES_ANALISIS, "personas": 50, "estandar": "OMS_20"}
 ORIGENES_FLUJO = ["SUPUESTO", "CALIBRADO_MAX", "CALIBRADO_MIN"]
+ENTORNOS_IMPACTO = 18
+ENTREGA_REFERENCIA_L = 1000.0
+ZONAS_INCRUSTACION = {"BAJO_TRANSICION", "TRANSICION", "SOBRE_TRANSICION", "SIN_DATOS"}
+IMPACTO_ENTORNOS_INVALIDO = {"personas": 0}
 
 # Perfiles de GET /api/v1/sitios (backend/analisis.py, perfiles_sitio).
 SITIOS_ESPERADOS = ["CABO_DE_LA_VELA", "CABO_DE_LA_VELA_CALIBRADO_MAX", "CABO_DE_LA_VELA_CALIBRADO_MIN"]
@@ -300,6 +305,7 @@ def probar_documentacion_api(cliente: httpx.Client, api: str) -> str:
             RUTA_SITIOS,
             RUTA_ROBUSTEZ_DESGASTE,
             RUTA_CALIBRACION,
+            RUTA_IMPACTO_ENTORNOS,
         )
         if ruta not in rutas
     ]
@@ -560,6 +566,33 @@ def probar_sitios(cliente: httpx.Client, api: str) -> str:
     return f"{len(nombres)} perfiles: {', '.join(nombres)}"
 
 
+@prueba("API: impacto en distintos entornos")
+def probar_impacto_entornos(cliente: httpx.Client, api: str) -> str:
+    respuesta = cliente.post(f"{api}{RUTA_IMPACTO_ENTORNOS}", json={})
+    _verificar_codigo(respuesta)
+    resultado = respuesta.json()
+    entornos = resultado["entornos"]
+    _verificar(len(entornos) == ENTORNOS_IMPACTO, f"{len(entornos)} entornos (esperados {ENTORNOS_IMPACTO})")
+    zonas_invalidas = [e["zona_incrustacion"] for e in entornos if e["zona_incrustacion"] not in ZONAS_INCRUSTACION]
+    _verificar(not zonas_invalidas, f"Zonas inesperadas: {zonas_invalidas}")
+    entrega = resultado["entrega_referencia_l_comunidad_mes"]
+    _verificar(
+        math.isclose(entrega, ENTREGA_REFERENCIA_L),
+        f"entrega_referencia_l_comunidad_mes = {entrega} (esperado {ENTREGA_REFERENCIA_L})",
+    )
+    return (
+        f"{len(entornos)} entornos; {resultado['entornos_con_ventaja_esperada']} con ventaja esperada; "
+        f"{resultado['entornos_coherentes_con_simulacion']}/{resultado['entornos_clasificables']} coherentes"
+    )
+
+
+@prueba("API: impacto en distintos entornos inválido -> 422")
+def probar_impacto_entornos_invalido(cliente: httpx.Client, api: str) -> str:
+    respuesta = cliente.post(f"{api}{RUTA_IMPACTO_ENTORNOS}", json=IMPACTO_ENTORNOS_INVALIDO)
+    _verificar_codigo(respuesta, 422)
+    return "422 en personas = 0"
+
+
 # ---------------------------------------------------------------------------
 # Comprobaciones del dashboard
 # ---------------------------------------------------------------------------
@@ -633,6 +666,8 @@ def ejecutar_pruebas(api: str, dashboard: str, timeout: float) -> List[Resultado
         resultados.append(probar_calibracion_inalcanzable(cliente, api))
         resultados.append(probar_dimensionamiento(cliente, api))
         resultados.append(probar_sitios(cliente, api))
+        resultados.append(probar_impacto_entornos(cliente, api))
+        resultados.append(probar_impacto_entornos_invalido(cliente, api))
         resultados.append(probar_salud_dashboard(cliente, dashboard))
         resultados.append(probar_inicio_dashboard(cliente, dashboard))
     resultados.append(probar_integracion_cliente(api))

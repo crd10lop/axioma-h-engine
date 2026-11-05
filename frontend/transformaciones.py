@@ -1235,6 +1235,123 @@ def resumen_dimensionamiento(resultado: dict) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# Impacto en distintos entornos (docs/04, sección 7.8)
+# ---------------------------------------------------------------------------
+ZONA_SOBRE_TRANSICION = "SOBRE_TRANSICION"
+PREGUNTA_CICLO_3_ENTORNOS = (
+    "Pregunta para el Ciclo 3: ¿Qué rendimiento de niebla y qué carga salina tiene un sitio candidato, "
+    "y en qué zona de la incrustación diaria cae?"
+)
+COLUMNAS_IMPACTO_ENTORNOS = (
+    "Régimen de niebla",
+    "Carga salina (Ω·m²/L)",
+    "Rendimiento (L/m²/día)",
+    "Incrustación diaria (Ω/día)",
+    "Zona de incrustación",
+    "Ventaja en recuperación (puntos)",
+    "Reducción del desgaste (%)",
+    "Nodos para la comunidad (1 m²)",
+    "Litros al mes por nodo (L)",
+    "Nodos que igualan 1000 L/mes (ICBF)",
+)
+
+
+def configuracion_impacto_entornos(personas: int, estandar: str, humedad: float) -> dict:
+    """Cuerpo JSON de POST /api/v1/analisis/impacto-entornos con la semilla 42 por defecto."""
+    return {
+        "personas": int(personas),
+        "estandar": estandar,
+        "humedad_ambiente_inicial_pct": float(humedad),
+    }
+
+
+def tabla_impacto_entornos(resultado: dict) -> pd.DataFrame:
+    """Tabla de los 18 entornos con nombres de columna llanos y régimen de niebla y zona en lenguaje llano."""
+    entornos = resultado.get("entornos", [])
+    filas = [
+        {
+            COLUMNAS_IMPACTO_ENTORNOS[0]: etiqueta_llana(entorno["origen_flujo"]),
+            COLUMNAS_IMPACTO_ENTORNOS[1]: entorno["carga_salina_ohm_l_m2"],
+            COLUMNAS_IMPACTO_ENTORNOS[2]: entorno.get("rendimiento_neuro_l_m2_dia"),
+            COLUMNAS_IMPACTO_ENTORNOS[3]: entorno.get("incrustacion_diaria_ohm"),
+            COLUMNAS_IMPACTO_ENTORNOS[4]: etiqueta_llana(entorno["zona_incrustacion"]),
+            COLUMNAS_IMPACTO_ENTORNOS[5]: entorno.get("ventaja_recuperacion_pts"),
+            COLUMNAS_IMPACTO_ENTORNOS[6]: entorno.get("reduccion_desgaste_pct"),
+            COLUMNAS_IMPACTO_ENTORNOS[7]: entorno.get("nodos_requeridos"),
+            COLUMNAS_IMPACTO_ENTORNOS[8]: entorno.get("litros_mes_por_nodo"),
+            COLUMNAS_IMPACTO_ENTORNOS[9]: entorno.get("nodos_equivalentes_entrega"),
+        }
+        for entorno in entornos
+    ]
+    return pd.DataFrame(filas, columns=list(COLUMNAS_IMPACTO_ENTORNOS))
+
+
+def _frase_origen_impacto(entorno: dict, personas: int, consumo: float, entrega: float) -> str:
+    """Nodos que igualan la entrega del ICBF y nodos para la comunidad con la carga salina más alta."""
+    etiqueta = etiqueta_llana(entorno["origen_flujo"])
+    carga = entorno["carga_salina_ohm_l_m2"]
+    nodos_entrega = entorno.get("nodos_equivalentes_entrega")
+    nodos_comunidad = entorno.get("nodos_requeridos")
+    if nodos_entrega is None or nodos_comunidad is None:
+        return f"{etiqueta} con la carga salina más alta ({carga:g} Ω·m²/L): sin producción de agua para dimensionar."
+    return (
+        f"{etiqueta} con la carga salina más alta ({carga:g} Ω·m²/L): {nodos_entrega} nodos de 1 m² igualan "
+        f"la entrega de {entrega:g} L al mes del ICBF y {nodos_comunidad} nodos abastecen a {personas} "
+        f"personas ({consumo:g} L/persona/día)."
+    )
+
+
+def _frases_por_origen_impacto(entornos: list[dict], personas: int, consumo: float, entrega: float) -> list[str]:
+    """Una frase por origen de flujo, evaluado en su nivel de carga salina más alto."""
+    origenes = list(dict.fromkeys(entorno["origen_flujo"] for entorno in entornos))
+    frases = []
+    for origen in origenes:
+        del_origen = [entorno for entorno in entornos if entorno["origen_flujo"] == origen]
+        mayor_carga = max(del_origen, key=lambda entorno: entorno["carga_salina_ohm_l_m2"])
+        frases.append(_frase_origen_impacto(mayor_carga, personas, consumo, entrega))
+    return frases
+
+
+def _frase_menor_nodos_con_ventaja(entornos: list[dict], personas: int) -> str:
+    """Entorno con ventaja esperada que requiere menos nodos, o aviso si no hay ninguno."""
+    candidatos = [
+        entorno
+        for entorno in entornos
+        if entorno.get("zona_incrustacion") == ZONA_SOBRE_TRANSICION and entorno.get("nodos_requeridos") is not None
+    ]
+    if not candidatos:
+        return "Con ninguno de los rendimientos evaluados se espera ventaja en recuperación."
+    mejor = min(candidatos, key=lambda entorno: entorno["nodos_requeridos"])
+    return (
+        f"El entorno con ventaja esperada que requiere menos nodos para {personas} personas es "
+        f"{etiqueta_llana(mejor['origen_flujo']).lower()} con carga salina de "
+        f"{mejor['carga_salina_ohm_l_m2']:g} Ω·m²/L: {mejor['nodos_requeridos']} nodos de 1 m²."
+    )
+
+
+def lectura_impacto_entornos(resultado: dict) -> list[str]:
+    """Frases de lectura del impacto por entorno y su comparación con la entrega por carrotanque del ICBF."""
+    entornos = resultado.get("entornos", [])
+    if not entornos:
+        return ["La estimación de impacto por entorno no devolvió resultados."]
+    personas = int(resultado.get("personas", 50))
+    consumo = float(resultado.get("consumo_l_persona_dia", config.CONSUMO_ACCESO_BASICO_L_PERSONA_DIA))
+    entrega = float(resultado.get("entrega_referencia_l_comunidad_mes", config.ENTREGA_CARROTANQUE_L_COMUNIDAD_MES))
+    con_ventaja = resultado.get("entornos_con_ventaja_esperada", 0)
+    coherentes = resultado.get("entornos_coherentes_con_simulacion", 0)
+    clasificables = resultado.get("entornos_clasificables", 0)
+    frases = [
+        f"En {con_ventaja} de los {len(entornos)} entornos se espera ventaja en recuperación (zona sobre la "
+        f"transición), y la regla de la incrustación coincide con la simulación en {coherentes} de los "
+        f"{clasificables} entornos clasificables."
+    ]
+    frases.extend(_frases_por_origen_impacto(entornos, personas, consumo, entrega))
+    frases.append(_frase_menor_nodos_con_ventaja(entornos, personas))
+    frases.append(PREGUNTA_CICLO_3_ENTORNOS)
+    return frases
+
+
+# ---------------------------------------------------------------------------
 # Explorador de hipótesis
 # ---------------------------------------------------------------------------
 LONGITUD_MAXIMA_NOMBRE_SITIO = 40

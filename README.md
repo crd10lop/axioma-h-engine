@@ -34,7 +34,7 @@ Todas las cifras salen de ejecuciones del modelo y su fuente única es [docs/04]
 - **Recuperación.** Su ventaja no depende de la carga salina por litro sino de la incrustación diaria: el cruce está entre 1632.9 y 1839.2 Ohm por día con la semilla 42 (1682.1 a 1866.6 con las semillas 1 a 3), mientras que la carga por litro del cruce va de 50.3 a 190.9 Ohm por L/m². Los dos niveles entre los que se interpola cada cruce están separados de 617 a 1165 Ohm por día, más que ese rango: el barrido no distingue el cruce entre combinaciones, que en cada una está en algún punto entre 1171 y 2365 Ohm por día (§8.8).
 - **Con niebla como la de la literatura.** Con el flujo calibrado mínimo, 0.49 L/m²/h, la incrustación diaria no pasa de 659 Ohm por día y el temporizador recupera más en todos los niveles con pulsos; con el flujo calibrado, el control basado en reglas recupera más en solo 3 de 62 muestras de la incertidumbre (§8.7 y §8.8).
 - **Conjeturas.** Las Conjeturas 1 y 2 dependen de la eficacia del pulso, que habría que medir (0.94 y 0.97 para validarlas, §6.2); la Conjetura 3 no se valida con el flujo calibrado (§8.6).
-- **Personas.** Para 50 personas con 20 L al día harían falta 32 nodos de 1 m² con el flujo supuesto, y entre 100 y 332 con el flujo calibrado, en línea con los 100 a 333 m² de la literatura (§7.7).
+- **Personas.** Para 50 personas con 20 L al día harían falta 32 nodos de 1 m² con el flujo supuesto, y entre 100 y 332 con el flujo calibrado, en línea con los 100 a 333 m² de la literatura (§7.7). Igualar la entrega mensual de 1000 L por comunidad con carrotanque reportada por el ICBF (2025) toma 2 nodos de 1 m² con el flujo supuesto, de 3 a 4 con el flujo calibrado máximo y de 11 a 13 con el mínimo (§7.8).
 
 La respuesta es condicional: la reducción del desgaste es robusta, y la ventaja en recuperación aparece solo por encima de una incrustación diaria de unos 1633 a 1867 Ohm por día (un rango estimado por interpolación: el cruce de cada combinación está en algún punto entre 1171 y 2365 Ohm por día). De ahí sale la hipótesis H1-Ciclo 3 ([docs/04](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), §8.9).
 
@@ -72,7 +72,7 @@ axioma-h-engine/
 │   ├── modelo_fisico.py    Ecuaciones compartidas y parámetros inmutables
 │   ├── motor_reglas.py     Motor de control basado en reglas
 │   ├── simulador.py        Simulación comparativa y verificación de conjeturas
-│   ├── analisis.py         Barrido, robustez de la respuesta y del desgaste, sensibilidad, calibración, incertidumbre y dimensionamiento
+│   ├── analisis.py         Barrido, robustez de la respuesta y del desgaste, sensibilidad, calibración, incertidumbre, dimensionamiento e impacto por entorno
 │   ├── impacto.py          Impacto comunitario y dimensionamiento (OMS y Sphere)
 │   └── routers/            nodo.py, simulacion.py, analisis.py y sitios.py
 ├── frontend/
@@ -114,7 +114,7 @@ uvicorn backend.main:app --reload --port 8000   # API: http://127.0.0.1:8000/doc
 streamlit run frontend/app.py                   # Dashboard: http://localhost:8501
 ```
 
-Todo funciona sin conexión a internet. Para usar otra API, defina `AXIOMA_API_URL` antes de iniciar Streamlit. Los datos de [docs/datos/](docs/datos/README.md) se regeneran sin la API con `python scripts/generar_resultados_referencia.py`, y `--comprobar` verifica que coinciden con el modelo. El despliegue en Render, con 29 comprobaciones automatizadas, está en [docs/05](docs/05_Despliegue_y_Operacion_AxiomaH.md).
+Todo funciona sin conexión a internet. Para usar otra API, defina `AXIOMA_API_URL` antes de iniciar Streamlit. Los datos de [docs/datos/](docs/datos/README.md) se regeneran sin la API con `python scripts/generar_resultados_referencia.py`, y `--comprobar` verifica que coinciden con el modelo. El despliegue en Render, con 31 comprobaciones automatizadas, está en [docs/05](docs/05_Despliegue_y_Operacion_AxiomaH.md).
 
 ## Endpoints
 
@@ -130,6 +130,7 @@ Todo funciona sin conexión a internet. Para usar otra API, defina `AXIOMA_API_U
 | POST | `/api/v1/analisis/sensibilidad` | Varios valores de la eficacia o del flujo de niebla |
 | POST | `/api/v1/analisis/incertidumbre` | Muestreo conjunto de eficacia y flujo calibrado |
 | POST | `/api/v1/analisis/dimensionamiento` | Área y nodos para un número de personas |
+| POST | `/api/v1/analisis/impacto-entornos` | Impacto en 18 entornos de niebla y salinidad frente a la entrega por carrotanque |
 | GET | `/api/v1/sitios` | Perfiles de sitio de referencia |
 
 Ningún análisis modifica la configuración del modelo (decisión D5). Los payloads y las respuestas de ejemplo están en [docs/02](docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md), sección 3, y el uso desde otros sistemas (curl, pandas, Data Package y sensores reales) en [docs/05](docs/05_Despliegue_y_Operacion_AxiomaH.md), sección 7.
@@ -172,9 +173,10 @@ La versión de la API se publica en `GET /api/v1/health` (`VERSION_SERVICIO` en 
 | 0.2.0 | Barrido con varias semillas, sensibilidad, causas de no validación, temporizador con tope ecológico, impacto comunitario, supervisión humana (REGLA_06) e incertidumbre con el flujo calibrado. |
 | 0.3.0 | Robustez de la respuesta, incrustación diaria y cruce, dimensionamiento, perfil de sitio, `parametros_usados` y `GET /api/v1/sitios`. |
 | 0.4.0 | Robustez del desgaste frente a la fatiga por pulso y la degradación térmica, niveles interpolados y separación del cruce, y calibración del flujo por API con el perfil del sitio. Los resultados por defecto del modelo no cambian. |
+| 0.5.0 | Impacto en 18 entornos de niebla y salinidad, clasificación frente al intervalo de transición del cruce y comparación con la entrega de 1000 L/mes por comunidad con carrotanque (ICBF, 2025). Los resultados por defecto del modelo no cambian. |
 
 El dashboard de cinco vistas, con la respuesta por partes y el explorador de hipótesis, y los datos interoperables (Data Package y OpenAPI versionado) se agregaron sobre la API 0.3.0, sin cambios en la API.
 
 ## Referencias y créditos
 
-El software de terceros, las fuentes científicas (Klemm et al., 2012; OMS, Howard et al., 2020; Sphere, 2018) y la trazabilidad de cada parámetro están en [docs/06](docs/06_Referencias_y_Trazabilidad_AxiomaH.md). El proyecto se distribuye con licencia MIT (archivo `LICENSE`).
+El software de terceros, las fuentes científicas (Klemm et al., 2012; OMS, Howard et al., 2020; Sphere, 2018; ICBF, 2025) y la trazabilidad de cada parámetro están en [docs/06](docs/06_Referencias_y_Trazabilidad_AxiomaH.md). El proyecto se distribuye con licencia MIT (archivo `LICENSE`).

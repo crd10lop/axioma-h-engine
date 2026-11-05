@@ -10,7 +10,7 @@ Desde la raíz del proyecto, con el entorno virtual activo:
 python scripts/generar_resultados_referencia.py
 ```
 
-La salida es determinista: dos ejecuciones con el mismo código producen archivos idénticos. El script escribe en esta carpeta los cuatro CSV, `resultados_completos.json` y `datapackage.json`, y en `docs/api/` el contrato `openapi.json`. Para comprobar que todos coinciden con el modelo actual sin modificarlos, agregar `--comprobar`: el script genera los archivos en un directorio temporal, los compara byte a byte y termina con código 1 si alguno difiere o falta. La carpeta de destino no se puede cambiar por línea de comandos. Si cambia el modelo, se deben regenerar los archivos y revisar que las cifras de `README.md` y `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md` sigan coincidiendo.
+La salida es determinista: dos ejecuciones con el mismo código producen archivos idénticos. El script escribe en esta carpeta los cinco CSV, `resultados_completos.json` y `datapackage.json`, y en `docs/api/` el contrato `openapi.json`. Para comprobar que todos coinciden con el modelo actual sin modificarlos, agregar `--comprobar`: el script genera los archivos en un directorio temporal, los compara byte a byte y termina con código 1 si alguno difiere o falta. La carpeta de destino no se puede cambiar por línea de comandos. Si cambia el modelo, se deben regenerar los archivos y revisar que las cifras de `README.md` y `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md` sigan coincidiendo.
 
 ## 2. Condiciones
 
@@ -20,6 +20,7 @@ La salida es determinista: dos ejecuciones con el mismo código producen archivo
 | Barrido de salinidad | `DIA_NORMAL` e `INCRUSTACION_SALINA_RAPIDA` con tasas BAJA, MEDIA y ALTA; humedad inicial de 85 %, 24 h, 8 nodos, semillas 1 a 5. |
 | Robustez de la respuesta | El mismo barrido con cada combinación de flujo de niebla (6.0, 1.83 y 0.49 L/m²/h) y eficacia del pulso (0.80, 0.90 y 1.00); humedad inicial de 85 %, 24 h, 8 nodos, semilla 42. |
 | Robustez del desgaste | El mismo barrido con cada combinación de flujo de niebla (6.0 y 1.83 L/m²/h), fatiga por pulso (0.01, 0.02 y 0.04 %) y degradación térmica (0.025, 0.05 y 0.10 % por °C y minuto), con la eficacia del pulso de 0.90; humedad inicial de 85 %, 24 h, 8 nodos, semilla 42. |
+| Impacto en distintos entornos | Los seis niveles del barrido con cada flujo de niebla de referencia (`SUPUESTO` 6.0, `CALIBRADO_MAX` 1.83 y `CALIBRADO_MIN` 0.49 L/m²/h); 50 personas con el estándar `OMS_20` (20 L/persona/día), humedad inicial de 85 %, semilla 42 y comparación con la entrega mensual de 1000 L por comunidad del ICBF (2025). |
 
 Salvo el flujo, la eficacia, la fatiga y la degradación térmica de las robusteces, que se aplican sobre copias de los parámetros, todos los parámetros son los de `backend/config.py`, sin modificar. Varios son supuestos de orden de magnitud; su origen está en [../06_Referencias_y_Trazabilidad_AxiomaH.md](../06_Referencias_y_Trazabilidad_AxiomaH.md), sección 3.
 
@@ -132,12 +133,13 @@ El método y la lectura de estos datos están en [../04_Modelo_de_Control_y_Simu
 | `barrido_salinidad` | Respuesta completa del barrido, con el formato de `POST /api/v1/analisis/barrido-salinidad`, incluidos el flujo y la eficacia usados y el cruce. |
 | `robustez_respuesta` | Resumen de `POST /api/v1/analisis/robustez-respuesta`: rango de la reducción del desgaste, combinaciones con cruce y rango de la incrustación diaria del cruce. Las combinaciones completas están en `robustez_respuesta.csv`. |
 | `robustez_desgaste` | Resumen de `POST /api/v1/analisis/robustez-desgaste`: rango de la reducción del desgaste y combinaciones en que el control basado en reglas se degrada menos en todos los puntos. Las combinaciones completas están en `robustez_desgaste.csv`. |
+| `impacto_entornos` | Resumen de `POST /api/v1/analisis/impacto-entornos`: personas, consumo diario por persona, entrega mensual de referencia del ICBF y contadores de entornos con ventaja esperada, clasificables y coherentes con la simulación. Los 18 entornos completos están en `impacto_entornos.csv`. |
 
 El JSON omite `series_temporales` y `bitacora` para mantener un tamaño manejable (288 puntos y entre 24 y 210 eventos por corrida). Se reproducen con `POST /api/v1/simulacion/ejecutar` y la misma configuración, o importando `backend.simulador.ejecutar_simulacion`.
 
 ## 7. datapackage.json y contrato de la API
 
-`datapackage.json` es un descriptor [Frictionless Data Package](https://specs.frictionlessdata.io/data-package/) de los cuatro CSV: nombre del paquete, licencia MIT, versión del servicio y, por cada CSV, ruta, formato, codificación UTF-8 y esquema de campos con nombre, tipo (`string`, `number`, `integer` o `boolean`) y descripción. Las celdas vacías se declaran como valores ausentes. Permite que otra herramienta lea los datos con sus tipos sin consultar este documento.
+`datapackage.json` es un descriptor [Frictionless Data Package](https://specs.frictionlessdata.io/data-package/) de los cinco CSV: nombre del paquete, licencia MIT, versión del servicio y, por cada CSV, ruta, formato, codificación UTF-8 y esquema de campos con nombre, tipo (`string`, `number`, `integer` o `boolean`) y descripción. Las celdas vacías se declaran como valores ausentes. Permite que otra herramienta lea los datos con sus tipos sin consultar este documento.
 
 El contrato de la API está en [../api/openapi.json](../api/openapi.json), generado desde `backend.main.app.openapi()`. Describe todos los endpoints, sus esquemas de entrada y salida y sus límites de validación, de modo que otros sistemas pueden generar clientes a partir de él.
 
@@ -159,3 +161,28 @@ Una fila por combinación de flujo, fatiga por pulso y degradación térmica (2 
 | `humedad_inicial_pct` | number | Humedad relativa a las 18:00 (%). |
 
 El método y la lectura de estos datos están en [../04_Modelo_de_Control_y_Simulacion_AxiomaH.md](../04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 8.11.
+
+## 9. impacto_entornos.csv
+
+Una fila por combinación de flujo de referencia (`SUPUESTO`, `CALIBRADO_MAX` y `CALIBRADO_MIN`) y nivel del barrido de salinidad (3 por 6, 18 filas), en ese orden. Traduce cada entorno en área de colector y nodos requeridos para las personas y el estándar indicados, producción mensual por nodo, nodos que igualan la entrega mensual de 1000 L por comunidad del ICBF (2025) y zona de la incrustación diaria frente al intervalo de transición del cruce.
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `origen_flujo` | string | Origen del flujo de niebla del entorno (SUPUESTO, CALIBRADO_MAX o CALIBRADO_MIN). |
+| `flujo_niebla_maximo_l_m2_h` | number | Flujo máximo de niebla de la combinación (L/m²/h). |
+| `escenario` | string | Escenario ambiental. |
+| `tasa_salinizacion` | string | Tasa de salinización de la combinación simulada. |
+| `carga_salina_ohm_l_m2` | number | Aumento de impedancia por litro captado por m². |
+| `rendimiento_neuro_l_m2_dia` | number | Rendimiento del control basado en reglas en el entorno (L/m² al día). |
+| `incrustacion_diaria_ohm` | number | Impedancia salina depositada por día en el control basado en reglas (Ohm/día). |
+| `zona_incrustacion` | string | Posición de la incrustación diaria frente al intervalo de transición del cruce. |
+| `ventaja_recuperacion_pts` | number | Recuperación media del control basado en reglas menos la del temporizador (puntos). |
+| `reduccion_desgaste_pct` | number | Reducción del desgaste, (D_temp - D_neuro) / D_temp * 100, con las medias. |
+| `area_colector_m2` | number | Área de colector requerida para abastecer a las personas indicadas (m²). |
+| `nodos_requeridos` | integer | Nodos de 1 m² requeridos para las personas y el estándar indicados. |
+| `litros_mes_por_nodo` | number | Litros producidos al mes por un nodo de 1 m² (30 días). |
+| `nodos_equivalentes_entrega` | integer | Nodos de 1 m² que igualan la entrega mensual de 1000 L por comunidad del ICBF. |
+| `personas` | integer | Personas que se quiere abastecer en la estimación de impacto. |
+| `estandar` | string | Estándar de consumo diario por persona (OMS_20 o SPHERE_15). |
+
+El método y la lectura de estos datos están en [../04_Modelo_de_Control_y_Simulacion_AxiomaH.md](../04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 7.8.

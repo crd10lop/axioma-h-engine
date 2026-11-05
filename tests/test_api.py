@@ -462,7 +462,7 @@ def test_incertidumbre_informa_la_ventaja_en_recuperacion():
 
 
 def test_version_del_servicio():
-    assert cliente.get("/api/v1/health").json()["version"] == "0.4.0"
+    assert cliente.get("/api/v1/health").json()["version"] == "0.5.0"
 
 
 # ---------------------------------------------------------------------------
@@ -535,3 +535,48 @@ def test_endpoints_de_0_4_0_publicados_en_openapi():
     rutas = cliente.get("/openapi.json").json()["paths"]
     assert RUTA_ROBUSTEZ_DESGASTE in rutas
     assert RUTA_CALIBRACION in rutas
+
+
+# ---------------------------------------------------------------------------
+# Impacto en distintos entornos (0.5.0)
+# ---------------------------------------------------------------------------
+RUTA_IMPACTO_ENTORNOS = "/api/v1/analisis/impacto-entornos"
+
+
+def test_impacto_entornos_con_configuracion_por_defecto():
+    respuesta = cliente.post(RUTA_IMPACTO_ENTORNOS, json={})
+    assert respuesta.status_code == 200
+    datos = respuesta.json()
+    assert datos["personas"] == 50
+    assert datos["consumo_l_persona_dia"] == pytest.approx(20.0)
+    assert datos["entrega_referencia_l_comunidad_mes"] == pytest.approx(1000.0)
+    assert len(datos["entornos"]) == 18
+
+
+def test_impacto_entornos_con_estandar_sphere():
+    respuesta = cliente.post(RUTA_IMPACTO_ENTORNOS, json={"personas": 50, "estandar": "SPHERE_15"})
+    assert respuesta.status_code == 200
+    datos = respuesta.json()
+    assert datos["consumo_l_persona_dia"] == pytest.approx(15.0)
+    assert datos["entornos"][0]["nodos_requeridos"] == 23
+    assert datos["entornos"][1]["nodos_requeridos"] == 24
+
+
+@pytest.mark.parametrize("cambios", [{"personas": 0}, {"personas": 1001}, {"humedad_ambiente_inicial_pct": -1.0}])
+def test_impacto_entornos_rechaza_configuracion_invalida(cambios):
+    assert cliente.post(RUTA_IMPACTO_ENTORNOS, json=cambios).status_code == 422
+
+
+def test_impacto_entornos_traduce_value_error_a_422(monkeypatch):
+    def _fallar(_configuracion):
+        raise ValueError("Error de validación de dominio")
+
+    monkeypatch.setattr("backend.routers.analisis.ejecutar_impacto_entornos", _fallar)
+    respuesta = cliente.post(RUTA_IMPACTO_ENTORNOS, json={})
+    assert respuesta.status_code == 422
+    assert "Error de validación de dominio" in respuesta.json()["detail"]
+
+
+def test_endpoint_de_0_5_0_publicado_en_openapi():
+    rutas = cliente.get("/openapi.json").json()["paths"]
+    assert RUTA_IMPACTO_ENTORNOS in rutas

@@ -24,7 +24,9 @@ from backend.schemas import (
     RobustezDesgasteConfig,
     SensibilidadConfig,
     SimulationConfig,
+    ImpactoEntornosConfig,
     TasaSalinizacion,
+    ZonaIncrustacion,
 )
 from backend.simulador import ejecutar_simulacion
 
@@ -911,3 +913,88 @@ def test_incertidumbre_sin_pulsos_no_tiene_ventaja():
 
 def test_probabilidad_de_ventaja_ignora_nulos_y_ventaja_cero():
     assert analisis._probabilidad_ventaja([None, 0.0, 2.0, -1.0, 3.0]) == pytest.approx(0.5)
+
+
+# ---------------------------------------------------------------------------
+# Impacto en distintos entornos y comparación con entrega por carrotanque (0.5.0)
+# ---------------------------------------------------------------------------
+@pytest.fixture(scope="module")
+def impacto_entornos():
+    """Impacto en los 18 entornos de referencia con la configuración por defecto."""
+    return analisis.ejecutar_impacto_entornos(ImpactoEntornosConfig())
+
+
+@pytest.mark.parametrize(
+    ("incrustacion", "zona"),
+    [
+        (None, ZonaIncrustacion.SIN_DATOS),
+        (0.0, ZonaIncrustacion.BAJO_TRANSICION),
+        (1171.05, ZonaIncrustacion.BAJO_TRANSICION),
+        (1171.06, ZonaIncrustacion.TRANSICION),
+        (2000.0, ZonaIncrustacion.TRANSICION),
+        (2365.33, ZonaIncrustacion.TRANSICION),
+        (2365.34, ZonaIncrustacion.SOBRE_TRANSICION),
+        (5000.0, ZonaIncrustacion.SOBRE_TRANSICION),
+    ],
+)
+def test_clasificar_incrustacion(incrustacion, zona):
+    assert analisis.clasificar_incrustacion(incrustacion) == zona
+
+
+def test_impacto_entornos_recorre_los_18_entornos_y_tres_origenes(impacto_entornos):
+    assert len(impacto_entornos.entornos) == 18
+    origenes = [entorno.origen_flujo for entorno in impacto_entornos.entornos]
+    assert set(origenes) == {"SUPUESTO", "CALIBRADO_MAX", "CALIBRADO_MIN"}
+    assert impacto_entornos.entrega_referencia_l_comunidad_mes == pytest.approx(
+        config.ENTREGA_CARROTANQUE_L_COMUNIDAD_MES
+    )
+
+
+def test_impacto_entornos_calibrado_min_sin_ventaja_esperada(impacto_entornos):
+    calibrado_min = [e for e in impacto_entornos.entornos if e.origen_flujo == "CALIBRADO_MIN"]
+    assert len(calibrado_min) == 6
+    for entorno in calibrado_min:
+        assert entorno.zona_incrustacion != ZonaIncrustacion.SOBRE_TRANSICION
+
+
+def test_impacto_entornos_contadores_coherentes(impacto_entornos):
+    assert impacto_entornos.entornos_con_ventaja_esperada == 3
+    assert impacto_entornos.entornos_clasificables == 7
+    assert impacto_entornos.entornos_coherentes_con_simulacion == 7
+    assert impacto_entornos.entornos_coherentes_con_simulacion <= impacto_entornos.entornos_clasificables
+
+
+def test_impacto_entornos_nodos_equivalentes_coherentes_con_litros_mes(impacto_entornos):
+    primero = impacto_entornos.entornos[0]
+    assert primero.litros_mes_por_nodo == pytest.approx(
+        primero.rendimiento_neuro_l_m2_dia * config.AREA_COLECTOR_M2 * config.DIAS_POR_MES,
+        abs=1e-3,
+    )
+    assert primero.nodos_equivalentes_entrega == 2
+    assert (primero.nodos_equivalentes_entrega - 1) * primero.litros_mes_por_nodo < (
+        config.ENTREGA_CARROTANQUE_L_COMUNIDAD_MES
+    )
+    assert primero.nodos_equivalentes_entrega * primero.litros_mes_por_nodo >= (
+        config.ENTREGA_CARROTANQUE_L_COMUNIDAD_MES
+    )
+
+
+def test_entorno_impacto_sin_rendimiento_devuelve_nulos():
+    punto = PuntoBarrido(**{**_punto(100.0, 1.0).model_dump(), "rendimiento_neuro_l_m2_dia_media": None})
+    entorno = analisis._entorno_impacto("SUPUESTO", 6.0, punto, 50, 20.0)
+    assert entorno.area_colector_m2 is None
+    assert entorno.nodos_requeridos is None
+    assert entorno.litros_mes_por_nodo is None
+    assert entorno.nodos_equivalentes_entrega is None
+
+
+def test_trazabilidad_constantes_de_transicion_con_robustez(robustez):
+    cruces = [
+        c.barrido.cruce
+        for c in robustez.combinaciones
+        if c.barrido.cruce.estado == EstadoCruce.INTERPOLADO
+    ]
+    minimo_inferior = min(c.incrustacion_inferior_ohm for c in cruces)
+    maximo_superior = max(c.incrustacion_superior_ohm for c in cruces)
+    assert minimo_inferior == pytest.approx(config.INCRUSTACION_TRANSICION_MIN_OHM_DIA, abs=0.01)
+    assert maximo_superior == pytest.approx(config.INCRUSTACION_TRANSICION_MAX_OHM_DIA, abs=0.01)

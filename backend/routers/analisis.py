@@ -10,6 +10,7 @@ from backend.analisis import (
     ejecutar_barrido,
     ejecutar_calibracion,
     ejecutar_dimensionamiento,
+    ejecutar_impacto_entornos,
     ejecutar_incertidumbre,
     ejecutar_robustez,
     ejecutar_robustez_desgaste,
@@ -22,6 +23,8 @@ from backend.schemas import (
     CalibracionResultado,
     DimensionamientoConfig,
     DimensionamientoResultado,
+    ImpactoEntornosConfig,
+    ImpactoEntornosResultado,
     IncertidumbreConfig,
     IncertidumbreResultado,
     RobustezConfig,
@@ -149,6 +152,27 @@ def dimensionamiento(configuracion: DimensionamientoConfig) -> DimensionamientoR
         configuracion.personas,
         configuracion.estandar.value,
         configuracion.escenario.value,
+        time.perf_counter() - inicio,
+    )
+    return resultado
+
+
+@router.post(
+    "/impacto-entornos",
+    responses={422: {"description": "Datos de entrada no válidos."}},
+)
+def impacto_entornos(configuracion: ImpactoEntornosConfig) -> ImpactoEntornosResultado:
+    """Estima el impacto del control basado en reglas en los 18 entornos de niebla y salinidad y lo compara con la entrega por carrotanque."""
+    inicio = time.perf_counter()
+    try:
+        resultado = ejecutar_impacto_entornos(configuracion)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    logger.info(
+        "Impacto en distintos entornos para %d personas con %s y humedad %.1f %% completado en %.2f s.",
+        configuracion.personas,
+        configuracion.estandar.value,
+        configuracion.humedad_ambiente_inicial_pct,
         time.perf_counter() - inicio,
     )
     return resultado

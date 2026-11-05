@@ -51,11 +51,18 @@ RAIZ_PROYECTO = Path(__file__).resolve().parent.parent
 if str(RAIZ_PROYECTO) not in sys.path:
     sys.path.insert(0, str(RAIZ_PROYECTO))
 
-from backend.analisis import ejecutar_barrido, ejecutar_robustez, ejecutar_robustez_desgaste  # noqa: E402
+from backend.analisis import (  # noqa: E402
+    ejecutar_barrido,
+    ejecutar_impacto_entornos,
+    ejecutar_robustez,
+    ejecutar_robustez_desgaste,
+)
 from backend.main import VERSION_SERVICIO, app  # noqa: E402
 from backend.schemas import (  # noqa: E402
     BarridoConfig,
     Escenario,
+    EstandarConsumo,
+    ImpactoEntornosConfig,
     RobustezConfig,
     RobustezDesgasteConfig,
     SimulationConfig,
@@ -73,16 +80,24 @@ ARCHIVO_BARRIDO = "barrido_salinidad.csv"
 ARCHIVO_JSON = "resultados_completos.json"
 ARCHIVO_ROBUSTEZ = "robustez_respuesta.csv"
 ARCHIVO_ROBUSTEZ_DESGASTE = "robustez_desgaste.csv"
+ARCHIVO_IMPACTO_ENTORNOS = "impacto_entornos.csv"
 ARCHIVOS = (
     ARCHIVO_ESCENARIOS,
     ARCHIVO_BARRIDO,
     ARCHIVO_JSON,
     ARCHIVO_ROBUSTEZ,
     ARCHIVO_ROBUSTEZ_DESGASTE,
+    ARCHIVO_IMPACTO_ENTORNOS,
     ARCHIVO_DATAPACKAGE,
 )
 ARCHIVOS_API = (ARCHIVO_OPENAPI,)
-CSV = (ARCHIVO_ESCENARIOS, ARCHIVO_BARRIDO, ARCHIVO_ROBUSTEZ, ARCHIVO_ROBUSTEZ_DESGASTE)
+CSV = (
+    ARCHIVO_ESCENARIOS,
+    ARCHIVO_BARRIDO,
+    ARCHIVO_ROBUSTEZ,
+    ARCHIVO_ROBUSTEZ_DESGASTE,
+    ARCHIVO_IMPACTO_ENTORNOS,
+)
 
 HUMEDADES_PCT = (45.0, 85.0)
 DURACION_HORAS = 24
@@ -91,6 +106,8 @@ SEMILLA = 42
 SEMILLAS_BARRIDO = [1, 2, 3, 4, 5]
 HUMEDAD_BARRIDO_PCT = 85.0
 SEMILLAS_ROBUSTEZ = [SEMILLA]
+PERSONAS_IMPACTO = 50
+ESTANDAR_IMPACTO = EstandarConsumo.OMS_20
 CAMPO_HUMEDAD = "humedad_inicial_pct"
 
 # Prefijo de columna de cada modo en resultados_escenarios.csv.
@@ -236,6 +253,25 @@ DICCIONARIO_CAMPOS: dict[str, tuple[str, str]] = {
         "Puntos del barrido en que el control basado en reglas se degrada menos que el temporizador.",
     ),
     "puntos_totales": (TIPO_ENTERO, "Puntos del barrido de la combinación."),
+    "origen_flujo": (TIPO_TEXTO, "Origen del flujo de niebla del entorno (SUPUESTO, CALIBRADO_MAX o CALIBRADO_MIN)."),
+    "rendimiento_neuro_l_m2_dia": (TIPO_NUMERO, "Rendimiento del control basado en reglas en el entorno (L/m² al día)."),
+    "incrustacion_diaria_ohm": (
+        TIPO_NUMERO,
+        "Impedancia salina depositada por día en el control basado en reglas (Ohm/día).",
+    ),
+    "zona_incrustacion": (
+        TIPO_TEXTO,
+        "Posición de la incrustación diaria frente al intervalo de transición del cruce.",
+    ),
+    "area_colector_m2": (TIPO_NUMERO, "Área de colector requerida para abastecer a las personas indicadas (m²)."),
+    "nodos_requeridos": (TIPO_ENTERO, "Nodos de 1 m² requeridos para las personas y el estándar indicados."),
+    "litros_mes_por_nodo": (TIPO_NUMERO, "Litros producidos al mes por un nodo de 1 m² (30 días)."),
+    "nodos_equivalentes_entrega": (
+        TIPO_ENTERO,
+        "Nodos de 1 m² que igualan la entrega mensual de 1000 L por comunidad del ICBF.",
+    ),
+    "personas": (TIPO_ENTERO, "Personas que se quiere abastecer en la estimación de impacto."),
+    "estandar": (TIPO_TEXTO, "Estándar de consumo diario por persona (OMS_20 o SPHERE_15)."),
 }
 
 
@@ -366,6 +402,19 @@ def filas_robustez_desgaste(robustez_desgaste: dict) -> list[dict]:
     ]
 
 
+def filas_impacto_entornos(impacto_entornos: dict, estandar: str = ESTANDAR_IMPACTO.value) -> list[dict]:
+    """Aplana el impacto en distintos entornos serializado: una fila por entorno, con personas y estándar al final."""
+    personas = impacto_entornos["personas"]
+    return [
+        {
+            **{clave: _vacio_si_nulo(valor) for clave, valor in entorno.items()},
+            "personas": personas,
+            "estandar": estandar,
+        }
+        for entorno in impacto_entornos["entornos"]
+    ]
+
+
 def escribir_csv(ruta: Path, filas: list[dict]) -> None:
     """Escribe filas homogéneas en CSV UTF-8 con encabezado."""
     with ruta.open("w", encoding=CODIFICACION, newline="") as archivo:
@@ -394,6 +443,12 @@ def condiciones() -> dict:
             "duracion_horas": DURACION_HORAS,
             "semillas": SEMILLAS_ROBUSTEZ,
         },
+        "impacto_entornos": {
+            "personas": PERSONAS_IMPACTO,
+            "estandar": ESTANDAR_IMPACTO.value,
+            CAMPO_HUMEDAD: HUMEDAD_BARRIDO_PCT,
+            "semilla": SEMILLA,
+        },
         "nota": (
             "Las corridas omiten series_temporales y bitacora; se reproducen con POST "
             "/api/v1/simulacion/ejecutar y la misma configuración."
@@ -421,6 +476,14 @@ def generar(carpeta: Path = CARPETA_POR_DEFECTO, carpeta_api: Path = CARPETA_API
     robustez_desgaste = ejecutar_robustez_desgaste(
         RobustezDesgasteConfig(humedad_ambiente_inicial_pct=HUMEDAD_BARRIDO_PCT, semillas=SEMILLAS_ROBUSTEZ)
     ).model_dump(mode="json")
+    impacto_entornos = ejecutar_impacto_entornos(
+        ImpactoEntornosConfig(
+            personas=PERSONAS_IMPACTO,
+            estandar=ESTANDAR_IMPACTO,
+            humedad_ambiente_inicial_pct=HUMEDAD_BARRIDO_PCT,
+            semilla=SEMILLA,
+        )
+    ).model_dump(mode="json")
 
     rutas = [carpeta / nombre for nombre in ARCHIVOS]
     filas_csv = {
@@ -428,6 +491,7 @@ def generar(carpeta: Path = CARPETA_POR_DEFECTO, carpeta_api: Path = CARPETA_API
         ARCHIVO_BARRIDO: [{**punto, CAMPO_HUMEDAD: HUMEDAD_BARRIDO_PCT} for punto in barrido["puntos"]],
         ARCHIVO_ROBUSTEZ: filas_robustez(robustez),
         ARCHIVO_ROBUSTEZ_DESGASTE: filas_robustez_desgaste(robustez_desgaste),
+        ARCHIVO_IMPACTO_ENTORNOS: filas_impacto_entornos(impacto_entornos),
     }
     for nombre, filas in filas_csv.items():
         escribir_csv(carpeta / nombre, filas)
@@ -457,6 +521,9 @@ def generar(carpeta: Path = CARPETA_POR_DEFECTO, carpeta_api: Path = CARPETA_API
         },
         "robustez_desgaste": {
             clave: valor for clave, valor in robustez_desgaste.items() if clave != "combinaciones"
+        },
+        "impacto_entornos": {
+            clave: valor for clave, valor in impacto_entornos.items() if clave != "entornos"
         },
     }
     escribir_json(carpeta / ARCHIVO_JSON, completos)

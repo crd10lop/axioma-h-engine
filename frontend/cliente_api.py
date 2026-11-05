@@ -128,6 +128,11 @@ def dimensionar(carga: dict) -> dict:
     return _solicitar("POST", "/api/v1/analisis/dimensionamiento", config.TIMEOUT_ANALISIS_SEG, carga)
 
 
+def ejecutar_impacto_entornos(carga: dict) -> dict:
+    """Estima el impacto por entorno y su equivalencia con carrotanque en POST /api/v1/analisis/impacto-entornos."""
+    return _solicitar("POST", "/api/v1/analisis/impacto-entornos", config.TIMEOUT_ANALISIS_SEG, carga)
+
+
 def obtener_sitios() -> list[dict]:
     """Consulta los perfiles de sitio de referencia en GET /api/v1/sitios."""
     return _solicitar("GET", "/api/v1/sitios", config.TIMEOUT_SITIOS_SEG)

@@ -213,10 +213,13 @@ ETIQUETAS_LLANAS: dict[str, str] = {
     "CRUCE_DESCENDENTE": "Cruza al revés: el control basado en reglas deja de recuperar más",
     "SIN_CRUCE_NEURO_SUPERIOR": "Sin cruce: el control basado en reglas recupera más en todos los niveles",
     "SIN_CRUCE_NEURO_INFERIOR": "Sin cruce: el temporizador recupera igual o más en todos los niveles",
-    "SIN_DATOS": "Sin datos suficientes: menos de dos niveles con pulsos en ambos modos",
-    "SUPUESTO": "flujo supuesto",
-    "CALIBRADO_MAX": "flujo calibrado máximo",
-    "CALIBRADO_MIN": "flujo calibrado mínimo",
+    "BAJO_TRANSICION": "Sin ventaja esperada en recuperación",
+    "TRANSICION": "Zona de transición: el modelo no resuelve el signo",
+    "SOBRE_TRANSICION": "Ventaja esperada en recuperación",
+    "SIN_DATOS": "Sin datos",
+    "SUPUESTO": "Niebla supuesta del modelo (6.0 L/m²/h)",
+    "CALIBRADO_MAX": "Niebla como la mayor de la literatura (10 L/m²/día)",
+    "CALIBRADO_MIN": "Niebla como la menor de la literatura (3 L/m²/día)",
 }
 
 COLUMNAS_REGLAS = {
@@ -523,6 +526,10 @@ REFERENCIAS: list[str] = [
     (
         "Klemm, O., Schemenauer, R. S., Lummerich, A., et al. (2012). Fog as a fresh-water resource: overview "
         "and perspectives. Ambio, 41, 221-234. https://doi.org/10.1007/s13280-012-0247-8"
+    ),
+    (
+        "Instituto Colombiano de Bienestar Familiar (2025). Más agua, más vida digna: Bienestar Familiar "
+        "avanza en el acceso al agua en territorios étnicos. https://www.icbf.gov.co/node/309446"
     ),
 ]
 

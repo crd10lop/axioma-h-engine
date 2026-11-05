@@ -1,6 +1,6 @@
 {
   "condiciones": {
-    "version_servicio": "0.4.0",
+    "version_servicio": "0.5.0",
     "escenarios": {
       "duracion_horas": 24,
       "tasa_salinizacion": "ALTA",
@@ -36,6 +36,12 @@
       "semillas": [
         42
       ]
+    },
+    "impacto_entornos": {
+      "personas": 50,
+      "estandar": "OMS_20",
+      "humedad_inicial_pct": 85.0,
+      "semilla": 42
     },
     "nota": "Las corridas omiten series_temporales y bitacora; se reproducen con POST /api/v1/simulacion/ejecutar y la misma configuración."
   },
@@ -1551,5 +1557,13 @@
     "reduccion_desgaste_min_pct": 61.4684,
     "reduccion_desgaste_max_pct": 100.0,
     "combinaciones_con_menor_desgaste_en_todos_los_puntos": 18
+  },
+  "impacto_entornos": {
+    "personas": 50,
+    "consumo_l_persona_dia": 20.0,
+    "entrega_referencia_l_comunidad_mes": 1000.0,
+    "entornos_con_ventaja_esperada": 3,
+    "entornos_coherentes_con_simulacion": 7,
+    "entornos_clasificables": 7
   }
 }

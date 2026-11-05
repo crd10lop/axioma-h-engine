@@ -43,7 +43,7 @@ REGLA_06 is human supervision, set with the optional `anulacion_manual` field of
 
 Two services run separately:
 
-- **Backend (FastAPI, port 8000):** rule-based control engine (`backend/motor_reglas.py`, first stage of the neuro-symbolic architecture), physical model, comparative simulator, conjecture verification, community impact and robustness analyses (salinity sweep with several seeds, robustness of the answer to the assumed parameters, parameter sensitivity, fog flux calibration and uncertainty propagation), collector sizing and site profiles to transfer the model.
+- **Backend (FastAPI, port 8000):** rule-based control engine (`backend/motor_reglas.py`, first stage of the neuro-symbolic architecture), physical model, comparative simulator, conjecture verification, community impact and robustness analyses (salinity sweep with several seeds, robustness of the answer to the assumed parameters, parameter sensitivity, fog flux calibration and uncertainty propagation), collector sizing, impact across 18 fog and salinity environments compared with water-truck delivery, and site profiles to transfer the model.
 - **Frontend (Streamlit, port 8501):** presentation-only dashboard that consumes the API over HTTP. It has five views: research guide (question, current thesis, derived hypothesis, key assumptions with the measurement that would replace each one, and a reading guide by discipline), manual node evaluation, comparative simulation (with what would change each conjecture result), answer to the research question in four parts (wear, recovery, certainty and people supplied), and a hypothesis explorer (simulation with a custom pulse efficacy and site profile, and questions for Cycle 3 computed from the session data). API codes are shown in plain language.
 
 | Method | Path | Description |
@@ -58,6 +58,7 @@ Two services run separately:
 | POST | `/api/v1/analisis/robustez-desgaste` | Repeats the sweep with 2 fog fluxes by 3 fatigue-per-pulse values by 3 thermal degradation rates and reports the wear reduction of each combination |
 | POST | `/api/v1/analisis/calibracion` | Calibrates the fog flux from a measured yield, using the temperature and daily amplitudes of a site profile; an unreachable yield returns 422 |
 | POST | `/api/v1/analisis/dimensionamiento` | Collector area and nodes needed for a number of people, with the three reference fog fluxes |
+| POST | `/api/v1/analisis/impacto-entornos` | Impact across 18 fog and salinity environments, crossing zone classification and comparison with the 1000 L/month water-truck delivery (ICBF, 2025) |
 | GET | `/api/v1/sitios` | Reference site profiles (Cabo de la Vela with the assumed flux and with the calibrated extremes) |
 
 `POST /api/v1/simulacion/ejecutar` also accepts an optional `sitio` profile (name, maximum fog flux, mean temperature and daily temperature and humidity amplitudes) and an optional `eficacia_maxima_pulso`. Without them, the Cabo de la Vela values are used and results do not change. The response reports the values used in `parametros_usados`.
@@ -97,7 +98,7 @@ pytest --cov --cov-report=term-missing
 
 ## Deployment
 
-The API and the dashboard are deployed on **Render** (free plan) as two web services defined in `render.yaml` and built from the `main` branch. Each push to `main` runs the CI workflow (tests, coverage and SonarQube Cloud analysis), and Render deploys both services only when all checks pass. The automated verification script (`python scripts/verificar_despliegue.py`) runs 29 checks against the published services; the latest recorded run is in section 4.3 of docs/05. Details are in [docs/05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md) (in Spanish).
+The API and the dashboard are deployed on **Render** (free plan) as two web services defined in `render.yaml` and built from the `main` branch. Each push to `main` runs the CI workflow (tests, coverage and SonarQube Cloud analysis), and Render deploys both services only when all checks pass. The automated verification script (`python scripts/verificar_despliegue.py`) runs 31 checks against the published services; the latest recorded run is in section 4.3 of docs/05. Details are in [docs/05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md) (in Spanish).
 
 ## Results
 
@@ -107,7 +108,7 @@ All figures come from model runs; their single source is [docs/04](docs/04_Model
 - **Recovery.** Its advantage depends on daily incrustation, not on the salt load per litre: the crossing lies between 1632.9 and 1839.2 Ohm/day with seed 42 (1682.1 to 1866.6 with seeds 1 to 3), while the salt load per litre at the crossing ranges from 50.3 to 190.9 Ohm per L/m². The two levels between which each crossing is interpolated are 617 to 1165 Ohm/day apart, more than that range: the sweep cannot tell the crossings of the combinations apart, and each one lies somewhere between 1171 and 2365 Ohm/day (section 8.8).
 - **With literature-like fog.** With the minimum calibrated flux, 0.49 L/m²/h, daily incrustation never exceeds 659 Ohm/day and the timer recovers more at every level with pulses; with the calibrated flux, the rule-based control recovers more in only 3 of 62 uncertainty samples (sections 8.7 and 8.8).
 - **Conjectures.** Conjectures 1 and 2 depend on pulse efficacy, which must be measured (0.94 and 0.97 would validate them, section 6.2); Conjecture 3 is not validated with the calibrated flux (section 8.6).
-- **People.** Supplying 50 people with 20 L per day would take 32 nodes of 1 m² with the assumed flux and 100 to 332 with the calibrated flux, in line with the 100 to 333 m² from the literature (section 7.7).
+- **People.** Supplying 50 people with 20 L per day would take 32 nodes of 1 m² with the assumed flux and 100 to 332 with the calibrated flux, in line with the 100 to 333 m² from the literature (section 7.7). Matching the monthly delivery of 1000 L per community by water truck reported by ICBF (2025) takes 2 nodes of 1 m² with the assumed flux, 3 to 4 with the maximum calibrated flux, and 11 to 13 with the minimum calibrated flux (section 7.8).
 
 The answer is conditional: the wear reduction is robust, and the recovery advantage appears only above a daily incrustation of about 1633 to 1867 Ohm/day (a range estimated by interpolation: each combination's crossing lies somewhere between 1171 and 2365 Ohm/day). This leads to the derived hypothesis H1-Cycle 3 (docs/04, section 8.9).
 
@@ -131,6 +132,7 @@ The 33 % cap comes from the team's formulation of Conjecture 3 (narrative of Cyc
 | 0.2.0 | Robustness analyses (salinity sweep with several seeds and sensitivity), causes of non-validation, timer with ecological cap, community impact, conservative human supervision (REGLA_06) and uncertainty propagation with the calibrated fog flux. |
 | 0.3.0 | Robustness of the answer to fog flux and pulse efficacy, daily incrustation and recovery crossing in the sweep, recovery advantage in the uncertainty analysis, collector sizing, site profile and pulse efficacy in the simulation, `parametros_usados` and `GET /api/v1/sitios`. |
 | 0.4.0 | Robustness of the wear reduction to fatigue per pulse and thermal degradation, interpolated levels and separation of the recovery crossing, and fog flux calibration through the API with the site profile. Default model results do not change. |
+| 0.5.0 | Impact across 18 fog and salinity environments, classification against the crossing transition interval, and comparison with the 1000 L/month per community delivery by water truck (ICBF, 2025). Default model results do not change. |
 
 The 0.2.0 features were added incrementally while the service still reported 0.1.0; the version number was updated when the set was closed. The five-view dashboard and the interoperable data (Data Package and versioned OpenAPI) were added on top of API 0.3.0, without changes to the API.
 
@@ -153,6 +155,7 @@ The reference data and its field dictionary are in [docs/datos/](docs/datos/READ
 - Klemm, O., Schemenauer, R. S., Lummerich, A., et al. (2012). Fog as a fresh-water resource: overview and perspectives. *Ambio*, 41, 221-234. https://doi.org/10.1007/s13280-012-0247-8
 - Howard, G., Bartram, J., Williams, A., Overbo, A., Fuente, D. and Geere, J.-A. (2020). *Domestic water quantity, service level and health* (2nd ed.). World Health Organization. https://www.who.int/publications/i/item/9789240015241
 - Sphere Association (2018). *The Sphere Handbook: Humanitarian Charter and Minimum Standards in Humanitarian Response* (4th ed.), water supply standard 2.1. https://spherestandards.org
+- Instituto Colombiano de Bienestar Familiar — ICBF (2025). *Gobierno del Cambio garantiza entrega de agua potable y alimentos a comunidades wayuu en La Guajira* (Sentencia T-302 de 2017). https://www.icbf.gov.co/node/309446
 - Model, equations, sensitivity analyses and critical reading of the conjectures: [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md) (in Spanish).
 
 The project is distributed under the MIT license (`LICENSE` file).

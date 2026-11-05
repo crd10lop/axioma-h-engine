@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.schemas import AccionControl, EstadoCruce, EstadoNodo
+from backend.schemas import AccionControl, EstadoCruce, EstadoNodo, ZonaIncrustacion
 from frontend import config
 from frontend import contenido
 
@@ -458,7 +458,7 @@ def test_tesis_usa_las_cifras_de_docs_04(fragmento):
     assert fragmento in contenido.TESIS
 
 
-@pytest.mark.parametrize("enumerado", [EstadoNodo, AccionControl, EstadoCruce])
+@pytest.mark.parametrize("enumerado", [EstadoNodo, AccionControl, EstadoCruce, ZonaIncrustacion])
 def test_etiquetas_llanas_cubren_los_enumerados_de_la_api(enumerado):
     for valor in enumerado:
         assert contenido.ETIQUETAS_LLANAS[valor.value].strip()

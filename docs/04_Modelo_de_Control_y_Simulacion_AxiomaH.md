@@ -462,6 +462,57 @@ La sección 7.6 responde cuántas personas abastece una red de 8 m². El dimensi
 - **Con 45 % el área crece de forma marcada.** Con el flujo calibrado mínimo harían falta 976 m² para 50 personas, unas 122 redes de 8 nodos. Una red de 8 m² con los flujos calibrados abastecería entre 1.2 y 4.0 personas con 85 %.
 - **Alcance.** Hereda las limitaciones de la sección 7.6. Además, los flujos de referencia son los de Cabo de la Vela: para otro sitio, el rendimiento se obtiene con una simulación con su perfil (sección 8.10) y se aplica la misma fórmula.
 
+### 7.8 Impacto en distintos entornos
+
+El dimensionamiento de la sección 7.7 evalúa un solo nivel de salinidad (`DIA_NORMAL`, tasa `ALTA`) y no compara el agua producida con las fuentes actuales del territorio. El análisis de impacto por entorno (`POST /api/v1/analisis/impacto-entornos`, `ejecutar_impacto_entornos` en `backend/analisis.py` y [datos/impacto_entornos.csv](datos/impacto_entornos.csv)) extiende ese cálculo a los 18 entornos que resultan de cruzar los tres flujos de niebla de referencia con los seis niveles de carga salina del barrido (sección 8.7), y compara la producción mensual por nodo con la entrega de agua por carrotanque reportada por el Instituto Colombiano de Bienestar Familiar (ICBF, 2025) en los municipios priorizados por la Sentencia T-302 de 2017 en La Guajira (Riohacha, Maicao, Manaure y Uribia): **1000 L al mes por comunidad** (`ENTREGA_CARROTANQUE_L_COMUNIDAD_MES = 1000.0`). No crea perfiles de sitios ficticios: usa únicamente los rendimientos y las cifras con fuente documentada en [06_Referencias_y_Trazabilidad_AxiomaH.md](06_Referencias_y_Trazabilidad_AxiomaH.md).
+
+**Método.**
+
+- Para cada flujo de `FLUJOS_REFERENCIA` (`SUPUESTO` 6.0, `CALIBRADO_MAX` 1.83 y `CALIBRADO_MIN` 0.49 L/m²/h) se ejecuta `ejecutar_barrido` con 24 h, 8 nodos, humedad inicial de 85 % y semilla 42 (eficacia del pulso de 0.90).
+- Con el rendimiento del control basado en reglas (`rendimiento_neuro_l_m2_dia`) se calculan:
+  - `area_colector_m2` y `nodos_requeridos` para las personas y el estándar elegidos (`dimensionar`, sección 7.7);
+  - `litros_mes_por_nodo = rendimiento_neuro_l_m2_dia * AREA_COLECTOR_M2 * DIAS_POR_MES`, con `AREA_COLECTOR_M2 = 1.0` m² y `DIAS_POR_MES = 30`, redondeado a 4 decimales;
+  - `nodos_equivalentes_entrega = ceil(round(ENTREGA_CARROTANQUE_L_COMUNIDAD_MES / litros_mes_por_nodo, 4))`, el número de nodos de 1 m² cuya producción mensual iguala o supera los 1000 L mensuales por comunidad del ICBF.
+- Cada entorno se clasifica con `clasificar_incrustacion` según la posición de su `incrustacion_diaria_ohm` frente al intervalo de transición `[1171.06, 2365.34)` Ohm/día de la sección 8.8 (`INCRUSTACION_TRANSICION_MIN_OHM_DIA` y `INCRUSTACION_TRANSICION_MAX_OHM_DIA`, que son el menor `incrustacion_inferior_ohm` y el mayor `incrustacion_superior_ohm` entre las seis combinaciones con cruce interpolado de la robustez de la respuesta):
+  - `BAJO_TRANSICION` (`< 1171.06` Ohm/día): no se espera ventaja en recuperación frente al temporizador;
+  - `TRANSICION` (`1171.06` a `< 2365.34` Ohm/día): dentro de la banda de resolución del barrido, donde el signo depende de la eficacia del pulso y de la discretización;
+  - `SOBRE_TRANSICION` (`>= 2365.34` Ohm/día): se espera ventaja positiva en recuperación;
+  - `SIN_DATOS`: incrustación nula.
+
+**Resultados** con la configuración por defecto (50 personas, estándar `OMS_20` de 20 L por persona al día, humedad inicial de 85 %, semilla 42):
+
+| Origen del flujo | Flujo (L/m²/h) | Escenario y tasa | Carga (Ohm·m²/L) | Rendimiento (L/m²/día) | Incrustación (Ohm/día) | Zona | Ventaja recuperación (pts) | Reducción desgaste (%) | Área 50 p. (m²) | Nodos 50 p. | Litros/mes por nodo (L) | Nodos = 1000 L/mes (ICBF) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `SUPUESTO` | 6.00 | `DIA_NORMAL` / `BAJA` | 20 | 33.33 | 666.6 | `BAJO_TRANSICION` | -6.98 | 99.03 | 30.00 | 31 | 999.90 | 2 |
+| `SUPUESTO` | 6.00 | `DIA_NORMAL` / `MEDIA` | 40 | 32.26 | 1290.5 | `TRANSICION` | -3.00 | 97.46 | 31.00 | 31 | 967.86 | 2 |
+| `SUPUESTO` | 6.00 | `INCRUSTACION_SALINA_RAPIDA` / `BAJA` | 60 | 31.97 | 1918.1 | `TRANSICION` | +0.78 | 96.10 | 31.28 | 32 | 959.07 | 2 |
+| `SUPUESTO` | 6.00 | `DIA_NORMAL` / `ALTA` | 80 | 31.83 | 2546.0 | `SOBRE_TRANSICION` | +4.33 | 95.26 | 31.42 | 32 | 954.76 | 2 |
+| `SUPUESTO` | 6.00 | `INCRUSTACION_SALINA_RAPIDA` / `MEDIA` | 120 | 29.37 | 3524.7 | `SOBRE_TRANSICION` | +10.01 | 86.71 | 34.05 | 35 | 881.16 | 2 |
+| `SUPUESTO` | 6.00 | `INCRUSTACION_SALINA_RAPIDA` / `ALTA` | 240 | 23.17 | 5561.1 | `SOBRE_TRANSICION` | +22.70 | 73.94 | 43.16 | 44 | 695.13 | 2 |
+| `CALIBRADO_MAX` | 1.83 | `DIA_NORMAL` / `BAJA` | 20 | 11.34 | 226.8 | `BAJO_TRANSICION` | sin pulsos | 100.00 | 88.18 | 89 | 340.22 | 3 |
+| `CALIBRADO_MAX` | 1.83 | `DIA_NORMAL` / `MEDIA` | 40 | 10.45 | 418.1 | `BAJO_TRANSICION` | sin pulsos | 100.00 | 95.66 | 96 | 313.61 | 4 |
+| `CALIBRADO_MAX` | 1.83 | `INCRUSTACION_SALINA_RAPIDA` / `BAJA` | 60 | 10.18 | 610.7 | `BAJO_TRANSICION` | -7.32 | 99.03 | 98.24 | 99 | 305.37 | 4 |
+| `CALIBRADO_MAX` | 1.83 | `DIA_NORMAL` / `ALTA` | 80 | 10.02 | 801.4 | `BAJO_TRANSICION` | -6.09 | 99.03 | 99.83 | 100 | 300.51 | 4 |
+| `CALIBRADO_MAX` | 1.83 | `INCRUSTACION_SALINA_RAPIDA` / `MEDIA` | 120 | 9.87 | 1184.1 | `TRANSICION` | -3.67 | 97.95 | 101.34 | 102 | 296.03 | 4 |
+| `CALIBRADO_MAX` | 1.83 | `INCRUSTACION_SALINA_RAPIDA` / `ALTA` | 240 | 9.72 | 2332.0 | `TRANSICION` | +3.12 | 95.34 | 102.91 | 103 | 291.50 | 4 |
+| `CALIBRADO_MIN` | 0.49 | `DIA_NORMAL` / `BAJA` | 20 | 3.27 | 65.4 | `BAJO_TRANSICION` | sin pulsos | 100.00 | 305.74 | 306 | 98.12 | 11 |
+| `CALIBRADO_MIN` | 0.49 | `DIA_NORMAL` / `MEDIA` | 40 | 3.18 | 127.1 | `BAJO_TRANSICION` | sin pulsos | 100.00 | 314.75 | 315 | 95.31 | 11 |
+| `CALIBRADO_MIN` | 0.49 | `INCRUSTACION_SALINA_RAPIDA` / `BAJA` | 60 | 3.09 | 185.6 | `BAJO_TRANSICION` | sin pulsos | 100.00 | 323.30 | 324 | 92.79 | 11 |
+| `CALIBRADO_MIN` | 0.49 | `DIA_NORMAL` / `ALTA` | 80 | 3.02 | 241.4 | `BAJO_TRANSICION` | sin pulsos | 100.00 | 331.44 | 332 | 90.51 | 12 |
+| `CALIBRADO_MIN` | 0.49 | `INCRUSTACION_SALINA_RAPIDA` / `MEDIA` | 120 | 2.88 | 346.1 | `BAJO_TRANSICION` | sin pulsos | 100.00 | 346.74 | 347 | 86.52 | 12 |
+| `CALIBRADO_MIN` | 0.49 | `INCRUSTACION_SALINA_RAPIDA` / `ALTA` | 240 | 2.72 | 653.8 | `BAJO_TRANSICION` | -7.05 | 99.03 | 367.11 | 368 | 81.72 | 13 |
+
+**Lectura y alcance.**
+
+- **Coherencia de la regla de zonas con la simulación.** De los 18 entornos, 3 caen en `SOBRE_TRANSICION` (`SUPUESTO` con 80, 120 y 240 Ohm·m²/L), 4 en `TRANSICION` y 11 en `BAJO_TRANSICION`. Siete entornos son clasificables (están fuera de `TRANSICION` y tienen pulsos en ambos modos), y en los **7 de 7** el signo simulado de la ventaja coincide con la zona: positiva en los 3 de `SOBRE_TRANSICION` (+4.33 a +22.70 puntos) y negativa en los 4 de `BAJO_TRANSICION` con pulsos (-7.32 a -6.09 puntos). Con `CALIBRADO_MAX` y 240 Ohm·m²/L la incrustación diaria es de 2332.0 Ohm/día (ventaja de +3.12 puntos), justo por debajo del corte superior de 2365.34 Ohm/día que proviene de la combinación con eficacia de 1.00 en la sección 8.8. Con `CALIBRADO_MIN` ningún entorno supera 653.8 Ohm/día y todos quedan en `BAJO_TRANSICION`. En los 18 entornos la reducción del desgaste es de 73.94 % a 100 %.
+- **Comparación con la entrega por carrotanque del ICBF.** Para igualar la entrega mensual de referencia de 1000 L por comunidad del ICBF (2025) bastan **2 nodos de 1 m²** con el flujo supuesto (695.1 a 999.9 L/mes por nodo), **3 a 4 nodos** con el flujo calibrado máximo (291.5 a 340.2 L/mes por nodo; 4 nodos con la carga salina más alta) y **11 a 13 nodos** con el flujo calibrado mínimo (81.7 a 98.1 L/mes por nodo; 13 nodos con la carga salina más alta). En cambio, abastecer a 50 personas al nivel de acceso básico de la OMS (20 L por persona al día, es decir, 30 000 L al mes) exige de 31 a 44 nodos con el flujo supuesto, de 89 a 103 con el calibrado máximo y de 306 a 368 con el calibrado mínimo. La diferencia de escala refleja que los 1000 L mensuales por comunidad equivalen a 33.3 L por día para toda la comunidad, mientras que el estándar de la OMS para 50 personas exige 1000 L por día. El entorno con ventaja esperada en recuperación que requiere menos nodos para 50 personas es el de flujo supuesto con carga salina de 80 Ohm·m²/L (32 nodos).
+- **Límites del cálculo.** En los 18 entornos el ciclo térmico y de humedad es el de Cabo de la Vela; lo que varía es el flujo máximo de niebla y la carga salina. La cifra del ICBF (2025) es una entrega institucional por comunidad y por mes mediante carrotanque, no una dotación por persona ni el único abastecimiento posible en cada ranchería. Todos los valores de producción y desgaste provienen de la simulación del Ciclo 2 y están sujetos a las limitaciones de las secciones 7.6 y 7.7.
+
+**Preguntas abiertas para el Ciclo 3.**
+
+1. ¿Qué rendimiento de niebla (L/m²/día) y qué carga salina (Ohm·m²/L) tiene un sitio candidato medido en campo, y en cuál de las tres zonas de incrustación diaria (`BAJO_TRANSICION`, `TRANSICION` o `SOBRE_TRANSICION`) cae?
+2. En una comunidad concreta, ¿con qué frecuencia efectiva llega el carrotanque, cuántas personas comparten cada entrega de 1000 L y qué fracción de esa demanda podría cubrir de forma complementaria una batería de 4 a 13 nodos de 1 m² durante la temporada de niebla?
+
 ## 8. Lectura crítica de las conjeturas
 
 ### 8.1 Conflicto entre los indicadores de la Conjetura 1

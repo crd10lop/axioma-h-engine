@@ -8,6 +8,7 @@ import pytest
 from backend.analisis import (
     ejecutar_barrido,
     ejecutar_dimensionamiento,
+    ejecutar_impacto_entornos,
     ejecutar_incertidumbre,
     ejecutar_robustez,
     ejecutar_robustez_desgaste,
@@ -17,6 +18,7 @@ from backend.schemas import (
     CausaNoValidacion,
     DimensionamientoConfig,
     Escenario,
+    ImpactoEntornosConfig,
     IncertidumbreConfig,
     RobustezConfig,
     RobustezDesgasteConfig,
@@ -867,7 +869,7 @@ def test_lectura_robustez_con_datos_reales(robustez_real):
     assert "Es coherente con H1-Ciclo 3" in frases[2]
     assert "separados de 617 a 1165 Ohm por día, más que el rango del cruce entre combinaciones (206" in frases[3]
     assert "entre 1171 y 2365 Ohm por día" in frases[3]
-    assert frases[4].startswith("3 de 9 combinaciones: sin datos suficientes")
+    assert frases[4].startswith("3 de 9 combinaciones: sin datos")
 
 
 def test_lectura_robustez_con_separacion_menor_que_el_rango():
@@ -1110,7 +1112,7 @@ def test_estandares_de_consumo_usan_config():
 def test_resumen_dimensionamiento_con_datos_reales(dimensionamiento_real):
     frases = tr.resumen_dimensionamiento(dimensionamiento_real)
     assert frases[0] == "Consumo de 20 L por persona al día."
-    assert "flujo supuesto (6 L/m²/h)" in frases[1]
+    assert "Niebla supuesta del modelo (6.0 L/m²/h)" in frases[1]
     assert "32 nodos de 1 m²" in frases[1]
     assert "332 nodos" in frases[3]
     assert "entre 100.0 y 333.3 m²" in frases[4]
@@ -1306,3 +1308,77 @@ def impacto_sintetico():
 def test_frases_visibles_no_usan_el_nombre_neuro_simbolico(funcion, nombre_fixture, request):
     texto = " ".join(funcion(request.getfixturevalue(nombre_fixture)))
     assert "neuro-simbólico" not in texto.casefold()
+
+
+# ---------------------------------------------------------------------------
+# Impacto en distintos entornos (0.5.0)
+# ---------------------------------------------------------------------------
+@pytest.fixture(scope="module")
+def impacto_entornos_real():
+    """Impacto real en los 18 entornos serializado como respuesta de la API."""
+    return ejecutar_impacto_entornos(ImpactoEntornosConfig()).model_dump(mode="json")
+
+
+def test_configuracion_impacto_entornos():
+    carga = tr.configuracion_impacto_entornos(50, "OMS_20", 85)
+    assert carga == {
+        "personas": 50,
+        "estandar": "OMS_20",
+        "humedad_ambiente_inicial_pct": 85.0,
+    }
+    assert isinstance(carga["humedad_ambiente_inicial_pct"], float)
+
+
+def test_tabla_impacto_entornos_con_datos_reales(impacto_entornos_real):
+    tabla = tr.tabla_impacto_entornos(impacto_entornos_real)
+    assert len(tabla) == 18
+    assert list(tabla.columns) == list(tr.COLUMNAS_IMPACTO_ENTORNOS)
+    assert tabla.iloc[0]["Régimen de niebla"] == "Niebla supuesta del modelo (6.0 L/m²/h)"
+    assert tabla.iloc[0]["Zona de incrustación"] == "Sin ventaja esperada en recuperación"
+    assert tabla.iloc[3]["Zona de incrustación"] == "Ventaja esperada en recuperación"
+
+
+def test_tabla_impacto_entornos_vacia():
+    tabla = tr.tabla_impacto_entornos({})
+    assert tabla.empty
+    assert list(tabla.columns) == list(tr.COLUMNAS_IMPACTO_ENTORNOS)
+
+
+def test_lectura_impacto_entornos_con_datos_reales(impacto_entornos_real):
+    frases = tr.lectura_impacto_entornos(impacto_entornos_real)
+    assert len(frases) == 6
+    assert "En 3 de los 18 entornos se espera ventaja en recuperación" in frases[0]
+    assert "7 de los 7 entornos clasificables" in frases[0]
+    assert "2 nodos de 1 m² igualan la entrega de 1000 L al mes del ICBF y 44 nodos abastecen a 50 personas" in frases[1]
+    assert "4 nodos de 1 m² igualan la entrega de 1000 L al mes del ICBF y 103 nodos abastecen a 50 personas" in frases[2]
+    assert "13 nodos de 1 m² igualan la entrega de 1000 L al mes del ICBF y 368 nodos abastecen a 50 personas" in frases[3]
+    assert "carga salina de 80 Ω·m²/L: 32 nodos de 1 m²" in frases[4]
+    assert "¿Qué rendimiento de niebla y qué carga salina tiene un sitio candidato, y en qué zona de la incrustación diaria cae?" in frases[5]
+
+
+def test_lectura_impacto_entornos_sin_ventaja_ni_produccion():
+    resultado = {
+        "personas": 50,
+        "consumo_l_persona_dia": 20.0,
+        "entrega_referencia_l_comunidad_mes": 1000.0,
+        "entornos_con_ventaja_esperada": 0,
+        "entornos_coherentes_con_simulacion": 0,
+        "entornos_clasificables": 0,
+        "entornos": [
+            {
+                "origen_flujo": "CALIBRADO_MIN",
+                "flujo_niebla_maximo_l_m2_h": 0.49,
+                "carga_salina_ohm_l_m2": 240.0,
+                "zona_incrustacion": "SIN_DATOS",
+                "nodos_requeridos": None,
+                "nodos_equivalentes_entrega": None,
+            }
+        ],
+    }
+    frases = tr.lectura_impacto_entornos(resultado)
+    assert "sin producción de agua para dimensionar" in frases[1]
+    assert "Con ninguno de los rendimientos evaluados se espera ventaja en recuperación" in frases[2]
+
+
+def test_lectura_impacto_entornos_sin_resultados():
+    assert tr.lectura_impacto_entornos({}) == ["La estimación de impacto por entorno no devolvió resultados."]

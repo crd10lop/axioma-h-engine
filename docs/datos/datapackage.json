@@ -2,7 +2,7 @@
   "profile": "tabular-data-package",
   "name": "axioma-h-resultados-referencia",
   "title": "Resultados de referencia del modelo Axioma-H",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "licenses": [
     {
       "name": "MIT",
@@ -559,6 +559,101 @@
             "name": "humedad_inicial_pct",
             "type": "number",
             "description": "Humedad relativa a las 18:00 (%)."
+          }
+        ],
+        "missingValues": [
+          ""
+        ]
+      }
+    },
+    {
+      "name": "impacto_entornos",
+      "path": "impacto_entornos.csv",
+      "profile": "tabular-data-resource",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "schema": {
+        "fields": [
+          {
+            "name": "origen_flujo",
+            "type": "string",
+            "description": "Origen del flujo de niebla del entorno (SUPUESTO, CALIBRADO_MAX o CALIBRADO_MIN)."
+          },
+          {
+            "name": "flujo_niebla_maximo_l_m2_h",
+            "type": "number",
+            "description": "Flujo máximo de niebla de la combinación (L/m²/h)."
+          },
+          {
+            "name": "escenario",
+            "type": "string",
+            "description": "Escenario ambiental."
+          },
+          {
+            "name": "tasa_salinizacion",
+            "type": "string",
+            "description": "Tasa de salinización de la combinación simulada."
+          },
+          {
+            "name": "carga_salina_ohm_l_m2",
+            "type": "number",
+            "description": "Aumento de impedancia por litro captado por m²."
+          },
+          {
+            "name": "rendimiento_neuro_l_m2_dia",
+            "type": "number",
+            "description": "Rendimiento del control basado en reglas en el entorno (L/m² al día)."
+          },
+          {
+            "name": "incrustacion_diaria_ohm",
+            "type": "number",
+            "description": "Impedancia salina depositada por día en el control basado en reglas (Ohm/día)."
+          },
+          {
+            "name": "zona_incrustacion",
+            "type": "string",
+            "description": "Posición de la incrustación diaria frente al intervalo de transición del cruce."
+          },
+          {
+            "name": "ventaja_recuperacion_pts",
+            "type": "number",
+            "description": "Recuperación media del control basado en reglas menos la del temporizador (puntos)."
+          },
+          {
+            "name": "reduccion_desgaste_pct",
+            "type": "number",
+            "description": "Reducción del desgaste, (D_temp - D_neuro) / D_temp * 100, con las medias."
+          },
+          {
+            "name": "area_colector_m2",
+            "type": "number",
+            "description": "Área de colector requerida para abastecer a las personas indicadas (m²)."
+          },
+          {
+            "name": "nodos_requeridos",
+            "type": "integer",
+            "description": "Nodos de 1 m² requeridos para las personas y el estándar indicados."
+          },
+          {
+            "name": "litros_mes_por_nodo",
+            "type": "number",
+            "description": "Litros producidos al mes por un nodo de 1 m² (30 días)."
+          },
+          {
+            "name": "nodos_equivalentes_entrega",
+            "type": "integer",
+            "description": "Nodos de 1 m² que igualan la entrega mensual de 1000 L por comunidad del ICBF."
+          },
+          {
+            "name": "personas",
+            "type": "integer",
+            "description": "Personas que se quiere abastecer en la estimación de impacto."
+          },
+          {
+            "name": "estandar",
+            "type": "string",
+            "description": "Estándar de consumo diario por persona (OMS_20 o SPHERE_15)."
           }
         ],
         "missingValues": [

@@ -591,7 +591,50 @@ Si el rendimiento de un flujo es 0, por ejemplo sin humedad, `area_colector_m2` 
 
 Los otros dos perfiles, `CABO_DE_LA_VELA_CALIBRADO_MAX` y `CABO_DE_LA_VELA_CALIBRADO_MIN`, solo cambian el flujo a 1.83 y 0.49 L/m²/h.
 
-Los valores de los ejemplos son los que calcula el modelo y coinciden con `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md`, secciones 5.6, 5.7, 7.3, 7.7, 8.7 y 8.8. Una configuración inválida (semillas repetidas, más de 5 semillas en el barrido o más de 3 en la robustez, duración de la robustez fuera de 24 a 72 h, eficacia igual a 0 o mayor que 1, flujo fuera de (0, 20], rangos invertidos, un número de muestras fuera de 5 a 30, o personas fuera de 1 a 1000) devuelve `422`.
+#### Impacto en distintos entornos
+* **Ruta:** `POST /api/v1/analisis/impacto-entornos`
+* **Descripción:** Ejecuta el barrido de seis niveles de salinidad para cada uno de los tres flujos de referencia (`SUPUESTO` 6.0, `CALIBRADO_MAX` 1.83 y `CALIBRADO_MIN` 0.49 L/m²/h; 18 entornos en total), dimensiona el área y los nodos para las personas y el estándar elegidos, calcula los litros mensuales por nodo y los nodos de 1 m² que igualan la entrega mensual de 1000 L por comunidad del ICBF (2025), y clasifica cada entorno frente al intervalo de transición del cruce (`BAJO_TRANSICION`, `TRANSICION`, `SOBRE_TRANSICION` o `SIN_DATOS`).
+
+##### Request Payload (`ImpactoEntornosConfig`):
+Todos los campos son opcionales: `personas` (por defecto 50, de 1 a 1000), `estandar` (`OMS_20`, 20 L por persona al día, por defecto, o `SPHERE_15`, 15 L), `humedad_ambiente_inicial_pct` (por defecto 85.0, de 0 a 100) y `semilla` (por defecto 42).
+```json
+{
+  "personas": 50,
+  "estandar": "OMS_20"
+}
+```
+
+##### Response Payload (`ImpactoEntornosResultado`), primer entorno de dieciocho:
+```json
+{
+  "personas": 50,
+  "consumo_l_persona_dia": 20.0,
+  "entrega_referencia_l_comunidad_mes": 1000.0,
+  "entornos": [
+    {
+      "origen_flujo": "SUPUESTO",
+      "flujo_niebla_maximo_l_m2_h": 6.0,
+      "escenario": "DIA_NORMAL",
+      "tasa_salinizacion": "BAJA",
+      "carga_salina_ohm_l_m2": 20.0,
+      "rendimiento_neuro_l_m2_dia": 33.33,
+      "incrustacion_diaria_ohm": 666.6,
+      "zona_incrustacion": "BAJO_TRANSICION",
+      "ventaja_recuperacion_pts": -6.984,
+      "reduccion_desgaste_pct": 99.0341,
+      "area_colector_m2": 30.003,
+      "nodos_requeridos": 31,
+      "litros_mes_por_nodo": 999.9,
+      "nodos_equivalentes_entrega": 2
+    }
+  ],
+  "entornos_con_ventaja_esperada": 3,
+  "entornos_coherentes_con_simulacion": 7,
+  "entornos_clasificables": 7
+}
+```
+
+Los valores de los ejemplos son los que calcula el modelo y coinciden con `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md`, secciones 5.6, 5.7, 7.3, 7.7, 7.8, 8.7 y 8.8. Una configuración inválida (semillas repetidas, más de 5 semillas en el barrido o más de 3 en la robustez, duración de la robustez fuera de 24 a 72 h, eficacia igual a 0 o mayor que 1, flujo fuera de (0, 20], rangos invertidos, un número de muestras fuera de 5 a 30, o personas fuera de 1 a 1000) devuelve `422`.
 
 ---
 
@@ -655,8 +698,8 @@ La API y el dashboard están implementados en `backend/` (FastAPI) y `frontend/`
 - **Campos opcionales en la solicitud.** `SimulationConfig` admite `numero_nodos` (por defecto 8), `paso_minutos` (por defecto 5) y `semilla` (por defecto 42). También admite `sitio`, un perfil de sitio (`PerfilSitio`: `nombre` con el patrón `^[A-Z0-9_]{1,40}$`, `flujo_niebla_maximo_l_m2_h` en (0, 20], `temperatura_media_c` de 0 a 45, `amplitud_temperatura_c` de 0 a 15 y `amplitud_humedad_pct` de 0 a 30), y `eficacia_maxima_pulso`, en (0, 1]. Ambos son nulos por defecto, y entonces se usan los valores de Cabo de la Vela de `backend/config.py` y los resultados no cambian. El payload de la sección 3.2 sigue siendo válido sin cambios. El procedimiento para transferir el modelo a otro sitio está en `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md`, sección 8.10.
 - **Temperatura objetivo del pulso.** Es 44.0 °C. Con 45.0 °C el pulso activaría el corte térmico de la REGLA_01 (`>= 45.0`). El ejemplo de la sección 3.1 se actualizó en consecuencia.
 - **Orden de evaluación.** La REGLA_04 se evalúa antes que la REGLA_03, porque ambas comparten la condición de impedancia alta. El caudal se expresa como porcentaje del tope ecológico del 33 %.
-- **Escenarios y endpoints adicionales.** El simulador incluye el escenario `TORMENTA_DE_SAL_Y_CALOR_EXTREMO`, además de los cuatro de la sección 5. La API expone también `GET /` y `GET /api/v1/health`, y los endpoints de la sección 3.3 (`POST /api/v1/analisis/barrido-salinidad`, `POST /api/v1/analisis/robustez-respuesta`, `POST /api/v1/analisis/robustez-desgaste`, `POST /api/v1/analisis/calibracion`, `POST /api/v1/analisis/sensibilidad`, `POST /api/v1/analisis/incertidumbre`, `POST /api/v1/analisis/dimensionamiento` y `GET /api/v1/sitios`). En la versión 0.4.0 el cruce del barrido agrega `incrustacion_inferior_ohm`, `incrustacion_superior_ohm` y `separacion_ohm`, opcionales y nulos sin cruce; ningún campo existente cambia de nombre ni de significado. El de incertidumbre usa por defecto un rango de flujo de niebla calibrado contra la literatura (0.49 a 1.83 L/m²/h); el valor por defecto del modelo sigue siendo 6.0 L/m²/h.
-- **Dashboard.** Los cuatro elementos de la sección 5 están implementados. El panel de telemetría, con las cuatro tarjetas y sus barras de nivel, está en la vista "Evaluación manual de nodo". El selector de escenarios, la consola de decisiones y los gráficos comparativos están en la vista "Simulación comparativa", que incluye además el escenario `TORMENTA_DE_SAL_Y_CALOR_EXTREMO`. El dashboard agrega tres vistas que la especificación no pedía: "Investigación y guía", con la pregunta, la tesis, las conjeturas, las reglas, los supuestos clave y las perspectivas del estudio; "Respuesta a la pregunta", que consume los endpoints de robustez de la respuesta y del desgaste, barrido, incertidumbre, sensibilidad, dimensionamiento y sitios de la sección 3.3 en cuatro partes; y "Explorador de hipótesis", que simula con una eficacia del pulso y un perfil de sitio propios y calibra el flujo con el endpoint de calibración. La descripción de cada vista está en `docs/03_Funcionamiento_General_AxiomaH.md`, sección 5.
+- **Escenarios y endpoints adicionales.** El simulador incluye el escenario `TORMENTA_DE_SAL_Y_CALOR_EXTREMO`, además de los cuatro de la sección 5. La API expone también `GET /` y `GET /api/v1/health`, y los endpoints de la sección 3.3 (`POST /api/v1/analisis/barrido-salinidad`, `POST /api/v1/analisis/robustez-respuesta`, `POST /api/v1/analisis/robustez-desgaste`, `POST /api/v1/analisis/calibracion`, `POST /api/v1/analisis/sensibilidad`, `POST /api/v1/analisis/incertidumbre`, `POST /api/v1/analisis/dimensionamiento`, `POST /api/v1/analisis/impacto-entornos` y `GET /api/v1/sitios`). En la versión 0.4.0 el cruce del barrido agrega `incrustacion_inferior_ohm`, `incrustacion_superior_ohm` y `separacion_ohm`, opcionales y nulos sin cruce; en la versión 0.5.0 se agrega `POST /api/v1/analisis/impacto-entornos`, que evalúa los 18 entornos de flujo de niebla y salinidad y los compara con la entrega mensual de 1000 L por comunidad del ICBF (2025). Ningún campo existente cambia de nombre ni de significado. El de incertidumbre usa por defecto un rango de flujo de niebla calibrado contra la literatura (0.49 a 1.83 L/m²/h); el valor por defecto del modelo sigue siendo 6.0 L/m²/h.
+- **Dashboard.** Los cuatro elementos de la sección 5 están implementados. El panel de telemetría, con las cuatro tarjetas y sus barras de nivel, está en la vista "Evaluación manual de nodo". El selector de escenarios, la consola de decisiones y los gráficos comparativos están en la vista "Simulación comparativa", que incluye además el escenario `TORMENTA_DE_SAL_Y_CALOR_EXTREMO`. El dashboard agrega tres vistas que la especificación no pedía: "Investigación y guía", con la pregunta, la tesis, las conjeturas, las reglas, los supuestos clave y las perspectivas del estudio; "Respuesta a la pregunta", que consume los endpoints de robustez de la respuesta y del desgaste, barrido, incertidumbre, sensibilidad, dimensionamiento, impacto en distintos entornos y sitios de la sección 3.3 en cuatro partes; y "Explorador de hipótesis", que simula con una eficacia del pulso y un perfil de sitio propios y calibra el flujo con el endpoint de calibración. La descripción de cada vista está en `docs/03_Funcionamiento_General_AxiomaH.md`, sección 5.
 - **Contrato OpenAPI.** El esquema completo de la API, con todos los endpoints y sus límites de validación, se publica en `docs/api/openapi.json`, generado desde `backend.main.app` por `scripts/generar_resultados_referencia.py`. Su uso desde otros sistemas está en `docs/05_Despliegue_y_Operacion_AxiomaH.md`, sección 7.
 - **Valores de ejemplo.** Los valores numéricos de la respuesta de ejemplo de la sección 3.2 son ilustrativos. Los resultados calculados por el modelo para ese payload están en `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md`, sección 5.1.
 - **Despliegue.** La API y el dashboard están desplegados en Render, en el plan gratuito, como los servicios web `axioma-h-api` (https://axioma-h-api.onrender.com) y `axioma-h-dashboard` (https://axioma-h-dashboard.onrender.com), definidos en `render.yaml`. Render despliega desde `main` solo cuando las pruebas y la Quality Gate de SonarQube Cloud están en verde. El dashboard obtiene la URL de la API de la variable `AXIOMA_API_URL`; los orígenes CORS adicionales se configuran con `AXIOMA_CORS_ORIGINS`. La configuración, la verificación y la operación están en `docs/05_Despliegue_y_Operacion_AxiomaH.md`.

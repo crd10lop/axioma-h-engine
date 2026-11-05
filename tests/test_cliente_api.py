@@ -175,6 +175,7 @@ def test_api_url_se_toma_del_entorno(monkeypatch):
         (cliente_api.dimensionar, "/api/v1/analisis/dimensionamiento"),
         (cliente_api.ejecutar_robustez_desgaste, "/api/v1/analisis/robustez-desgaste"),
         (cliente_api.calibrar_flujo, "/api/v1/analisis/calibracion"),
+        (cliente_api.ejecutar_impacto_entornos, "/api/v1/analisis/impacto-entornos"),
     ],
 )
 def test_analisis_usa_su_ruta_y_timeout(request_simulado, funcion, ruta):

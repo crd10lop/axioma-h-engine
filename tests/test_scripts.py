@@ -146,6 +146,37 @@ def test_filas_robustez_desgaste_una_fila_por_combinacion():
     assert list(filas[0])[-1] == generador.CAMPO_HUMEDAD
 
 
+def test_filas_impacto_entornos_una_fila_por_entorno():
+    impacto = {
+        "personas": 50,
+        "entornos": [
+            {
+                "origen_flujo": origen,
+                "flujo_niebla_maximo_l_m2_h": 6.0,
+                "escenario": "DIA_NORMAL",
+                "tasa_salinizacion": "BAJA",
+                "carga_salina_ohm_l_m2": 20.0,
+                "rendimiento_neuro_l_m2_dia": 31.83,
+                "incrustacion_diaria_ohm": 636.6,
+                "zona_incrustacion": "BAJO_TRANSICION",
+                "ventaja_recuperacion_pts": None,
+                "reduccion_desgaste_pct": 89.2,
+                "area_colector_m2": 31.42,
+                "nodos_requeridos": 32,
+                "litros_mes_por_nodo": 954.9,
+                "nodos_equivalentes_entrega": 2,
+            }
+            for origen in ("SUPUESTO", "CALIBRADO_MAX")
+        ],
+    }
+    filas = generador.filas_impacto_entornos(impacto)
+    assert len(filas) == 2
+    assert filas[1]["origen_flujo"] == "CALIBRADO_MAX"
+    assert filas[0]["ventaja_recuperacion_pts"] == ""
+    assert filas[0]["personas"] == 50
+    assert filas[0]["estandar"] == "OMS_20"
+
+
 # ---------------------------------------------------------------------------
 # Interoperabilidad: diccionario de campos, Data Package y OpenAPI
 # ---------------------------------------------------------------------------

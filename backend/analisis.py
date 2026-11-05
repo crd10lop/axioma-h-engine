@@ -28,9 +28,12 @@ from backend.schemas import (
     DimensionamientoConfig,
     DimensionamientoResultado,
     DimensionPorFlujo,
+    EntornoImpacto,
     Escenario,
     EstadoCruce,
     EstandarConsumo,
+    ImpactoEntornosConfig,
+    ImpactoEntornosResultado,
     IncertidumbreConfig,
     IncertidumbreResultado,
     MuestraIncertidumbre,
@@ -47,6 +50,7 @@ from backend.schemas import (
     SensibilidadResultado,
     SimulationConfig,
     TasaSalinizacion,
+    ZonaIncrustacion,
 )
 from backend.simulador import (
     DiagnosticoModo,
@@ -819,4 +823,103 @@ def ejecutar_dimensionamiento(cfg: DimensionamientoConfig) -> DimensionamientoRe
         dimensiones=[_dimension_por_flujo(cfg, consumo, origen, flujo) for origen, flujo in FLUJOS_REFERENCIA],
         area_literatura_min_m2=area_min,
         area_literatura_max_m2=area_max,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Impacto en distintos entornos y comparación con abastecimiento por carrotanque
+# ---------------------------------------------------------------------------
+_ZONAS_CLASIFICABLES = (ZonaIncrustacion.BAJO_TRANSICION, ZonaIncrustacion.SOBRE_TRANSICION)
+
+
+def clasificar_incrustacion(incrustacion: float | None) -> ZonaIncrustacion:
+    """Clasifica la incrustación diaria frente al intervalo de transición del cruce (docs/04, sección 8.8)."""
+    if incrustacion is None:
+        return ZonaIncrustacion.SIN_DATOS
+    if incrustacion < config.INCRUSTACION_TRANSICION_MIN_OHM_DIA:
+        return ZonaIncrustacion.BAJO_TRANSICION
+    if incrustacion >= config.INCRUSTACION_TRANSICION_MAX_OHM_DIA:
+        return ZonaIncrustacion.SOBRE_TRANSICION
+    return ZonaIncrustacion.TRANSICION
+
+
+def _produccion_mensual_nodo(rendimiento: float | None) -> tuple[float | None, int | None]:
+    """Litros al mes de un nodo de 1 m² y nodos necesarios para igualar la entrega mensual por carrotanque."""
+    if rendimiento is None or rendimiento <= 0:
+        return None, None
+    litros_mes = round(rendimiento * config.AREA_COLECTOR_M2 * config.DIAS_POR_MES, _DECIMALES)
+    nodos_entrega = math.ceil(round(config.ENTREGA_CARROTANQUE_L_COMUNIDAD_MES / litros_mes, _DECIMALES))
+    return litros_mes, nodos_entrega
+
+
+def _entorno_impacto(
+    origen: str, flujo: float, punto: PuntoBarrido, personas: int, consumo: float
+) -> EntornoImpacto:
+    """Construye el resumen de impacto de un entorno a partir de un punto del barrido."""
+    rendimiento = punto.rendimiento_neuro_l_m2_dia_media
+    incrustacion = punto.incrustacion_diaria_ohm_media
+    area, nodos = dimensionar(personas, consumo, rendimiento or 0.0)
+    litros_mes, nodos_entrega = _produccion_mensual_nodo(rendimiento)
+    return EntornoImpacto(
+        origen_flujo=origen,
+        flujo_niebla_maximo_l_m2_h=flujo,
+        escenario=punto.escenario,
+        tasa_salinizacion=punto.tasa_salinizacion,
+        carga_salina_ohm_l_m2=punto.carga_salina_ohm_l_m2,
+        rendimiento_neuro_l_m2_dia=rendimiento,
+        incrustacion_diaria_ohm=incrustacion,
+        zona_incrustacion=clasificar_incrustacion(incrustacion),
+        ventaja_recuperacion_pts=punto.ventaja_recuperacion_pts,
+        reduccion_desgaste_pct=punto.reduccion_desgaste_pct,
+        area_colector_m2=area,
+        nodos_requeridos=nodos,
+        litros_mes_por_nodo=litros_mes,
+        nodos_equivalentes_entrega=nodos_entrega,
+    )
+
+
+def _es_clasificable(entorno: EntornoImpacto) -> bool:
+    """Indica si el entorno cae fuera de la transición y tiene ventaja de recuperación calculada."""
+    return entorno.zona_incrustacion in _ZONAS_CLASIFICABLES and entorno.ventaja_recuperacion_pts is not None
+
+
+def _es_coherente_con_simulacion(entorno: EntornoImpacto) -> bool:
+    """Indica si la ventaja simulada coincide con lo esperado en la zona del entorno."""
+    if not _es_clasificable(entorno):
+        return False
+    supera = _neuro_supera(entorno.ventaja_recuperacion_pts)  # type: ignore[arg-type]
+    return supera if entorno.zona_incrustacion == ZonaIncrustacion.SOBRE_TRANSICION else not supera
+
+
+def ejecutar_impacto_entornos(cfg: ImpactoEntornosConfig) -> ImpactoEntornosResultado:
+    """Evalúa el impacto del control basado en reglas en los 18 entornos de flujo de niebla y salinidad.
+
+    Para cada flujo de `FLUJOS_REFERENCIA` ejecuta el barrido de seis niveles de
+    salinidad y traduce cada punto en área de colector, nodos requeridos para la
+    comunidad y el estándar elegidos, producción mensual por nodo, nodos que
+    igualan la entrega mensual por carrotanque del ICBF (2025) y zona de la
+    incrustación diaria frente al intervalo de transición del cruce. No modifica
+    `backend.config`.
+    """
+    consumo = CONSUMO_POR_ESTANDAR[cfg.estandar]
+    entornos: list[EntornoImpacto] = []
+    for origen, flujo in FLUJOS_REFERENCIA:
+        barrido = ejecutar_barrido(
+            BarridoConfig(
+                humedad_ambiente_inicial_pct=cfg.humedad_ambiente_inicial_pct,
+                semillas=[cfg.semilla],
+                flujo_niebla_maximo_l_m2_h=flujo,
+            )
+        )
+        entornos.extend(_entorno_impacto(origen, flujo, punto, cfg.personas, consumo) for punto in barrido.puntos)
+    return ImpactoEntornosResultado(
+        personas=cfg.personas,
+        consumo_l_persona_dia=consumo,
+        entrega_referencia_l_comunidad_mes=config.ENTREGA_CARROTANQUE_L_COMUNIDAD_MES,
+        entornos=entornos,
+        entornos_con_ventaja_esperada=sum(
+            1 for entorno in entornos if entorno.zona_incrustacion == ZonaIncrustacion.SOBRE_TRANSICION
+        ),
+        entornos_coherentes_con_simulacion=sum(1 for entorno in entornos if _es_coherente_con_simulacion(entorno)),
+        entornos_clasificables=sum(1 for entorno in entornos if _es_clasificable(entorno)),
     )

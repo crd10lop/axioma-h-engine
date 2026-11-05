@@ -173,6 +173,9 @@ def inicializar_estado() -> None:
         "dim_estandar": "OMS_20",
         "dim_escenario": ESCENARIO_INICIAL,
         "dim_humedad": 85.0,
+        "imp_personas": 50,
+        "imp_estandar": "OMS_20",
+        "imp_humedad": 85.0,
         "exp_escenario": ESCENARIO_INICIAL,
         "exp_tasa": "ALTA",
         "exp_humedad": 85.0,
@@ -211,6 +214,8 @@ def inicializar_estado() -> None:
         "error_calibracion": None,
         "resultado_dimensionamiento": None,
         "error_dimensionamiento": None,
+        "resultado_impacto_entornos": None,
+        "error_impacto_entornos": None,
         "resultado_explorador": None,
         "error_explorador": None,
     }
@@ -266,6 +271,12 @@ def calibracion_en_cache(carga: dict) -> dict:
 def dimensionamiento_en_cache(carga: dict) -> dict:
     """Ejecuta el dimensionamiento, o devuelve la respuesta guardada para la misma carga."""
     return cliente_api.dimensionar(carga)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def impacto_entornos_en_cache(carga: dict) -> dict:
+    """Estima el impacto por entorno, o devuelve la respuesta guardada para la misma carga."""
+    return cliente_api.ejecutar_impacto_entornos(carga)
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -1082,6 +1093,35 @@ def seccion_dimensionamiento(api_disponible: bool) -> None:
     st.markdown(contenido.lista_markdown(tr.resumen_dimensionamiento(resultado)))
 
 
+def seccion_impacto_entornos(api_disponible: bool) -> None:
+    """Impacto en distintos entornos de niebla y salinidad y comparación con entrega por carrotanque."""
+    st.markdown("**Impacto en distintos entornos**")
+    st.caption(
+        "Combina tres regímenes de niebla y seis niveles de salinidad. La entrega de referencia es la del ICBF "
+        "por carrotanque en La Guajira: 1000 L al mes por comunidad (ICBF, 2025)."
+    )
+    columnas = st.columns(4)
+    personas = columnas[0].number_input("Personas", 1, 1000, step=1, key="imp_personas")
+    estandar = columnas[1].selectbox(
+        "Consumo", list(tr.ESTANDARES_CONSUMO), format_func=tr.ESTANDARES_CONSUMO.get, key="imp_estandar"
+    )
+    humedad = columnas[2].slider(ETIQUETA_HUMEDAD, 0.0, 100.0, step=0.5, key="imp_humedad")
+    columnas[3].write("")
+    if columnas[3].button("Estimar impacto por entorno", disabled=not api_disponible, width="stretch"):
+        carga = tr.configuracion_impacto_entornos(personas, estandar, humedad)
+        ejecutar_analisis(
+            impacto_entornos_en_cache, carga, "impacto_entornos", "Estimando el impacto en los 18 entornos..."
+        )
+    if st.session_state.error_impacto_entornos is not None:
+        mostrar_error(st.session_state.error_impacto_entornos)
+    resultado = st.session_state.resultado_impacto_entornos
+    if resultado is None:
+        st.info("Indique el número de personas y presione Estimar impacto por entorno.")
+        return
+    st.dataframe(tr.tabla_impacto_entornos(resultado), hide_index=True, width="stretch")
+    st.markdown(contenido.lista_markdown(tr.lectura_impacto_entornos(resultado)))
+
+
 def grafico_barrido(df: pd.DataFrame, variable: str, titulo: str, eje_y: str, referencia=None):
     """Media por modo frente a la carga salina, con una banda de +/- una desviación estándar."""
     datos = df[df["Variable"] == variable]
@@ -1262,6 +1302,7 @@ def vista_respuesta(api_disponible: bool) -> None:
     seccion_sensibilidad(api_disponible)
     encabezado_parte("personas")
     seccion_dimensionamiento(api_disponible)
+    seccion_impacto_entornos(api_disponible)
     boton_siguiente_vista(VISTA_RESPUESTA)
 
 

@@ -143,3 +143,13 @@ EFICACIA_PULSO_RANGO_MAX = 1.00  # Supuesto: rango plausible alrededor de 0.90, 
 # Grilla de la robustez del desgaste. No cambian FATIGA_POR_PULSO_PCT ni DEGRADACION_TERMICA_PCT_POR_C_MIN.
 FATIGAS_ROBUSTEZ_PCT = (0.01, 0.02, 0.04)  # % por ciclo térmico. Supuesto: mitad, valor supuesto y doble.
 DEGRADACIONES_TERMICAS_ROBUSTEZ = (0.025, 0.05, 0.10)  # %/(°C·min). Supuesto: mitad, valor supuesto y doble.
+
+# ---------------------------------------------------------------------------
+# Impacto en distintos entornos y comparación con abastecimiento por carrotanque.
+# ---------------------------------------------------------------------------
+ENTREGA_CARROTANQUE_L_COMUNIDAD_MES = 1000.0  # Referencia: ICBF (2025), entrega mensual por comunidad en La Guajira.
+DIAS_POR_MES = 30  # Criterio del equipo: mes de 30 días para convertir la entrega mensual.
+# Resultado del modelo: nivel inferior más bajo entre los que se interpola el cruce (docs/04, sección 8.8, semilla 42).
+INCRUSTACION_TRANSICION_MIN_OHM_DIA = 1171.06
+# Resultado del modelo: nivel superior más alto entre los que se interpola el cruce (docs/04, sección 8.8, semilla 42).
+INCRUSTACION_TRANSICION_MAX_OHM_DIA = 2365.34
