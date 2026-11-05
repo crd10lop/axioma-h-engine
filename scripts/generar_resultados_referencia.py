@@ -16,7 +16,12 @@ Escribe en docs/datos/:
   punto del barrido;
 - resultados_completos.json: comparativa, conjeturas y detalle de verificación
   de cada corrida, el barrido completo, el resumen de la robustez y las
-  condiciones de ejecución.
+  condiciones de ejecución;
+- datapackage.json: descriptor Frictionless Data Package de los tres CSV, con
+  el esquema de cada campo tomado de DICCIONARIO_CAMPOS.
+
+Escribe además docs/api/openapi.json, el contrato OpenAPI de la API generado
+desde backend.main.app.
 
 La salida es determinista: ejecutar el script dos veces produce archivos
 idénticos. Uso, desde la raíz del proyecto:
@@ -24,8 +29,8 @@ idénticos. Uso, desde la raíz del proyecto:
     python scripts/generar_resultados_referencia.py
 
 Con --comprobar, el script genera los archivos en un directorio temporal, los
-compara byte a byte con los de docs/datos/ y termina con código 1 si alguno
-difiere o falta, sin modificar docs/datos/:
+compara byte a byte con los de docs/datos/ y docs/api/ y termina con código 1
+si alguno difiere o falta, sin modificar esas carpetas:
 
     python scripts/generar_resultados_referencia.py --comprobar
 """
@@ -43,7 +48,7 @@ if str(RAIZ_PROYECTO) not in sys.path:
     sys.path.insert(0, str(RAIZ_PROYECTO))
 
 from backend.analisis import ejecutar_barrido, ejecutar_robustez  # noqa: E402
-from backend.main import VERSION_SERVICIO  # noqa: E402
+from backend.main import VERSION_SERVICIO, app  # noqa: E402
 from backend.schemas import (  # noqa: E402
     BarridoConfig,
     Escenario,
@@ -54,11 +59,17 @@ from backend.schemas import (  # noqa: E402
 from backend.simulador import ejecutar_simulacion  # noqa: E402
 
 CARPETA_POR_DEFECTO = RAIZ_PROYECTO / "docs" / "datos"
+CARPETA_API = RAIZ_PROYECTO / "docs" / "api"
+CODIFICACION = "utf-8"
+ARCHIVO_OPENAPI = "openapi.json"
+ARCHIVO_DATAPACKAGE = "datapackage.json"
 ARCHIVO_ESCENARIOS = "resultados_escenarios.csv"
 ARCHIVO_BARRIDO = "barrido_salinidad.csv"
 ARCHIVO_JSON = "resultados_completos.json"
 ARCHIVO_ROBUSTEZ = "robustez_respuesta.csv"
-ARCHIVOS = (ARCHIVO_ESCENARIOS, ARCHIVO_BARRIDO, ARCHIVO_JSON, ARCHIVO_ROBUSTEZ)
+ARCHIVOS = (ARCHIVO_ESCENARIOS, ARCHIVO_BARRIDO, ARCHIVO_JSON, ARCHIVO_ROBUSTEZ, ARCHIVO_DATAPACKAGE)
+ARCHIVOS_API = (ARCHIVO_OPENAPI,)
+CSV = (ARCHIVO_ESCENARIOS, ARCHIVO_BARRIDO, ARCHIVO_ROBUSTEZ)
 
 HUMEDADES_PCT = (45.0, 85.0)
 DURACION_HORAS = 24
@@ -111,6 +122,135 @@ INFORMATIVOS = [
     ("c2_impedancia_tras_pulso_ohm", "c2", "impedancia_promedio_tras_pulso_ohms"),
     ("c3_rendimiento_temporizador_l_m2_noche", "c3", "rendimiento_nocturno_temporizador_l_m2_noche"),
 ]
+
+
+# ---------------------------------------------------------------------------
+# Diccionario único de campos de los CSV. docs/datos/README.md lo reproduce y una
+# prueba verifica que cada descripción aparezca allí. Las claves con el prefijo
+# <modo>_ valen para los tres modos de MODOS.
+# ---------------------------------------------------------------------------
+TIPO_NUMERO = "number"
+TIPO_ENTERO = "integer"
+TIPO_TEXTO = "string"
+TIPO_LOGICO = "boolean"
+PREFIJO_MODO = "<modo>_"
+NOMBRES_MODO = {
+    "neuro": "Control basado en reglas (modo neuro-simbólico)",
+    "temporizador": "Temporizador fijo (fracción 0.45)",
+    "temporizador_tope": "Temporizador con tope ecológico (fracción 0.33)",
+}
+DICCIONARIO_CAMPOS: dict[str, tuple[str, str]] = {
+    "escenario": (TIPO_TEXTO, "Escenario ambiental."),
+    CAMPO_HUMEDAD: (TIPO_NUMERO, "Humedad relativa a las 18:00 (%)."),
+    "<modo>_litros": (TIPO_NUMERO, "Agua captada por los 8 nodos (L)."),
+    "<modo>_pulsos": (TIPO_ENTERO, "Pulsos resistivos ejecutados."),
+    "<modo>_energia_wh": (TIPO_NUMERO, "Energía consumida, pulsos y electrónica (Wh)."),
+    "<modo>_integridad_final_pct": (TIPO_NUMERO, "Integridad promedio de las membranas al final (%)."),
+    "<modo>_degradacion_pct": (TIPO_NUMERO, "Degradación acumulada, 100 - integridad final (%)."),
+    "<modo>_violaciones": (TIPO_ENTERO, "Episodios de extracción fuera del límite ecológico."),
+    "<modo>_recuperacion_pct": (TIPO_NUMERO, "Conductancia relativa promedio tras cada pulso (%)."),
+    "<modo>_personas_acceso_basico": (
+        TIPO_NUMERO,
+        "Informativo: personas abastecidas con 20 L por persona al día (acceso básico de la OMS).",
+    ),
+    "<modo>_rendimiento_l_m2_dia": (TIPO_NUMERO, "Informativo: litros por día y por m² de colector de la red (8 m²)."),
+    "c1_validada": (TIPO_LOGICO, "Estado de la Conjetura 1 (True o False)."),
+    "c2_validada": (TIPO_LOGICO, "Estado de la Conjetura 2 (True o False)."),
+    "c3_validada": (TIPO_LOGICO, "Estado de la Conjetura 3 (True o False)."),
+    "c1_recuperacion_pct": (TIPO_NUMERO, "Indicador de la Conjetura 1: recuperación de caudal (umbral >= 90 %)."),
+    "c1_ahorro_energia_pct": (TIPO_NUMERO, "Indicador de la Conjetura 1: ahorro de energía en pulsos (umbral >= 35 %)."),
+    "c2_tiempo_regeneracion_s": (TIPO_NUMERO, "Indicador de la Conjetura 2: tiempo de regeneración (umbral < 120 s)."),
+    "c2_perdida_termica_pct": (TIPO_NUMERO, "Indicador de la Conjetura 2: pérdida de integridad térmica (umbral 0 %)."),
+    "c3_violaciones": (TIPO_NUMERO, "Indicador de la Conjetura 3: violaciones ecológicas (umbral 0)."),
+    "c3_rendimiento_nocturno_l_m2_noche": (
+        TIPO_NUMERO,
+        "Indicador de la Conjetura 3: rendimiento nocturno (umbral >= 12 L/m²/noche).",
+    ),
+    "c1_reduccion_degradacion_pct": (TIPO_NUMERO, "Informativo: reducción de la degradación frente al temporizador (%)."),
+    "c2_pulsos_regenerados": (TIPO_ENTERO, "Informativo: pulsos que alcanzaron 1100 Ohm."),
+    "c2_pulsos_totales": (TIPO_ENTERO, "Informativo: pulsos totales del control basado en reglas."),
+    "c2_t95_promedio_s": (TIPO_NUMERO, "Informativo: tiempo hasta el 95 % de la remoción de cada pulso (s)."),
+    "c2_impedancia_tras_pulso_ohm": (TIPO_NUMERO, "Informativo: impedancia promedio al terminar cada pulso (Ohm)."),
+    "c3_rendimiento_temporizador_l_m2_noche": (TIPO_NUMERO, "Informativo: rendimiento nocturno del temporizador fijo."),
+    "c1_causas": (TIPO_TEXTO, "Causas de no validación de la Conjetura 1, separadas por punto y coma."),
+    "c2_causas": (TIPO_TEXTO, "Causas de no validación de la Conjetura 2, separadas por punto y coma."),
+    "c3_causas": (TIPO_TEXTO, "Causas de no validación de la Conjetura 3, separadas por punto y coma."),
+    "tasa_salinizacion": (TIPO_TEXTO, "Tasa de salinización de la combinación simulada."),
+    "carga_salina_ohm_l_m2": (TIPO_NUMERO, "Aumento de impedancia por litro captado por m²."),
+    "n_semillas": (TIPO_ENTERO, "Corridas promediadas, una por semilla."),
+    "recuperacion_neuro_media": (TIPO_NUMERO, "Media de la recuperación tras pulso del control basado en reglas (%)."),
+    "recuperacion_neuro_desv": (TIPO_NUMERO, "Desviación estándar muestral de la recuperación del control basado en reglas."),
+    "recuperacion_temporizador_media": (TIPO_NUMERO, "Media de la recuperación tras pulso del temporizador fijo (%)."),
+    "recuperacion_temporizador_desv": (TIPO_NUMERO, "Desviación estándar muestral de la recuperación del temporizador fijo."),
+    "degradacion_neuro_media": (TIPO_NUMERO, "Media de la degradación acumulada del control basado en reglas (%)."),
+    "degradacion_neuro_desv": (TIPO_NUMERO, "Desviación estándar muestral de la degradación del control basado en reglas."),
+    "degradacion_temporizador_media": (TIPO_NUMERO, "Media de la degradación acumulada del temporizador fijo (%)."),
+    "degradacion_temporizador_desv": (TIPO_NUMERO, "Desviación estándar muestral de la degradación del temporizador fijo."),
+    "reduccion_desgaste_pct": (TIPO_NUMERO, "Reducción del desgaste, (D_temp - D_neuro) / D_temp * 100, con las medias."),
+    "rendimiento_neuro_l_m2_dia_media": (TIPO_NUMERO, "Media del rendimiento del control basado en reglas (L/m² al día)."),
+    "incrustacion_diaria_ohm_media": (
+        TIPO_NUMERO,
+        "Media de la carga salina por el rendimiento del control basado en reglas (Ohm/día).",
+    ),
+    "ventaja_recuperacion_pts": (
+        TIPO_NUMERO,
+        "Recuperación media del control basado en reglas menos la del temporizador (puntos).",
+    ),
+    "pulsos_neuro_media": (TIPO_NUMERO, "Media de los pulsos del control basado en reglas en toda la red."),
+    "flujo_niebla_maximo_l_m2_h": (TIPO_NUMERO, "Flujo máximo de niebla de la combinación (L/m²/h)."),
+    "eficacia_maxima_pulso": (TIPO_NUMERO, "Eficacia máxima del pulso de la combinación."),
+    "cruce_estado": (TIPO_TEXTO, "Estado del cruce de la ventaja en recuperación frente a la incrustación diaria."),
+    "cruce_incrustacion_diaria_ohm": (TIPO_NUMERO, "Incrustación diaria interpolada donde la ventaja vale 0 (Ohm/día)."),
+    "cruce_carga_salina_ohm_l_m2": (TIPO_NUMERO, "Carga salina interpolada donde la ventaja vale 0 (Ohm por L/m²)."),
+}
+
+
+def campo_csv(columna: str) -> dict:
+    """Esquema Frictionless de una columna: nombre, tipo y descripción de DICCIONARIO_CAMPOS.
+
+    Las columnas que empiezan con un prefijo de MODOS usan la clave <modo>_ y anteponen el nombre del modo
+    a la descripción. Lanza ValueError si la columna no está en el diccionario.
+    """
+    if columna in DICCIONARIO_CAMPOS:
+        tipo, descripcion = DICCIONARIO_CAMPOS[columna]
+        return {"name": columna, "type": tipo, "description": descripcion}
+    # El prefijo más largo primero, para que temporizador_tope no se confunda con temporizador.
+    for prefijo in sorted(MODOS, key=len, reverse=True):
+        clave = f"{PREFIJO_MODO}{columna.removeprefix(prefijo + '_')}"
+        if columna.startswith(prefijo + "_") and clave in DICCIONARIO_CAMPOS:
+            tipo, descripcion = DICCIONARIO_CAMPOS[clave]
+            return {"name": columna, "type": tipo, "description": f"{NOMBRES_MODO[prefijo]}. {descripcion}"}
+    raise ValueError(f"La columna {columna!r} no está en DICCIONARIO_CAMPOS.")
+
+
+def descriptor_datapackage(columnas_por_archivo: dict[str, list[str]]) -> dict:
+    """Descriptor Frictionless Data Package con un recurso por CSV y el esquema de cada campo."""
+    return {
+        "profile": "tabular-data-package",
+        "name": "axioma-h-resultados-referencia",
+        "title": "Resultados de referencia del modelo Axioma-H",
+        "version": VERSION_SERVICIO,
+        "licenses": [{"name": "MIT", "path": "https://opensource.org/licenses/MIT", "title": "MIT License"}],
+        "resources": [
+            {
+                "name": Path(nombre).stem,
+                "path": nombre,
+                "profile": "tabular-data-resource",
+                "format": "csv",
+                "mediatype": "text/csv",
+                "encoding": CODIFICACION,
+                "schema": {"fields": [campo_csv(columna) for columna in columnas], "missingValues": [""]},
+            }
+            for nombre, columnas in columnas_por_archivo.items()
+        ],
+    }
+
+
+def escribir_json(ruta: Path, datos: dict) -> None:
+    """Escribe un JSON UTF-8 con sangría de 2 espacios y fin de línea LF."""
+    with ruta.open("w", encoding=CODIFICACION, newline="\n") as archivo:
+        json.dump(datos, archivo, ensure_ascii=False, indent=2)
+        archivo.write("\n")
 
 
 def _vacio_si_nulo(valor):
@@ -183,7 +323,7 @@ def filas_robustez(robustez: dict) -> list[dict]:
 
 def escribir_csv(ruta: Path, filas: list[dict]) -> None:
     """Escribe filas homogéneas en CSV UTF-8 con encabezado."""
-    with ruta.open("w", encoding="utf-8", newline="") as archivo:
+    with ruta.open("w", encoding=CODIFICACION, newline="") as archivo:
         # Fin de línea LF para que el archivo sea idéntico en cualquier sistema operativo.
         escritor = csv.DictWriter(archivo, fieldnames=list(filas[0]), lineterminator="\n")
         escritor.writeheader()
@@ -211,14 +351,16 @@ def condiciones() -> dict:
     }
 
 
-def generar(carpeta: Path = CARPETA_POR_DEFECTO) -> list[Path]:
-    """Ejecuta el modelo y escribe los cuatro archivos; devuelve sus rutas.
+def generar(carpeta: Path = CARPETA_POR_DEFECTO, carpeta_api: Path = CARPETA_API) -> list[Path]:
+    """Ejecuta el modelo, escribe los datos y el contrato OpenAPI y devuelve sus rutas.
 
-    La carpeta de destino solo la fija el propio script: la constante
-    CARPETA_POR_DEFECTO o un directorio de tempfile.TemporaryDirectory(). Nunca
-    proviene de la línea de comandos ni de variables de entorno.
+    Las carpetas de destino solo las fija el propio script: las constantes
+    CARPETA_POR_DEFECTO y CARPETA_API o directorios de
+    tempfile.TemporaryDirectory(). Nunca provienen de la línea de comandos ni de
+    variables de entorno.
     """
     carpeta.mkdir(parents=True, exist_ok=True)
+    carpeta_api.mkdir(parents=True, exist_ok=True)
     corridas = ejecutar_escenarios()
     barrido = ejecutar_barrido(
         BarridoConfig(humedad_ambiente_inicial_pct=HUMEDAD_BARRIDO_PCT, semillas=SEMILLAS_BARRIDO)
@@ -228,9 +370,19 @@ def generar(carpeta: Path = CARPETA_POR_DEFECTO) -> list[Path]:
     ).model_dump(mode="json")
 
     rutas = [carpeta / nombre for nombre in ARCHIVOS]
-    escribir_csv(rutas[0], [fila_escenario(escenario, humedad, r) for escenario, humedad, r in corridas])
-    escribir_csv(rutas[1], [{**punto, CAMPO_HUMEDAD: HUMEDAD_BARRIDO_PCT} for punto in barrido["puntos"]])
-    escribir_csv(rutas[3], filas_robustez(robustez))
+    filas_csv = {
+        ARCHIVO_ESCENARIOS: [fila_escenario(escenario, humedad, r) for escenario, humedad, r in corridas],
+        ARCHIVO_BARRIDO: [{**punto, CAMPO_HUMEDAD: HUMEDAD_BARRIDO_PCT} for punto in barrido["puntos"]],
+        ARCHIVO_ROBUSTEZ: filas_robustez(robustez),
+    }
+    for nombre, filas in filas_csv.items():
+        escribir_csv(carpeta / nombre, filas)
+    escribir_json(
+        carpeta / ARCHIVO_DATAPACKAGE,
+        descriptor_datapackage({nombre: list(filas[0]) for nombre, filas in filas_csv.items()}),
+    )
+    ruta_openapi = carpeta_api / ARCHIVO_OPENAPI
+    escribir_json(ruta_openapi, app.openapi())
 
     completos = {
         "condiciones": condiciones(),
@@ -250,20 +402,20 @@ def generar(carpeta: Path = CARPETA_POR_DEFECTO) -> list[Path]:
             clave: valor for clave, valor in robustez.items() if clave != "combinaciones"
         },
     }
-    with rutas[2].open("w", encoding="utf-8", newline="\n") as archivo:
-        json.dump(completos, archivo, ensure_ascii=False, indent=2)
-        archivo.write("\n")
-    return rutas
+    escribir_json(carpeta / ARCHIVO_JSON, completos)
+    return rutas + [ruta_openapi]
 
 
-def comparar_con_referencia(carpeta_generada: Path, carpeta_referencia: Path = CARPETA_POR_DEFECTO) -> list[str]:
-    """Compara byte a byte los archivos de ARCHIVOS en ambas carpetas.
+def comparar_con_referencia(
+    carpeta_generada: Path, carpeta_referencia: Path = CARPETA_POR_DEFECTO, nombres: tuple[str, ...] = ARCHIVOS
+) -> list[str]:
+    """Compara byte a byte los archivos indicados (por defecto ARCHIVOS) en ambas carpetas.
 
     Devuelve los nombres de los archivos que difieren o que faltan en alguna de
     las dos carpetas; una lista vacía indica que coinciden.
     """
     diferentes = []
-    for nombre in ARCHIVOS:
+    for nombre in nombres:
         generado = carpeta_generada / nombre
         referencia = carpeta_referencia / nombre
         if not (generado.is_file() and referencia.is_file()) or generado.read_bytes() != referencia.read_bytes():
@@ -281,7 +433,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--comprobar",
         action="store_true",
-        help="Genera en un directorio temporal y compara con docs/datos/ sin modificarlo.",
+        help="Genera en un directorio temporal y compara con docs/datos/ y docs/api/ sin modificarlos.",
     )
     argumentos = parser.parse_args(argv)
     if not argumentos.comprobar:
@@ -290,14 +442,20 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     with tempfile.TemporaryDirectory() as temporal:
-        carpeta_temporal = Path(temporal)
-        generar(carpeta_temporal)
-        diferentes = comparar_con_referencia(carpeta_temporal)
+        datos_temporales = Path(temporal) / "datos"
+        api_temporal = Path(temporal) / "api"
+        generar(datos_temporales, api_temporal)
+        diferentes = comparar_con_referencia(datos_temporales) + comparar_con_referencia(
+            api_temporal, CARPETA_API, ARCHIVOS_API
+        )
     if diferentes:
-        print(f"Difieren de {CARPETA_POR_DEFECTO} o faltan: {', '.join(diferentes)}")
+        print(f"Difieren de {CARPETA_POR_DEFECTO} o de {CARPETA_API}, o faltan: {', '.join(diferentes)}")
         print("Regenerar con: python scripts/generar_resultados_referencia.py")
         return 1
-    print(f"Los {len(ARCHIVOS)} archivos de {CARPETA_POR_DEFECTO} coinciden con el modelo actual.")
+    print(
+        f"Los {len(ARCHIVOS)} archivos de {CARPETA_POR_DEFECTO} y {len(ARCHIVOS_API)} de {CARPETA_API} "
+        "coinciden con el modelo actual."
+    )
     return 0
 
 

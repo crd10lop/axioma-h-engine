@@ -1,6 +1,6 @@
 # Axioma-H Engine (English summary)
 
-This is a summary of the main [README.md](README.md), which is written in Spanish and is the authoritative version. All figures below are copied from it.
+This is a summary of the main [README.md](README.md), which is written in Spanish and is the authoritative version. The single source of all figures is [docs/04](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md); this summary links to it instead of repeating its tables.
 
 Axioma-H Engine is a rule-based control engine, designed as the first stage of a neuro-symbolic architecture, for passive atmospheric water harvesting nodes. From each node's telemetry (membrane impedance, matrix temperature, heat reserve and relative humidity), the engine decides whether to filter continuously, apply a resistive heat pulse to detach crystallized salt, reduce the flow, or stop extraction to protect the membrane and the ecosystem. A simulator compares this controller with a conventional fixed timer under five reference scenarios for Cabo de la Vela (La Guajira, Colombia).
 
@@ -13,7 +13,8 @@ It is developed by team AXIOMA for the Research Fundamentals course at the Unive
 | Source code | https://github.com/crd10lop/axioma-h-engine |
 | Deployed dashboard | https://axioma-h-dashboard.onrender.com |
 | Deployed API (interactive docs) | https://axioma-h-api.onrender.com/docs |
-| Open reference data (CSV and JSON) | [docs/datos/](docs/datos/README.md) |
+| Versioned OpenAPI contract | [docs/api/openapi.json](docs/api/openapi.json) |
+| Open reference data (CSV, JSON and Data Package) | [docs/datos/](docs/datos/README.md) |
 
 ## Research question
 
@@ -21,7 +22,7 @@ It is developed by team AXIOMA for the Research Fundamentals course at the Unive
 
 **Working hypothesis.** The neuro-symbolic control keeps a stable flow recovery and a lower accumulated degradation than the timer, and its advantage grows with salinity.
 
-**Nature of the control.** The implemented engine is symbolic: explicit rules evaluated by priority, plus an explicit physical model. The "neural module" of the target architecture is not implemented and is left as future work. "Neuro-symbolic" describes the target architecture, not the current implementation. For compatibility, the API and the dashboard keep the mode name neuro-symbolic (`NEURO_SIMBOLICO`, `modo_neuro_simbolico`) for the rule-based control; in the tables below, "Neuro-symbolic" refers to that mode.
+**Nature of the control.** The implemented engine is symbolic: explicit rules evaluated by priority, plus an explicit physical model. The "neural module" of the target architecture is not implemented and is left as future work. "Neuro-symbolic" describes the target architecture, not the current implementation. For compatibility, the API and the dashboard keep the mode name neuro-symbolic (`NEURO_SIMBOLICO`, `modo_neuro_simbolico`) for the rule-based control; in result tables, the mode is labelled "Control basado en reglas (modo neuro-simbólico)".
 
 ## Control rules
 
@@ -43,7 +44,7 @@ REGLA_06 is human supervision, set with the optional `anulacion_manual` field of
 Two services run separately:
 
 - **Backend (FastAPI, port 8000):** rule-based control engine (`backend/motor_reglas.py`, first stage of the neuro-symbolic architecture), physical model, comparative simulator, conjecture verification, community impact and robustness analyses (salinity sweep with several seeds, robustness of the answer to the assumed parameters, parameter sensitivity, fog flux calibration and uncertainty propagation), collector sizing and site profiles to transfer the model.
-- **Frontend (Streamlit, port 8501):** dashboard that consumes the API over HTTP. It has four views: research guide, manual node evaluation, comparative simulation, and answer to the research question.
+- **Frontend (Streamlit, port 8501):** presentation-only dashboard that consumes the API over HTTP. It has five views: research guide (question, current thesis, derived hypothesis, key assumptions with the measurement that would replace each one, and a reading guide by discipline), manual node evaluation, comparative simulation (with what would change each conjecture result), answer to the research question in four parts (wear, recovery, certainty and people supplied), and a hypothesis explorer (simulation with a custom pulse efficacy and site profile, and questions for Cycle 3 computed from the session data). API codes are shown in plain language.
 
 | Method | Path | Description |
 |---|---|---|
@@ -61,30 +62,33 @@ Two services run separately:
 
 ## Installation and local use
 
-Requires Python 3.11 or later. On Windows, from the project root in PowerShell:
+Requires Python 3.11 or later. From the project root:
 
-```powershell
+```bash
 python -m venv venv
-.\venv\Scripts\activate
+# Windows (PowerShell):  .\venv\Scripts\activate
+# Linux and macOS:       source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+On Linux and macOS you may need `python3` instead of `python`.
+
 Run the backend and the dashboard in two terminals:
 
-```powershell
+```bash
 uvicorn backend.main:app --reload --port 8000
 streamlit run frontend/app.py
 ```
 
-Everything runs locally without an internet connection; the dashboard connects to `http://127.0.0.1:8000` by default. The reference data can also be regenerated without the API:
+Everything runs locally without an internet connection; the dashboard connects to `http://127.0.0.1:8000` by default. The reference data, the Data Package descriptor and the OpenAPI contract can be regenerated without the API, and `--comprobar` checks that they match the current code:
 
-```powershell
+```bash
 python scripts/generar_resultados_referencia.py
 ```
 
 Tests (no network access):
 
-```powershell
+```bash
 pip install -r requirements-dev.txt
 pytest --cov --cov-report=term-missing
 ```
@@ -95,74 +99,15 @@ The API and the dashboard are deployed on **Render** (free plan) as two web serv
 
 ## Results
 
-All runs: 24 h starting at 18:00, 5 min steps, 8 nodes, seed 42, high salinization rate (ALTA), unmodified parameters (pulse efficacy 0.90, regeneration criterion 1100 Ohm).
+All figures come from model runs; their single source is [docs/04](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sections 5 to 8 (in Spanish). With 24 h, 85 % initial humidity and the evaluated ranges of fog flux and pulse efficacy:
 
-### PRD reference run (salt storm with extreme heat, initial humidity 45 %)
+- **Wear.** The rule-based control reduces membrane degradation by 73.3 % to 100 % compared with the timer at all 54 points of the nine combinations of fog flux and pulse efficacy (section 8.8).
+- **Recovery.** Its advantage depends on daily incrustation, not on the salt load per litre: the crossing lies between 1632.9 and 1839.2 Ohm/day with seed 42 (1682.1 to 1866.6 with seeds 1 to 3), while the salt load per litre at the crossing ranges from 50.3 to 190.9 Ohm per L/m² (section 8.8).
+- **With literature-like fog.** With the minimum calibrated flux, 0.49 L/m²/h, daily incrustation never exceeds 659 Ohm/day and the timer recovers more at every level with pulses; with the calibrated flux, the rule-based control recovers more in only 3 of 62 uncertainty samples (sections 8.7 and 8.8).
+- **Conjectures.** Conjectures 1 and 2 depend on pulse efficacy, which must be measured (0.94 and 0.97 would validate them, section 6.2); Conjecture 3 is not validated with the calibrated flux (section 8.6).
+- **People.** Supplying 50 people with 20 L per day would take 32 nodes of 1 m² with the assumed flux and 100 to 332 with the calibrated flux, in line with the 100 to 333 m² from the literature (section 7.7).
 
-| Metric | Neuro-symbolic | Fixed timer |
-|---|---|---|
-| Water collected (L) | 81.65 | 120.41 |
-| Heat pulses | 19 | 88 |
-| Energy consumed (Wh) | 323.2 | 1065.1 |
-| Final integrity (%) | 99.95 | 97.09 |
-| Ecological violations | 0 | 8 |
-
-None of the three conjectures is validated in this run: flow recovery is 88.81 % (threshold 90 %), regeneration time is 22 263 s (threshold 120 s, 0 of 19 pulses regenerated), and night yield is 5.95 L/m²/night (threshold 12).
-
-### Conjecture status
-
-- **C3 (territorial knowledge):** the rule-based control recorded no ecological violations in any scenario. It is validated in four scenarios with 85 % initial humidity. With 45 % it is not, because the atmospheric resource is insufficient: night yield stays between 4 and 6 L/m²/night, and the timer does not reach 12 L/m²/night either.
-- **C1 (efficiency):** energy savings meet the threshold in almost all cases, but flow recovery after the pulse stays below 90 %.
-- **C2 (self-repair):** the absence of thermal degradation holds in the model (0 % in all ten scenarios); dissolution efficacy cannot be verified by simulation because it depends on pulse efficacy, an assumed parameter.
-- **Required efficacy:** validating C1 requires a 90 s pulse at 44 °C to remove at least 78 % of the salt crust (`eta_max` >= 0.94); validating C2 requires at least 81 % (`eta_max` >= 0.97). This is the priority laboratory measurement for the next cycle.
-
-### Salinity sweep (initial humidity 85 %)
-
-| Salt load (Ohm per L/m²) | Recovery neuro / timer (%) | Degradation neuro / timer (%) |
-|---|---|---|
-| 20 | 88.85 / 95.84 | 0.020 / 2.071 |
-| 40 | 88.83 / 91.83 | 0.052 / 2.071 |
-| 60 | 88.80 / 88.02 | 0.082 / 2.117 |
-| 80 | 88.78 / 84.45 | 0.115 / 2.427 |
-| 120 | 88.02 / 78.02 | 0.408 / 3.070 |
-| 240 | 85.92 / 63.21 | 1.073 / 4.117 |
-
-The rule-based control reduces accumulated degradation by 74 % to 99 % at every level. Its recovery stays stable, while the timer's falls with salinity: the timer recovers more at low salinity, because it cleans nearly clean membranes, and the neuro-symbolic control overtakes it from 60 Ohm per L/m².
-
-### Robustness of the answer
-
-Repeated with three fog fluxes (6.0 L/m²/h assumed, 1.83 and 0.49 calibrated against the literature) and three pulse efficacies (0.80, 0.90 and 1.00), seed 42:
-
-- the rule-based control reduces membrane wear by 73.3 % to 100 % at all 54 points of the nine combinations;
-- its recovery advantage depends on daily incrustation (salt load times water collected per day), not on the salt load per litre: in the six combinations with a crossing it appears from 1632.9 to 1839.2 Ohm/day, while the salt load per litre at the crossing ranges from 50.3 to 190.9; with 0.49 L/m²/h that incrustation is never reached and the timer recovers more;
-- with the calibrated flux, the rule-based control recovers more in only 3 of 62 uncertainty samples (probability 0.15 in rapid salt incrustation and 0.00 in the other scenarios with pulses).
-
-The derived hypothesis H1-Cycle 3 states that the crossing occurs at a daily incrustation between 1633 and 1867 Ohm/day, whatever combination of fog flux and salt load per litre produces it. Details are in docs/04, sections 8.8 and 8.9. For 50 people at 20 L per day (normal day, 85 %), the sizing endpoint gives 32 nodes with the assumed flux and 100 or 332 with the calibrated fluxes, versus 100 to 333 m² from the literature (docs/04, section 7.7).
-
-### Ecological cap versus control logic
-
-A reference timer with the same 0.33 cap separates the two causes of the water gap:
-
-| Run | Neuro-symbolic (L) | Timer 0.45 (L) | Timer 0.33 (L) | Gap due to the cap |
-|---|---|---|---|---|
-| Salt storm with extreme heat, humidity 45 % | 81.7 | 120.4 | 91.8 | 73.9 % |
-| Normal day, humidity 85 % | 254.6 | 340.4 | 266.1 | 86.6 % |
-
-Across the five scenarios, the cap explains 69.8 % to 89.8 % of the gap with 45 % initial humidity and 76.2 % to 90.8 % with 85 %. The lower yield of the neuro-symbolic control is mostly the cost of the ecological limit, not of the control logic.
-
-### Fog flux calibration and parameter uncertainty
-
-The assumed fog flux (6.0 L/m²/h) yields 31.8 L/m² per day on a normal day with 85 % humidity, versus 3 to 10 L/m² per day in operational projects (Klemm et al., 2012). An inverse calibration by bisection finds the fluxes that reproduce that range: 0.49 to 1.83 L/m²/h. The model default does not change; the calibrated range is used only in the uncertainty analysis. With the calibrated flux, C3 is not validated on a normal day with 85 % humidity.
-
-`POST /api/v1/analisis/incertidumbre` samples pulse efficacy (0.80 to 1.00) and the calibrated flux together. With 20 samples, 85 % initial humidity and a high salinization rate, the probability of validating C1 ranges from 0.00 to 0.15, C2 from 0.00 to 0.10 and C3 is 0.00 in all five scenarios. With less fog there is less salt and many runs apply no pulse, so C1 and C2 lack data rather than being refuted. The lower membrane degradation of the neuro-symbolic control holds across all samples (95.7 % to 100 % reduction between the 5th and 95th percentiles). Details are in docs/04, sections 8.6 and 8.7.
-
-### Estimated community impact
-
-Each simulation converts the collected water into people supplied (`impacto_comunitario`), using the WHO basic access level (20 L per person per day, Howard et al., 2020) and the Sphere humanitarian minimum (15 L per person per day, standard 2.1). It is an informative indicator and does not affect validation.
-
-- With the assumed fog flux and 85 % initial humidity, the 8 m² network would supply about 12 people at the basic access level on a normal day (12.7), and 7.5 to 12.7 depending on the scenario. With 45 %, 2.0 to 4.1.
-- The simulated yield at 85 % (18.7 to 31.8 L/m² per day) exceeds the 3 to 10 L/m² per day reported for operational projects (Klemm et al., 2012). At those yields, 2 to 6.7 m² of collector per person would be needed.
-- The ecological cap reduces the number of people supplied compared with the timer: 2.8 to 4.3 fewer with 85 % and 1.1 to 2.2 fewer with 45 %.
+The answer is conditional: the wear reduction is robust, and the recovery advantage appears only above a daily incrustation of about 1633 to 1867 Ohm/day. This leads to the derived hypothesis H1-Cycle 3 (docs/04, section 8.9).
 
 The 33 % cap comes from the team's formulation of Conjecture 3 (narrative of Cycle 1, "El Axioma del Silencio"). It is neither documented Wayuu knowledge nor a criterion taken from the ecological literature, and it must be validated with the communities. A four-step co-creation protocol is proposed for Cycle 3: prior consultation, community validation of the cap and the ecological pause, translation of the interface with Wayuu translators, and governance rules for the device and the data (docs/01, section 2.7).
 
@@ -173,7 +118,7 @@ The 33 % cap comes from the team's formulation of Conjecture 3 (narrative of Cyc
 - The status of Conjectures 1 and 2 changes with pulse efficacy; measuring it is the priority before declaring either validated or refuted.
 - The reference climate uses idealized daily cycles with Gaussian noise.
 - The assumed fog flux is optimistic compared with the literature (see references).
-- The available site profiles are only for Cabo de la Vela, because the project has no sourced climate data for other sites. Robustness, sizing and site profiles are available through the API but not yet in the dashboard.
+- The available site profiles are only for Cabo de la Vela, because the project has no sourced climate data for other sites.
 - This is an analytical proof of concept, roughly TRL 2-3, with no physical prototype. Prior consultation with Wayuu communities (ILO Convention 169, Colombian Law 21 of 1991) is required before any pilot in their territory and has not been carried out.
 
 ## Version history
@@ -184,7 +129,7 @@ The 33 % cap comes from the team's formulation of Conjecture 3 (narrative of Cyc
 | 0.2.0 | Robustness analyses (salinity sweep with several seeds and sensitivity), causes of non-validation, timer with ecological cap, community impact, conservative human supervision (REGLA_06) and uncertainty propagation with the calibrated fog flux. |
 | 0.3.0 | Robustness of the answer to fog flux and pulse efficacy, daily incrustation and recovery crossing in the sweep, recovery advantage in the uncertainty analysis, collector sizing, site profile and pulse efficacy in the simulation, `parametros_usados` and `GET /api/v1/sitios`. |
 
-The 0.2.0 features were added incrementally while the service still reported 0.1.0; the version number was updated when the set was closed.
+The 0.2.0 features were added incrementally while the service still reported 0.1.0; the version number was updated when the set was closed. The five-view dashboard and the interoperable data (Data Package and versioned OpenAPI) were added on top of API 0.3.0, without changes to the API.
 
 ## Documentation
 
@@ -194,7 +139,7 @@ The documents in `docs/` are numbered in reading order (all in Spanish):
 2. [02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md](docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md): API specification and implementation status.
 3. [03_Funcionamiento_General_AxiomaH.md](docs/03_Funcionamiento_General_AxiomaH.md): plain-language explanation of the application and the dashboard.
 4. [04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md): rules, equations, results and critical reading of the conjectures.
-5. [05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md): deployment on Render, CI and verification.
+5. [05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md): deployment on Render, CI, verification and integration with other systems (curl, pandas, Data Package validation and real sensors, section 7).
 6. [06_Referencias_y_Trazabilidad_AxiomaH.md](docs/06_Referencias_y_Trazabilidad_AxiomaH.md): third-party software, scientific source and parameter traceability.
 
 The reference data and its field dictionary are in [docs/datos/](docs/datos/README.md).

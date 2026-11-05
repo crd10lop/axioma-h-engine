@@ -176,7 +176,7 @@ Los resultados de las secciones 5.1 a 5.4, junto con el modo de referencia de la
 
 Es el payload de ejemplo del PRD (sección 3.2): `duracion_horas` 24, `escenario` TORMENTA_DE_SAL_Y_CALOR_EXTREMO, `humedad_ambiente_inicial_pct` 45.0 y `tasa_salinizacion` ALTA. Los valores numéricos de la respuesta de ejemplo del PRD son ilustrativos. Los de esta tabla son los que calcula el modelo.
 
-| Métrica | Neuro-simbólico | Temporizador fijo | Diferencia |
+| Métrica | Control basado en reglas (modo neuro-simbólico) | Temporizador fijo | Diferencia |
 |---|---|---|---|
 | Agua captada (L) | 81.652 | 120.408 | -32.2 % |
 | Pulsos térmicos | 19 | 88 | -78.4 % |
@@ -210,15 +210,15 @@ En SEQUIA con humedad inicial de 45 %, el modo neuro-simbólico no ejecutó ning
 
 | Escenario | Modo | Litros | Pulsos | Energía (Wh) | Integridad final (%) | Violaciones |
 |---|---|---|---|---|---|---|
-| DIA_NORMAL | Neuro-simbólico | 254.60 | 46 | 664.5 | 99.89 | 0 |
+| DIA_NORMAL | Control basado en reglas (modo neuro-simbólico) | 254.60 | 46 | 664.5 | 99.89 | 0 |
 | DIA_NORMAL | Temporizador fijo | 340.40 | 88 | 1065.1 | 97.57 | 8 |
-| INCRUSTACION_SALINA_RAPIDA | Neuro-simbólico | 185.37 | 97 | 1013.7 | 98.93 | 0 |
+| INCRUSTACION_SALINA_RAPIDA | Control basado en reglas (modo neuro-simbólico) | 185.37 | 97 | 1013.7 | 98.93 | 0 |
 | INCRUSTACION_SALINA_RAPIDA | Temporizador fijo | 240.94 | 88 | 1065.1 | 95.88 | 8 |
-| SEQUIA | Neuro-simbólico | 149.35 | 24 | 491.9 | 99.84 | 0 |
+| SEQUIA | Control basado en reglas (modo neuro-simbólico) | 149.35 | 24 | 491.9 | 99.84 | 0 |
 | SEQUIA | Temporizador fijo | 204.40 | 88 | 1065.1 | 97.78 | 8 |
-| TORMENTA_DE_ARENA | Neuro-simbólico | 232.43 | 53 | 752.1 | 99.87 | 0 |
+| TORMENTA_DE_ARENA | Control basado en reglas (modo neuro-simbólico) | 232.43 | 53 | 752.1 | 99.87 | 0 |
 | TORMENTA_DE_ARENA | Temporizador fijo | 306.41 | 88 | 1065.1 | 98.18 | 8 |
-| TORMENTA_DE_SAL_Y_CALOR_EXTREMO | Neuro-simbólico | 234.98 | 64 | 780.8 | 99.59 | 0 |
+| TORMENTA_DE_SAL_Y_CALOR_EXTREMO | Control basado en reglas (modo neuro-simbólico) | 234.98 | 64 | 780.8 | 99.59 | 0 |
 | TORMENTA_DE_SAL_Y_CALOR_EXTREMO | Temporizador fijo | 305.83 | 88 | 1065.1 | 96.10 | 8 |
 
 ### 5.4 Cinco escenarios con humedad inicial 85 %: verificación de conjeturas
@@ -367,7 +367,7 @@ La carga salina efectiva es la tasa de incrustación por litro captado: 20, 40 y
 
 ### 7.3 Resultados (humedad inicial 85 %)
 
-| Carga salina (Ohm por L/m²) | Escenario y tasa | Recuperación neuro (%) | Recuperación temporizador (%) | Diferencia (puntos) | Degradación neuro (%) | Degradación temporizador (%) | Reducción del desgaste | Pulsos neuro / temporizador |
+| Carga salina (Ohm por L/m²) | Escenario y tasa | Recuperación, control basado en reglas (modo neuro-simbólico) (%) | Recuperación temporizador (%) | Diferencia (puntos) | Degradación, control basado en reglas (modo neuro-simbólico) (%) | Degradación temporizador (%) | Reducción del desgaste | Pulsos: control basado en reglas (modo neuro-simbólico) / temporizador |
 |---|---|---|---|---|---|---|---|---|
 | 20 | DIA_NORMAL, BAJA | 88.85 | 95.84 | -7.0 | 0.020 | 2.071 | 99.0 % | 8 / 88 |
 | 40 | DIA_NORMAL, MEDIA | 88.83 | 91.83 | -3.0 | 0.052 | 2.071 | 97.5 % | 21 / 88 |
@@ -392,7 +392,7 @@ Con humedad inicial de 45 % hay menos agua captada y, por tanto, menos sal. El m
 - Los valores absolutos dependen de parámetros supuestos, en especial la eficacia máxima del pulso (0.90), la fatiga por pulso y la degradación térmica (sección 3.4). La dirección de los resultados se explica por la lógica de control (pulsar por demanda frente a pulsar por horario, y el límite de 45 °C), pero su magnitud debe calibrarse con mediciones.
 - Las cifras de 7.3 corresponden a una semilla. El barrido con varias semillas ya está disponible en la API (`POST /api/v1/analisis/barrido-salinidad`, de 1 a 5 semillas), que reporta la media y la desviación estándar muestral de cada variable. La tabla siguiente es el resultado con las semillas 1 a 5, con las demás condiciones de 7.2 (media +/- desviación).
 
-| Carga salina (Ohm por L/m²) | Escenario y tasa | Recuperación neuro (%) | Recuperación temporizador (%) | Degradación neuro (%) | Degradación temporizador (%) | Reducción del desgaste |
+| Carga salina (Ohm por L/m²) | Escenario y tasa | Recuperación, control basado en reglas (modo neuro-simbólico) (%) | Recuperación temporizador (%) | Degradación, control basado en reglas (modo neuro-simbólico) (%) | Degradación temporizador (%) | Reducción del desgaste |
 |---|---|---|---|---|---|---|
 | 20 | DIA_NORMAL, BAJA | 88.86 +/- 0.01 | 95.92 +/- 0.14 | 0.020 +/- 0.000 | 2.151 +/- 0.021 | 99.1 % |
 | 40 | DIA_NORMAL, MEDIA | 88.83 +/- 0.01 | 91.95 +/- 0.24 | 0.052 +/- 0.004 | 2.151 +/- 0.021 | 97.6 % |
@@ -413,7 +413,7 @@ La respuesta de `POST /api/v1/simulacion/ejecutar` incluye el campo `impacto_com
 - `personas_acceso_basico = litros_dia_red / 20`, el acceso básico de unos 20 L por persona al día de la OMS (Howard et al., 2020).
 - `area_m2_por_persona_basico_literatura_min = 20 / 10 = 2.0` y `area_m2_por_persona_basico_literatura_max = 20 / 3 = 6.67`: m² de colector por persona para el acceso básico con el rendimiento máximo y mínimo de proyectos reales, de 3 a 10 L/m² al día según Klemm et al. (2012). No dependen de la simulación.
 
-Resultados con 24 h, tasa ALTA, 8 nodos (8 m² de colector) y semilla 42. Cada celda muestra neuro-simbólico / temporizador fijo / temporizador con tope ecológico.
+Resultados con 24 h, tasa ALTA, 8 nodos (8 m² de colector) y semilla 42. Cada celda muestra control basado en reglas (modo neuro-simbólico) / temporizador fijo / temporizador con tope ecológico.
 
 | Escenario | Humedad inicial | Litros por día | L/m² al día | Personas con 15 L | Personas con 20 L |
 |---|---|---|---|---|---|
@@ -472,7 +472,7 @@ La sección 5.5 muestra que la Conjetura 1 falla por la recuperación de caudal,
 - 24 h, inicio a las 18:00, paso de 5 min, 8 nodos, semilla 42, tasa ALTA, humedad inicial 85 %;
 - los demás parámetros de `backend/config.py` sin modificar.
 
-| Umbral (Ohm) | Escenario | Recuperación (%) | Ahorro (%) | C1 | Pulsos neuro / temporizador | Litros neuro / temporizador | Degradación neuro / temporizador (%) |
+| Umbral (Ohm) | Escenario | Recuperación (%) | Ahorro (%) | C1 | Pulsos: control basado en reglas (modo neuro-simbólico) / temporizador | Litros: control basado en reglas (modo neuro-simbólico) / temporizador | Degradación: control basado en reglas (modo neuro-simbólico) / temporizador (%) |
 |---|---|---|---|---|---|---|---|
 | 1500 | DIA_NORMAL | 88.78 | 46.50 | false | 46 / 88 | 254.60 / 340.40 | 0.115 / 2.427 |
 | 1500 | INCRUSTACION_SALINA_RAPIDA | 85.92 | 12.49 | false | 97 / 88 | 185.37 / 240.94 | 1.073 / 4.117 |
@@ -535,7 +535,7 @@ Con L_neuro, L_temp y L_temp33 como el agua captada por el neuro-simbólico, el 
 
 Condiciones: 24 h, inicio a las 18:00, paso de 5 min, 8 nodos, semilla 42, tasa ALTA y parámetros de `backend/config.py` sin modificar. Las columnas de neuro-simbólico y temporizador 0.45 coinciden con las secciones 5.2 a 5.4.
 
-| Escenario | Humedad inicial | Neuro-simbólico (L) | Temporizador 0.45 (L) | Temporizador 0.33 (L) | Brecha total (L) | Por tope (L) | Por lógica de control (L) | Brecha debida al tope (%) | Violaciones del temporizador 0.33 |
+| Escenario | Humedad inicial | Control basado en reglas (modo neuro-simbólico) (L) | Temporizador 0.45 (L) | Temporizador 0.33 (L) | Brecha total (L) | Por tope (L) | Por lógica de control (L) | Brecha debida al tope (%) | Violaciones del temporizador 0.33 |
 |---|---|---|---|---|---|---|---|---|---|
 | DIA_NORMAL | 45 % | 82.7 | 126.6 | 95.5 | 43.9 | 31.1 | 12.8 | 70.9 | 0 |
 | INCRUSTACION_SALINA_RAPIDA | 45 % | 80.5 | 106.2 | 83.1 | 25.7 | 23.1 | 2.6 | 89.8 | 0 |
@@ -597,7 +597,7 @@ El rango calibrado, de 0.49 a 1.83 L/m²/h, está entre 3.3 y 12 veces por debaj
 
 **Efecto sobre la Conjetura 3.** Con el flujo calibrado, la Conjetura 3 no se valida en DIA_NORMAL con humedad inicial de 85 %, el caso en que sí se valida con el flujo de 6.0:
 
-| Flujo (L/m²/h) | Rendimiento (L/m²/día) | Rendimiento nocturno neuro (L/m²/noche) | Rendimiento nocturno temporizador (L/m²/noche) | C3 | Causa |
+| Flujo (L/m²/h) | Rendimiento (L/m²/día) | Rendimiento nocturno, control basado en reglas (modo neuro-simbólico) (L/m²/noche) | Rendimiento nocturno temporizador (L/m²/noche) | C3 | Causa |
 |---|---|---|---|---|---|
 | 6.0 (supuesto) | 31.83 | 16.97 | 21.96 | Validada | |
 | 1.83 (calibrado, máximo) | 10.02 | 5.47 | 8.09 | No validada | `LIMITE_DEL_RECURSO_ATMOSFERICO` |

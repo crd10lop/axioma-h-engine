@@ -1,8 +1,10 @@
 """Contenido de la vista de investigación y del recorrido guiado del dashboard.
 
-Los textos resumen README.md y docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md
-(secciones 2, 2.7 y 2.8). Los umbrales de las reglas se toman de frontend/config.py para
-que los textos no se desalineen de los valores mostrados en el resto del dashboard.
+Los textos resumen README.md, docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md
+(secciones 2, 2.7 y 2.8) y docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md (secciones 5 a 8),
+que es la fuente única de cifras. Cada bloque indica su documento de origen. Los umbrales de
+las reglas se toman de frontend/config.py para que los textos no se desalineen de los valores
+mostrados en el resto del dashboard.
 """
 
 from frontend import config
@@ -34,6 +36,16 @@ HIPOTESIS = (
     "acumulada menor que el temporizador, y su ventaja crece con el nivel de salinidad."
 )
 
+# Tesis actual: respuesta robusta de docs/04, sección 8.8.
+TESIS = (
+    "El control basado en reglas reduce el desgaste de la membrana frente al temporizador en todos los "
+    "niveles de salinidad y con todos los valores evaluados de flujo de niebla y eficacia del pulso, entre "
+    "73.3 % y 100 %. Su ventaja en recuperación es condicional: no depende de la carga salina por litro "
+    "sino de la incrustación diaria, y aparece solo por encima de unos 1633 a 1867 Ohm por día, que con "
+    "rendimientos de niebla como los de la literatura solo se alcanzan con la salinidad más alta."
+)
+
+# Hipótesis derivada: docs/04, sección 8.9.
 HIPOTESIS_DERIVADA = (
     "H1-Ciclo 3. La recuperación tras pulso del control basado en reglas supera a la del temporizador "
     "cuando la incrustación diaria de la membrana, el aumento de impedancia por sal en un día, supera un "
@@ -66,7 +78,7 @@ RESPUESTA_PRELIMINAR: list[str] = [
 
 
 # ---------------------------------------------------------------------------
-# Conjeturas (docs/01, sección 3; lectura según README, "Interpretación de los resultados")
+# Conjeturas (docs/01, sección 3; lectura según docs/04, secciones 5.5 y 6)
 # ---------------------------------------------------------------------------
 def _conjetura(nombre: str, enunciado: str, criterio: str, lectura: str) -> dict[str, str]:
     """Agrupa los textos de una conjetura con las claves que usa la tabla del dashboard."""
@@ -174,6 +186,36 @@ REGLAS: list[dict[str, int | str]] = [
     ),
 ]
 
+# Lenguaje llano de los códigos que entrega la API (backend/schemas.py y backend/motor_reglas.py;
+# docs/04, secciones 2 y 8.8).
+ETIQUETAS_LLANAS: dict[str, str] = {
+    "REGLA_01_LIMITE_TERMICO_ABSOLUTO": "Corte de emergencia por temperatura de 45 °C o más",
+    "REGLA_02_LIMITE_ECOLOGICO_TERRITORIAL": "Pausa ecológica por humedad menor que 30 %",
+    "REGLA_03_DESPRENDIMIENTO_SAL_POR_IMPEDANCIA": "Pulso de limpieza: la sal obstruye la membrana",
+    "REGLA_04_PROTECCION_RESERVA_CRITICA": "Caudal a la mitad sin pulso para proteger la reserva de energía",
+    "REGLA_05_OPERACION_NOMINAL": "Operación normal: filtración continua",
+    "REGLA_06_SUPERVISION_HUMANA": "Decisión de un operador, más prudente que el motor",
+    "EMERGENCIA_TERMICA": "Emergencia térmica",
+    "PAUSA_ECOLOGICA": "Pausa ecológica",
+    "RESERVA_CRITICA": "Reserva de energía crítica",
+    "CRISTALIZACION_DETECTADA": "Sal cristalizada en la membrana",
+    "NOMINAL": "Funcionamiento normal",
+    "SUPERVISION_HUMANA": "Bajo supervisión de un operador",
+    "CORTE_DE_EMERGENCIA": "Detener todo",
+    "REDUCIR_CAUDAL_SIN_PULSO": "Reducir el caudal sin limpiar",
+    "APLICAR_PULSO_RESISTIVO": "Aplicar un pulso de limpieza",
+    "FILTRACION_PASIVA_CONTINUA": "Seguir filtrando",
+    "SUSPENSION_MANUAL": "Extracción suspendida por el operador",
+    "INTERPOLADO": "Cruza: el control basado en reglas pasa a recuperar más",
+    "CRUCE_DESCENDENTE": "Cruza al revés: el control basado en reglas deja de recuperar más",
+    "SIN_CRUCE_NEURO_SUPERIOR": "Sin cruce: el control basado en reglas recupera más en todos los niveles",
+    "SIN_CRUCE_NEURO_INFERIOR": "Sin cruce: el temporizador recupera igual o más en todos los niveles",
+    "SIN_DATOS": "Sin datos suficientes: menos de dos niveles con pulsos en ambos modos",
+    "SUPUESTO": "flujo supuesto",
+    "CALIBRADO_MAX": "flujo calibrado máximo",
+    "CALIBRADO_MIN": "flujo calibrado mínimo",
+}
+
 COLUMNAS_REGLAS = {
     "prioridad": "Prioridad",
     "regla": "Regla",
@@ -194,30 +236,125 @@ NOTA_REGLAS = (
 # ---------------------------------------------------------------------------
 # Supuestos clave (docs/06_Referencias_y_Trazabilidad_AxiomaH.md) y limitaciones (README)
 # ---------------------------------------------------------------------------
-def _supuesto(parametro: str, valor: str, origen: str) -> dict[str, str]:
+def _supuesto(parametro: str, valor: str, origen: str, efecto: str, medicion: str) -> dict[str, str]:
     """Agrupa los textos de un supuesto con las claves que usa la tabla del dashboard."""
-    return {"parametro": parametro, "valor": valor, "origen": origen}
+    return {"parametro": parametro, "valor": valor, "origen": origen, "efecto": efecto, "medicion": medicion}
 
 
+# Origen: docs/06, secciones 3 y 4. Efecto: docs/04, secciones 5.6, 5.7, 6.2, 7.4, 8.4 y 8.6 a 8.9.
 SUPUESTOS_CLAVE: list[dict[str, str]] = [
     _supuesto(
         "Eficacia máxima del pulso",
         "0.90",
-        "Supuesto del modelo, sin fuente: estimación de orden de magnitud pendiente de medición en "
-        "laboratorio. Validar la Conjetura 1 requiere al menos 0.94 y la Conjetura 2 al menos 0.97. "
-        "El análisis de incertidumbre la varía entre 0.80 y 1.00.",
+        ("Supuesto del modelo, sin fuente: estimación de orden de magnitud pendiente de medición en "
+        "laboratorio (docs/06, sección 3)."),
+        ("Decide las Conjeturas 1 y 2: con 0.94 se valida la Conjetura 1 y con 0.97 la 2 (docs/04, "
+        "secciones 5.6, 5.7 y 6.2). Mueve el cruce de la ventaja en recuperación de unos 1820 a 1839 Ohm "
+        "por día con 0.80 a unos 1633 a 1640 con 1.00 (docs/04, sección 8.8)."),
+        ("Fracción de la costra de NaCl que remueve un pulso de 90 s a 44 °C en una muestra de membrana "
+        "(docs/04, sección 6.3)."),
     ),
     _supuesto(
         "Flujo máximo de niebla",
         "6.0 L/m²/h con humedad relativa del 100 %; rango calibrado de 0.49 a 1.83 L/m²/h",
-        "Supuesto del modelo, sin fuente. Contrastado con Klemm et al. (2012), que reportan de 3 a "
-        "10 L/m² al día en proyectos operativos de captación de niebla: es un supuesto optimista. La "
-        "calibración inversa contra ese rango (Día normal, humedad inicial de 85 %, semilla 42) da un "
-        "flujo de 0.49 a 1.83 L/m²/h, que el análisis de incertidumbre usa en lugar de 6.0.",
+        ("Supuesto del modelo, sin fuente. Contrastado con Klemm et al. (2012), que reportan de 3 a "
+        "10 L/m² al día en proyectos operativos de captación de niebla: es un supuesto optimista "
+        "(docs/06, sección 4)."),
+        ("Con 6.0 la Conjetura 3 se valida en cuatro escenarios con humedad inicial de 85 %; con el flujo "
+        "calibrado no se valida (docs/04, sección 8.6). Con 0.49 la incrustación diaria no pasa de 659 Ohm "
+        "por día y el control basado en reglas no supera al temporizador en recuperación (docs/04, "
+        "sección 8.8)."),
+        ("Rendimiento de niebla en L/m² al día con un colector en el sitio, convertido en flujo con la "
+        "calibración inversa (docs/04, secciones 8.6 y 8.10)."),
+    ),
+    _supuesto(
+        "Carga salina por litro",
+        "20, 40 y 80 Ohm por L/m² (tasas BAJA, MEDIA y ALTA), multiplicadas por 3 en la incrustación rápida",
+        "Supuesto del modelo, sin fuente: estimación de orden de magnitud (docs/06, sección 3).",
+        ("Por sí sola no decide la ventaja en recuperación: el cruce ocurre con cargas de 50 a 191 Ohm por "
+        "L/m² según el flujo, pero siempre con una incrustación diaria de unos 1633 a 1839 Ohm por día "
+        "(docs/04, secciones 8.8 y 8.9)."),
+        ("Pendiente de la impedancia entre pulsos, con el sensor del nodo, y agua captada en el mismo "
+        "periodo, para obtener la incrustación diaria (docs/04, sección 8.9)."),
+    ),
+    _supuesto(
+        "Degradación por fatiga del pulso",
+        "0.02 % de integridad por pulso",
+        "Supuesto del modelo, sin fuente: estimación de orden de magnitud (docs/06, sección 3).",
+        ("Junto con la degradación térmica de los pulsos diurnos sobre 45 °C, explica el desgaste del "
+        "temporizador, que aplica 88 pulsos en 24 h (docs/04, sección 7.4). La dirección de la reducción "
+        "del desgaste se explica por la lógica de control, pero su magnitud depende de este valor, que no "
+        "se ha variado en un análisis de sensibilidad (docs/04, sección 7.5)."),
+        "Pérdida de función de una membrana tras ciclos repetidos de pulso a 44 °C en laboratorio.",
+    ),
+    _supuesto(
+        "Tope ecológico de extracción",
+        f"{FRACCION_MAXIMA_EXTRACCION_PCT:g} % de la niebla disponible",
+        ("Matriz del equipo, formulación de la Conjetura 3 a partir de la narrativa del Ciclo 1: no es un "
+        "saber wayuu documentado ni un criterio de la literatura ecológica (docs/01, sección 2.7; docs/06, "
+        "sección 3)."),
+        ("Explica la mayor parte de la diferencia de agua frente al temporizador: entre 69.8 % y 90.8 %, "
+        "según el escenario y la humedad (docs/04, sección 8.4)."),
+        ("Validación con las comunidades en consulta previa y seguimiento de la humedad disponible para la "
+        "vegetación con distintas fracciones de extracción (propuesta, docs/01, sección 2.7)."),
     ),
 ]
 
-COLUMNAS_SUPUESTOS = {"parametro": "Parámetro", "valor": "Valor", "origen": "Origen"}
+COLUMNAS_SUPUESTOS = {
+    "parametro": "Parámetro",
+    "valor": "Valor",
+    "origen": "Origen",
+    "efecto": "Efecto observado",
+    "medicion": "Medición que lo reemplazaría",
+}
+
+# ---------------------------------------------------------------------------
+# Guía de lectura por disciplina (docs/03, sección 11; campos de docs/02, sección 3)
+# ---------------------------------------------------------------------------
+GUIA_DISCIPLINAS: dict[str, dict[str, str]] = {
+    "Hidrología e ingeniería": {
+        "donde": (
+            "Vista 4, partes b y d, y vista 5 con el perfil de sitio. Campos rendimiento_neuro_l_m2_dia_media, "
+            "incrustacion_diaria_ohm_media y area_colector_m2; datos en docs/datos/robustez_respuesta.csv."
+        ),
+        "pregunta": (
+            "¿El rendimiento de niebla medido en un sitio, convertido en flujo con la calibración, produce con "
+            "la sal local una incrustación diaria por encima del umbral de H1-Ciclo 3?"
+        ),
+    },
+    "Salud pública": {
+        "donde": (
+            "Vista 3, impacto comunitario, y vista 4, parte d, dimensionamiento. Campos personas_acceso_basico "
+            "y nodos_requeridos."
+        ),
+        "pregunta": (
+            "¿Cuántos nodos habría que instalar para cubrir el acceso básico de la OMS de una comunidad "
+            "concreta, y cuánto cambia esa cifra con el rendimiento de niebla que se mida en campo?"
+        ),
+    },
+    "Ecología": {
+        "donde": (
+            "Vista 2, pausa ecológica (REGLA_02), y vista 3, violaciones ecológicas y temporizador con tope "
+            "ecológico. Campos violaciones_ecologicas y modo_temporizador_tope_ecologico."
+        ),
+        "pregunta": (
+            "¿Extraer como máximo el 33 % de la niebla y pausar con humedad menor que 30 % preserva la humedad "
+            "que necesitan el trupillo y el cardón?"
+        ),
+    },
+    "Ciencias sociales": {
+        "donde": (
+            "Vista 1, perspectivas y supuestos, y vista 4, parte d. Costo del tope ecológico en personas "
+            "abastecidas (docs/04, sección 7.6)."
+        ),
+        "pregunta": (
+            "¿Aceptarían las comunidades abastecer a menos personas a cambio de respetar el tope ecológico, y "
+            "quién decide sobre el agua captada y sobre los datos del dispositivo?"
+        ),
+    },
+}
+
+COLUMNAS_GUIA = {"donde": "Vista o campo que usar", "pregunta": "Pregunta que podría poner a prueba"}
 
 LIMITACIONES: list[str] = [
     "Los resultados provienen de un modelo simulado, no de mediciones en campo.",
@@ -385,7 +522,48 @@ VISTAS: list[str] = [
     "Evaluación manual de nodo",
     "Simulación comparativa",
     "Respuesta a la pregunta",
+    "Explorador de hipótesis",
 ]
+
+# Partes de la respuesta en la vista 4: título y frase inicial que dice qué parte de la pregunta responde
+# (docs/04, secciones 7.3, 7.7, 8.7 y 8.8).
+PARTES_RESPUESTA: dict[str, dict[str, str]] = {
+    "desgaste": {
+        "titulo": "a) ¿Reduce el desgaste?",
+        "frase": (
+            "Esta parte responde si el control basado en reglas desgasta menos la membrana que el temporizador, "
+            "repitiendo el barrido con tres flujos de niebla y tres eficacias del pulso."
+        ),
+    },
+    "recuperacion": {
+        "titulo": "b) ¿Mejora la recuperación y desde qué salinidad?",
+        "frase": (
+            "Esta parte responde si el control basado en reglas recupera más caudal tras el pulso y desde qué "
+            "incrustación diaria, es decir, cuánta sal recibe la membrana en un día."
+        ),
+    },
+    "seguridad": {
+        "titulo": "c) ¿Qué tan seguro es?",
+        "frase": (
+            "Esta parte responde cuánto dependen los resultados de los parámetros que aún no se han medido: la "
+            "eficacia del pulso y el flujo de niebla."
+        ),
+    },
+    "personas": {
+        "titulo": "d) ¿Para cuántas personas alcanza?",
+        "frase": (
+            "Esta parte traduce el agua captada en área de colector y número de nodos para abastecer a un "
+            "grupo de personas, con los estándares de la OMS y de Sphere."
+        ),
+    },
+}
+
+INTRO_EXPLORADOR = (
+    "Elija un escenario, una eficacia del pulso y un perfil de sitio, y ajuste sus cinco campos dentro de los "
+    "límites de la API. La simulación muestra qué conjeturas se validan, qué cambiaría cada resultado y "
+    "con qué parámetros se ejecutó. Al final, el explorador propone preguntas para el Ciclo 3 con los datos "
+    "de esta sesión. Ningún valor modifica la configuración del modelo (decisión D5)."
+)
 
 AVISO_EXPLORATORIO = (
     "Análisis exploratorio. Cada corrida usa su propia copia de los parámetros: la configuración del "

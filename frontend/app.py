@@ -39,6 +39,17 @@ VISTA_EVALUACION = "Evaluación manual de nodo"
 VISTA_SIMULACION = "Simulación comparativa"
 VISTA_INVESTIGACION = contenido.VISTAS[0]
 VISTA_RESPUESTA = contenido.VISTAS[3]
+VISTA_EXPLORADOR = contenido.VISTAS[4]
+TASAS = ["BAJA", "MEDIA", "ALTA"]
+ETIQUETA_ESCENARIO = "Escenario"
+# Clave de session_state de cada campo editable del perfil de sitio en el explorador.
+CAMPOS_EXPLORADOR = {
+    "nombre": "exp_nombre",
+    "flujo_niebla_maximo_l_m2_h": "exp_flujo",
+    "temperatura_media_c": "exp_temperatura",
+    "amplitud_temperatura_c": "exp_amplitud_temperatura",
+    "amplitud_humedad_pct": "exp_amplitud_humedad",
+}
 
 # Clave de session_state de cada control de telemetría.
 CONTROLES = {
@@ -123,6 +134,7 @@ ESCENARIO_INICIAL = "DIA_NORMAL"
 ETIQUETA_HUMEDAD = "Humedad inicial (%)"
 COLOR_REFERENCIA = "#a93226"
 CAMPO_MODO = "Modo:N"
+CAMPO_CARGA = "carga:Q"
 COLUMNA_METRICA = "Métrica"
 
 
@@ -154,8 +166,23 @@ def inicializar_estado() -> None:
         "inc_escenario": ESCENARIO_INICIAL,
         "inc_humedad": 85.0,
         "inc_muestras": tr.MUESTRAS_INCERTIDUMBRE_POR_DEFECTO,
+        "rob_humedad": 85.0,
+        "rob_semillas": 1,
+        "resp_perfil": config.PERFIL_SITIO_POR_DEFECTO["nombre"],
+        "dim_personas": 50,
+        "dim_estandar": "OMS_20",
+        "dim_escenario": ESCENARIO_INICIAL,
+        "dim_humedad": 85.0,
+        "exp_escenario": ESCENARIO_INICIAL,
+        "exp_tasa": "ALTA",
+        "exp_humedad": 85.0,
+        "exp_eficacia": config.EFICACIA_SUPUESTA,
+        "exp_perfil": config.PERFIL_SITIO_POR_DEFECTO["nombre"],
     }
     widgets.update({CONTROLES[campo]: valor for campo, valor in TELEMETRIA_PRD.items()})
+    widgets.update(
+        {clave: config.PERFIL_SITIO_POR_DEFECTO[campo] for campo, clave in CAMPOS_EXPLORADOR.items()}
+    )
     for clave, valor in widgets.items():
         st.session_state[clave] = st.session_state.get(clave, valor)
 
@@ -175,6 +202,12 @@ def inicializar_estado() -> None:
         "error_sensibilidad": None,
         "resultado_incertidumbre": None,
         "error_incertidumbre": None,
+        "resultado_robustez": None,
+        "error_robustez": None,
+        "resultado_dimensionamiento": None,
+        "error_dimensionamiento": None,
+        "resultado_explorador": None,
+        "error_explorador": None,
     }
     for clave, valor in valores.items():
         st.session_state.setdefault(clave, valor)
@@ -204,6 +237,35 @@ def sensibilidad_en_cache(carga: dict) -> dict:
 def incertidumbre_en_cache(carga: dict) -> dict:
     """Ejecuta la propagación de la incertidumbre, o devuelve la respuesta guardada para la misma carga."""
     return cliente_api.ejecutar_incertidumbre(carga)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def robustez_en_cache(carga: dict) -> dict:
+    """Ejecuta la robustez de la respuesta, o devuelve la respuesta guardada para la misma carga."""
+    return cliente_api.ejecutar_robustez(carga)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def dimensionamiento_en_cache(carga: dict) -> dict:
+    """Ejecuta el dimensionamiento, o devuelve la respuesta guardada para la misma carga."""
+    return cliente_api.dimensionar(carga)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def sitios_en_cache() -> list[dict]:
+    """Consulta los perfiles de sitio, o devuelve la respuesta guardada durante una hora."""
+    return cliente_api.obtener_sitios()
+
+
+def obtener_perfiles(api_disponible: bool) -> list[dict]:
+    """Perfiles de sitio de la API; lista vacía, con un aviso, si la API no los entrega."""
+    if not api_disponible:
+        return []
+    try:
+        return sitios_en_cache()
+    except cliente_api.ErrorApiAxioma as error:
+        st.warning(f"No fue posible consultar los perfiles de sitio. {error.mensaje}")
+        return []
 
 
 def formatear_duracion(segundos: float) -> str:
@@ -290,13 +352,14 @@ def tabla_textos(filas: list[dict], columnas: dict[str, str]) -> None:
 def vista_investigacion() -> None:
     """Pregunta, conjeturas, reglas, perspectivas y alcance del estudio. No depende de la API."""
     st.header(VISTA_INVESTIGACION)
-    st.caption("Contexto del estudio antes de usar el simulador. Las vistas 2 a 4 requieren la API.")
+    st.caption("Contexto del estudio antes de usar el simulador. Las vistas 2 a 5 requieren la API.")
 
     st.subheader("Pregunta de investigación")
     st.info(contenido.PREGUNTA_INVESTIGACION)
     st.markdown(f"**Versión divulgativa.** {contenido.VERSION_DIVULGATIVA}")
     st.markdown(f"**Hipótesis de trabajo.** {contenido.HIPOTESIS}")
-    st.markdown(f"**Hipótesis derivada.** {contenido.HIPOTESIS_DERIVADA}")
+    st.success(f"**Tesis actual.** {contenido.TESIS}")
+    st.info(f"**Hipótesis derivada.** {contenido.HIPOTESIS_DERIVADA}")
 
     st.subheader("Respuesta preliminar del simulador")
     st.markdown(contenido.lista_markdown(contenido.RESPUESTA_PRELIMINAR))
@@ -317,8 +380,13 @@ def vista_investigacion() -> None:
     st.subheader("Alcance y madurez")
     st.markdown(contenido.MADUREZ)
 
-    with st.expander("Supuestos clave y limitaciones"):
-        tabla_textos(contenido.SUPUESTOS_CLAVE, contenido.COLUMNAS_SUPUESTOS)
+    st.subheader("Supuestos clave y qué los reemplazaría")
+    tabla_textos(contenido.SUPUESTOS_CLAVE, contenido.COLUMNAS_SUPUESTOS)
+
+    with st.expander("Guía de lectura por disciplina"):
+        filas = [{"disciplina": nombre, **guia} for nombre, guia in contenido.GUIA_DISCIPLINAS.items()]
+        tabla_textos(filas, {"disciplina": "Disciplina", **contenido.COLUMNAS_GUIA})
+    with st.expander("Limitaciones"):
         st.markdown(contenido.lista_markdown(contenido.LIMITACIONES))
     with st.expander("Glosario"):
         for termino, definicion in contenido.glosario_ordenado():
@@ -346,13 +414,15 @@ def tarjeta_indicador(columna, titulo: str, valor: str, nivel: float, alerta: bo
 def panel_decision(decision: dict) -> None:
     """Muestra la decisión del motor con el color semántico de su estado."""
     estado = decision["estado_nodo"]
-    resumen = f"Estado del nodo: {estado}. Acción recomendada: {decision['accion_recomendada']}."
+    accion = decision["accion_recomendada"]
+    resumen = f"Estado del nodo: {tr.etiqueta_llana(estado)}. Acción recomendada: {tr.etiqueta_llana(accion)}."
     if estado == "NOMINAL":
         st.success(resumen)
     elif estado in ("CRISTALIZACION_DETECTADA", "RESERVA_CRITICA", "SUPERVISION_HUMANA"):
         st.warning(resumen)
     else:
         st.error(resumen)
+    st.caption(f"Códigos de la API: estado {estado}, acción {accion}.")
 
     if decision["pulso_termico_activo"]:
         pulso = (
@@ -361,8 +431,9 @@ def panel_decision(decision: dict) -> None:
         )
     else:
         pulso = "Inactivo"
+    st.markdown(f"**Regla activada:** {tr.etiqueta_llana(decision['regla_activada'])}")
+    st.caption(f"Código de la regla: {decision['regla_activada']}")
     st.markdown(
-        f"**Regla activada:** `{decision['regla_activada']}`  \n"
         f"**Pulso térmico:** {pulso}  \n"
         f"**Ajuste de caudal:** {decision['ajuste_caudal_pct']:.0f} % del tope ecológico"
     )
@@ -603,7 +674,8 @@ def seccion_conjeturas(resultado: dict) -> None:
         "no intervienen en la validación. Ver docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md."
     )
     columnas = st.columns(3)
-    for columna, conjetura in zip(columnas, tr.conjeturas_a_lista(resultado)):
+    condiciones = tr.condiciones_de_cambio(resultado)
+    for indice, (columna, conjetura) in enumerate(zip(columnas, tr.conjeturas_a_lista(resultado))):
         with columna.container(border=True):
             st.markdown(f"**{conjetura['nombre']}**")
             if conjetura["validada"]:
@@ -613,6 +685,9 @@ def seccion_conjeturas(resultado: dict) -> None:
                 for causa in conjetura["causas"]:
                     st.markdown(f"- {causa}")
             st.dataframe(conjetura["indicadores"], hide_index=True, width="stretch")
+            if indice < len(condiciones):
+                with st.expander("Qué cambiaría este resultado"):
+                    st.markdown(condiciones[indice])
 
 
 def seccion_graficos(df: pd.DataFrame, resultado: dict) -> None:
@@ -683,9 +758,13 @@ def seccion_bitacora(resultado: dict) -> None:
         nodos = sorted({e["nodo_id"] for e in bitacora})
         reglas = sorted({e["regla_activada"] for e in bitacora})
         nodo = columnas[0].selectbox("Filtrar por nodo", ["Todos"] + nodos, key="filtro_nodo")
-        regla = columnas[1].selectbox("Filtrar por regla", ["Todas"] + reglas, key="filtro_regla")
+        regla = columnas[1].selectbox(
+            "Filtrar por regla", ["Todas"] + reglas, format_func=tr.etiqueta_llana, key="filtro_regla"
+        )
         filtro_nodo = None if nodo == "Todos" else nodo
         filtro_regla = None if regla == "Todas" else regla
+        if filtro_regla is not None:
+            columnas[1].caption(f"Código de la regla: {filtro_regla}")
         cantidad = len(tr.filtrar_bitacora(bitacora, filtro_nodo, filtro_regla))
         st.caption(f"{cantidad} eventos. Se registran solo los cambios de regla de cada nodo; hora local.")
         st.code(tr.bitacora_a_texto(bitacora, filtro_nodo, filtro_regla), language=None, height=360)
@@ -823,7 +902,7 @@ def vista_simulacion(api_disponible: bool) -> None:
         columnas = st.columns(5)
         duracion = columnas[0].slider("Duración (h)", 1, 72, key="sim_duracion")
         humedad = columnas[1].slider(ETIQUETA_HUMEDAD, 0.0, 100.0, step=0.5, key="sim_humedad")
-        tasa = columnas[2].selectbox("Tasa de salinización", ["BAJA", "MEDIA", "ALTA"], key="sim_tasa")
+        tasa = columnas[2].selectbox("Tasa de salinización", TASAS, key="sim_tasa")
         nodos = columnas[3].slider("Número de nodos", 1, 8, key="sim_nodos")
         semilla = columnas[4].number_input("Semilla", step=1, key="sim_semilla")
     parametros = {
@@ -882,11 +961,89 @@ def ejecutar_analisis(funcion, carga: dict, clave: str, mensaje: str) -> None:
             st.session_state[f"error_{clave}"] = error
 
 
+def encabezado_parte(clave: str) -> None:
+    """Título de una parte de la respuesta y la frase que dice qué parte de la pregunta responde."""
+    parte = contenido.PARTES_RESPUESTA[clave]
+    st.subheader(parte["titulo"])
+    st.markdown(parte["frase"])
+
+
+def grafico_incrustacion(serie: pd.DataFrame, cruce: float | None):
+    """Recuperación de ambos modos frente a la incrustación diaria, con una línea vertical en el cruce."""
+    lineas = (
+        alt.Chart(serie)
+        .mark_line(point=True)
+        .encode(
+            x=alt.X("incrustacion:Q", title="Incrustación diaria (Ohm por día)"),
+            y=alt.Y("recuperacion:Q", title="Recuperación tras pulso (%)", scale=alt.Scale(zero=False)),
+            color=alt.Color(CAMPO_MODO, scale=COLORES_MODO, legend=alt.Legend(orient="bottom")),
+            tooltip=[
+                alt.Tooltip(CAMPO_MODO),
+                alt.Tooltip("incrustacion:Q", title="Incrustación diaria", format=".0f"),
+                alt.Tooltip(CAMPO_CARGA, title="Carga salina"),
+                alt.Tooltip("recuperacion:Q", title="Recuperación (%)", format=".2f"),
+            ],
+        )
+    )
+    grafico = _con_referencia(lineas, config.RECUPERACION_MINIMA_PCT)
+    if cruce is not None:
+        vertical = (
+            alt.Chart(pd.DataFrame({"x": [cruce], "etiqueta": ["Cruce"]}))
+            .mark_rule(color=COLOR_REFERENCIA)
+            .encode(x="x:Q", tooltip=[alt.Tooltip("etiqueta:N", title="Referencia"), alt.Tooltip("x:Q", format=".0f")])
+        )
+        grafico = alt.layer(grafico, vertical)
+    return grafico.properties(title="Recuperación frente a la incrustación diaria (referencia 90 %)", height=300)
+
+
+def seccion_robustez(api_disponible: bool) -> None:
+    """Robustez de la respuesta: tabla de las nueve combinaciones de flujo y eficacia y su lectura."""
+    columnas = st.columns(3)
+    humedad = columnas[0].slider(ETIQUETA_HUMEDAD, 0.0, 100.0, step=0.5, key="rob_humedad")
+    semillas = columnas[1].slider("Número de semillas", 1, tr.MAXIMO_SEMILLAS_ROBUSTEZ, key="rob_semillas")
+    columnas[2].write("")
+    if columnas[2].button("Ejecutar robustez", disabled=not api_disponible, type="primary", width="stretch"):
+        ejecutar_analisis(
+            robustez_en_cache, tr.configuracion_robustez(humedad, semillas), "robustez",
+            "Repitiendo el barrido con nueve combinaciones de parámetros...",
+        )
+    if st.session_state.error_robustez is not None:
+        mostrar_error(st.session_state.error_robustez)
+    resultado = st.session_state.resultado_robustez
+    if resultado is None:
+        st.info("Ejecute la robustez para ver si la reducción del desgaste depende de los parámetros supuestos.")
+        return
+    st.dataframe(tr.tabla_robustez(resultado), hide_index=True, width="stretch")
+    st.markdown(contenido.lista_markdown(tr.lectura_robustez(resultado)))
+
+
+def seccion_dimensionamiento(api_disponible: bool) -> None:
+    """Dimensionamiento: área de colector y nodos para un número de personas."""
+    columnas = st.columns(5)
+    personas = columnas[0].number_input("Personas", 1, 1000, step=1, key="dim_personas")
+    estandar = columnas[1].selectbox(
+        "Consumo", list(tr.ESTANDARES_CONSUMO), format_func=tr.ESTANDARES_CONSUMO.get, key="dim_estandar"
+    )
+    escenario = columnas[2].selectbox(ETIQUETA_ESCENARIO, list(ESCENARIOS), format_func=ESCENARIOS.get, key="dim_escenario")
+    humedad = columnas[3].slider(ETIQUETA_HUMEDAD, 0.0, 100.0, step=0.5, key="dim_humedad")
+    columnas[4].write("")
+    if columnas[4].button("Dimensionar", disabled=not api_disponible, width="stretch"):
+        carga = tr.configuracion_dimensionamiento(personas, estandar, escenario, humedad)
+        ejecutar_analisis(dimensionamiento_en_cache, carga, "dimensionamiento", "Dimensionando el captador...")
+    if st.session_state.error_dimensionamiento is not None:
+        mostrar_error(st.session_state.error_dimensionamiento)
+    resultado = st.session_state.resultado_dimensionamiento
+    if resultado is None:
+        st.info("Indique el número de personas y presione Dimensionar.")
+        return
+    st.markdown(contenido.lista_markdown(tr.resumen_dimensionamiento(resultado)))
+
+
 def grafico_barrido(df: pd.DataFrame, variable: str, titulo: str, eje_y: str, referencia=None):
     """Media por modo frente a la carga salina, con una banda de +/- una desviación estándar."""
     datos = df[df["Variable"] == variable]
     base = alt.Chart(datos).encode(
-        x=alt.X("carga:Q", title="Carga salina (Ohm por L/m²)"),
+        x=alt.X(CAMPO_CARGA, title="Carga salina (Ohm por L/m²)"),
         color=alt.Color(CAMPO_MODO, scale=COLORES_MODO, legend=alt.Legend(orient="bottom")),
     )
     banda = base.mark_area(opacity=0.2).encode(y=alt.Y("inferior:Q", title=eje_y, scale=alt.Scale(zero=False)), y2="superior:Q")
@@ -894,7 +1051,7 @@ def grafico_barrido(df: pd.DataFrame, variable: str, titulo: str, eje_y: str, re
         y=alt.Y("media:Q", title=eje_y),
         tooltip=[
             alt.Tooltip(CAMPO_MODO),
-            alt.Tooltip("carga:Q", title="Carga salina"),
+            alt.Tooltip(CAMPO_CARGA, title="Carga salina"),
             alt.Tooltip("media:Q", title="Media", format=".3f"),
             alt.Tooltip("desv:Q", title="Desviación", format=".3f"),
         ],
@@ -903,18 +1060,27 @@ def grafico_barrido(df: pd.DataFrame, variable: str, titulo: str, eje_y: str, re
 
 
 def seccion_barrido(api_disponible: bool) -> None:
-    """Barrido de salinidad con varias semillas: gráficos de recuperación y degradación y su lectura."""
-    st.subheader("Barrido de salinidad")
-    columnas = st.columns(3)
+    """Barrido de salinidad con el flujo de un perfil de sitio: recuperación frente a la incrustación diaria."""
+    perfiles = {perfil["nombre"]: perfil for perfil in obtener_perfiles(api_disponible)}
+    columnas = st.columns(4)
     humedad = columnas[0].slider(ETIQUETA_HUMEDAD, 0.0, 100.0, step=0.5, key="resp_humedad")
     semillas = columnas[1].slider(
         "Número de semillas", 1, tr.MAXIMO_SEMILLAS, key="resp_semillas",
         help="Se usan semillas consecutivas desde 1. Cada semilla genera un clima de referencia distinto.",
     )
-    columnas[2].write("")
-    if columnas[2].button("Ejecutar barrido", disabled=not api_disponible, type="primary", width="stretch"):
+    flujo = None
+    if perfiles:
+        if st.session_state.resp_perfil not in perfiles:
+            st.session_state.resp_perfil = next(iter(perfiles))
+        nombre = columnas[2].selectbox(
+            "Flujo de niebla", list(perfiles), format_func=lambda clave: tr.etiqueta_sitio(perfiles[clave]),
+            key="resp_perfil", help="Flujo supuesto o extremos calibrados contra la literatura (GET /api/v1/sitios).",
+        )
+        flujo = perfiles[nombre]["flujo_niebla_maximo_l_m2_h"]
+    columnas[3].write("")
+    if columnas[3].button("Ejecutar barrido", disabled=not api_disponible, type="primary", width="stretch"):
         ejecutar_analisis(
-            barrido_en_cache, tr.configuracion_barrido(humedad, semillas), "barrido",
+            barrido_en_cache, tr.configuracion_barrido_con_flujo(humedad, semillas, flujo), "barrido",
             "Ejecutando el barrido de salinidad...",
         )
     if st.session_state.error_barrido is not None:
@@ -927,25 +1093,24 @@ def seccion_barrido(api_disponible: bool) -> None:
     df = tr.barrido_a_dataframe(resultado)
     graficos = st.columns(2)
     graficos[0].altair_chart(
-        grafico_barrido(df, tr.VARIABLE_RECUPERACION, "Recuperación tras pulso (referencia 90 %)", "%",
-                        config.RECUPERACION_MINIMA_PCT),
+        grafico_incrustacion(tr.serie_barrido_por_incrustacion(resultado), tr.incrustacion_cruce(resultado)),
         width="stretch",
     )
     graficos[1].altair_chart(
-        grafico_barrido(df, tr.VARIABLE_DEGRADACION, "Degradación acumulada de la membrana", "%"),
+        grafico_barrido(df, tr.VARIABLE_DEGRADACION, "Degradación acumulada frente a la carga salina", "%"),
         width="stretch",
     )
-    st.markdown(contenido.lista_markdown(tr.lectura_barrido(resultado)))
+    st.markdown(contenido.lista_markdown([tr.lectura_cruce(resultado)] + tr.lectura_barrido(resultado)))
 
 
 def seccion_sensibilidad(api_disponible: bool) -> None:
     """Sensibilidad a un parámetro supuesto: indicador frente al valor y estado de las conjeturas."""
-    st.subheader("Sensibilidad a un parámetro supuesto")
+    st.markdown("**Sensibilidad a un parámetro supuesto**")
     columnas = st.columns(3)
     parametro = columnas[0].selectbox(
         "Parámetro", list(tr.VALORES_SENSIBILIDAD), format_func=tr.NOMBRES_PARAMETRO.get, key="sens_parametro"
     )
-    escenario = columnas[1].selectbox("Escenario", list(ESCENARIOS), format_func=ESCENARIOS.get, key="sens_escenario")
+    escenario = columnas[1].selectbox(ETIQUETA_ESCENARIO, list(ESCENARIOS), format_func=ESCENARIOS.get, key="sens_escenario")
     columnas[2].write("")
     if columnas[2].button("Ejecutar sensibilidad", disabled=not api_disponible, width="stretch"):
         carga = tr.configuracion_sensibilidad(parametro, escenario, st.session_state.resp_humedad)
@@ -1005,14 +1170,14 @@ def grafico_incertidumbre(df: pd.DataFrame):
 
 def seccion_incertidumbre(api_disponible: bool) -> None:
     """Propagación de la incertidumbre de la eficacia del pulso y del flujo de niebla."""
-    st.subheader("Incertidumbre de los parámetros supuestos")
+    st.markdown("**Incertidumbre de los parámetros supuestos**")
     st.caption(
         "Cada muestra toma una eficacia del pulso entre 0.80 y 1.00 y un flujo de niebla entre 0.49 y "
         "1.83 L/m²/h (calibrado contra el rendimiento de 3 a 10 L/m² al día de la literatura), con "
         "distribución uniforme, y simula 24 h con tasa de salinización ALTA."
     )
     columnas = st.columns(4)
-    escenario = columnas[0].selectbox("Escenario", list(ESCENARIOS), format_func=ESCENARIOS.get, key="inc_escenario")
+    escenario = columnas[0].selectbox(ETIQUETA_ESCENARIO, list(ESCENARIOS), format_func=ESCENARIOS.get, key="inc_escenario")
     humedad = columnas[1].slider(ETIQUETA_HUMEDAD, 0.0, 100.0, step=0.5, key="inc_humedad")
     muestras = columnas[2].slider("Número de muestras", 5, 30, key="inc_muestras")
     columnas[3].write("")
@@ -1039,14 +1204,116 @@ def seccion_incertidumbre(api_disponible: bool) -> None:
 
 
 def vista_respuesta(api_disponible: bool) -> None:
-    """Respuesta a la pregunta de investigación con el barrido, la sensibilidad y la incertidumbre."""
+    """Respuesta a la pregunta por partes: desgaste, recuperación, seguridad y personas abastecidas."""
     st.header(VISTA_RESPUESTA)
     st.info(contenido.PREGUNTA_INVESTIGACION)
     st.markdown(f"**Hipótesis de trabajo.** {contenido.HIPOTESIS}")
     st.warning(contenido.AVISO_EXPLORATORIO)
+    encabezado_parte("desgaste")
+    seccion_robustez(api_disponible)
+    encabezado_parte("recuperacion")
     seccion_barrido(api_disponible)
-    seccion_sensibilidad(api_disponible)
+    encabezado_parte("seguridad")
     seccion_incertidumbre(api_disponible)
+    seccion_sensibilidad(api_disponible)
+    encabezado_parte("personas")
+    seccion_dimensionamiento(api_disponible)
+    boton_siguiente_vista(VISTA_RESPUESTA)
+
+
+# ---------------------------------------------------------------------------
+# Vista D: explorador de hipótesis
+# ---------------------------------------------------------------------------
+def cargar_perfil(perfiles: dict[str, dict]) -> None:
+    """Callback que copia el perfil elegido en los cinco campos editables del explorador."""
+    perfil = perfiles.get(st.session_state.exp_perfil)
+    if perfil is None:
+        return
+    for campo, clave in CAMPOS_EXPLORADOR.items():
+        st.session_state[clave] = perfil[campo]
+
+
+def controles_perfil(perfiles: dict[str, dict], bloqueado: bool) -> dict:
+    """Selector de perfil y sus cinco campos, acotados a los límites de PerfilSitio; devuelve el perfil editado."""
+    if perfiles:
+        if st.session_state.exp_perfil not in perfiles:
+            st.session_state.exp_perfil = next(iter(perfiles))
+        st.selectbox(
+            "Perfil de sitio", list(perfiles), format_func=lambda clave: tr.etiqueta_sitio(perfiles[clave]),
+            key="exp_perfil", on_change=cargar_perfil, args=(perfiles,), disabled=bloqueado,
+        )
+    columnas = st.columns(5)
+    columnas[0].text_input(
+        "Nombre del sitio", key=CAMPOS_EXPLORADOR["nombre"], max_chars=tr.LONGITUD_MAXIMA_NOMBRE_SITIO,
+        help="Mayúsculas, dígitos y guion bajo; los demás caracteres se reemplazan por guion bajo.",
+    )
+    columnas[1].number_input(
+        "Flujo de niebla (L/m²/h)", config.FLUJO_NIEBLA_MIN_L_M2_H, config.FLUJO_NIEBLA_MAX_L_M2_H,
+        step=0.01, key=CAMPOS_EXPLORADOR["flujo_niebla_maximo_l_m2_h"],
+    )
+    columnas[2].number_input(
+        "Temperatura media (°C)", config.TEMPERATURA_MEDIA_MIN_C, config.TEMPERATURA_MEDIA_MAX_C,
+        step=0.5, key=CAMPOS_EXPLORADOR["temperatura_media_c"],
+    )
+    columnas[3].number_input(
+        "Amplitud térmica (°C)", 0.0, config.AMPLITUD_TEMPERATURA_MAX_C, step=0.5,
+        key=CAMPOS_EXPLORADOR["amplitud_temperatura_c"],
+    )
+    columnas[4].number_input(
+        "Amplitud de humedad (puntos)", 0.0, config.AMPLITUD_HUMEDAD_MAX_PCT, step=0.5,
+        key=CAMPOS_EXPLORADOR["amplitud_humedad_pct"],
+    )
+    return {campo: st.session_state[clave] for campo, clave in CAMPOS_EXPLORADOR.items()}
+
+
+def mostrar_resultado_explorador(resultado: dict) -> None:
+    """Conjeturas, qué cambiaría cada una y parámetros usados de la simulación del explorador."""
+    st.subheader("Conjeturas")
+    columnas = st.columns(3)
+    condiciones = tr.condiciones_de_cambio(resultado)
+    for indice, (columna, conjetura) in enumerate(zip(columnas, tr.conjeturas_a_lista(resultado))):
+        with columna.container(border=True):
+            st.markdown(f"**{conjetura['nombre']}**")
+            if conjetura["validada"]:
+                st.success("VALIDADA")
+            else:
+                st.error("NO VALIDADA")
+            if indice < len(condiciones):
+                st.markdown(condiciones[indice])
+    st.subheader("Parámetros usados")
+    st.dataframe(tr.parametros_usados_a_dataframe(resultado), hide_index=True, width="stretch")
+
+
+def vista_explorador(api_disponible: bool) -> None:
+    """Simulación con eficacia y perfil de sitio propios, condiciones de cambio y preguntas para el Ciclo 3."""
+    st.header(VISTA_EXPLORADOR)
+    st.markdown(contenido.INTRO_EXPLORADOR)
+    bloqueado = not api_disponible
+    perfiles = {perfil["nombre"]: perfil for perfil in obtener_perfiles(api_disponible)}
+    columnas = st.columns(4)
+    escenario = columnas[0].selectbox(ETIQUETA_ESCENARIO, list(ESCENARIOS), format_func=ESCENARIOS.get, key="exp_escenario")
+    tasa = columnas[1].selectbox("Tasa de salinización", TASAS, key="exp_tasa")
+    humedad = columnas[2].slider(ETIQUETA_HUMEDAD, 0.0, 100.0, step=0.5, key="exp_humedad")
+    eficacia = columnas[3].slider(
+        "Eficacia del pulso", config.EFICACIA_EXPLORADOR_MIN, config.EFICACIA_EXPLORADOR_MAX, step=0.01,
+        key="exp_eficacia",
+    )
+    sitio = controles_perfil(perfiles, bloqueado)
+    if st.button("Ejecutar simulación", disabled=bloqueado, type="primary"):
+        carga = tr.configuracion_explorador(escenario, tasa, humedad, eficacia, sitio)
+        ejecutar_analisis(simulacion_en_cache, carga, "explorador", "Ejecutando la simulación con su hipótesis...")
+    if st.session_state.error_explorador is not None:
+        mostrar_error(st.session_state.error_explorador)
+    resultado = st.session_state.resultado_explorador
+    if resultado is None:
+        st.info("Ajuste los parámetros y presione Ejecutar simulación.")
+    else:
+        mostrar_resultado_explorador(resultado)
+    st.subheader("Preguntas para el Ciclo 3")
+    preguntas = tr.hipotesis_siguientes(
+        st.session_state.resultado_robustez, st.session_state.resultado_incertidumbre, resultado
+    )
+    st.markdown(contenido.lista_markdown(preguntas))
 
 
 # ---------------------------------------------------------------------------
@@ -1068,6 +1335,8 @@ def main() -> None:
         vista_evaluacion(api_disponible)
     elif vista == VISTA_RESPUESTA:
         vista_respuesta(api_disponible)
+    elif vista == VISTA_EXPLORADOR:
+        vista_explorador(api_disponible)
     else:
         vista_simulacion(api_disponible)
         # La simulación puede terminar antes de mostrar resultados, por eso el botón se dibuja aquí.

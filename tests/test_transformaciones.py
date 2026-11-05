@@ -5,12 +5,14 @@ import copy
 import pandas as pd
 import pytest
 
-from backend.analisis import ejecutar_barrido, ejecutar_incertidumbre
+from backend.analisis import ejecutar_barrido, ejecutar_dimensionamiento, ejecutar_incertidumbre, ejecutar_robustez
 from backend.schemas import (
     BarridoConfig,
     CausaNoValidacion,
+    DimensionamientoConfig,
     Escenario,
     IncertidumbreConfig,
+    RobustezConfig,
     SimulationConfig,
     TasaSalinizacion,
 )
@@ -676,12 +678,13 @@ def test_lectura_incertidumbre_con_muestras_sin_pulsos(incertidumbre_dia_normal)
     assert frases[0].startswith("Conjetura 1. Eficiencia: se valida en ")
     assert "de 20 muestras (probabilidad " in frases[0]
     assert "entre los percentiles 5 y 95" in frases[4]
-    assert frases[-1].startswith(f"En {sin_pulsos} de 20 muestras el neuro-simbólico no aplicó pulsos")
+    assert frases[-2].startswith(f"En {sin_pulsos} de 20 muestras el neuro-simbólico no aplicó pulsos")
+    assert frases[-1].startswith("El control basado en reglas recupera más que el temporizador en 0 de 8 muestras")
 
 
 def test_lectura_incertidumbre_sin_muestras_sin_pulsos(incertidumbre_salina):
     frases = tr.lectura_incertidumbre(incertidumbre_salina)
-    assert len(frases) == 6
+    assert len(frases) == 7
     assert "no aplicó pulsos" not in " ".join(frases)
 
 
@@ -716,3 +719,404 @@ def test_lectura_incertidumbre_indicador_sin_datos():
 
 def test_lectura_incertidumbre_vacia():
     assert tr.lectura_incertidumbre({"muestras": []}) == ["El análisis no devolvió muestras."]
+
+
+# ---------------------------------------------------------------------------
+# Lenguaje llano y condiciones de cambio
+# ---------------------------------------------------------------------------
+REGLA_03 = "REGLA_03_DESPRENDIMIENTO_SAL_POR_IMPEDANCIA"
+CODIGO_DESCONOCIDO = "CODIGO_NUEVO"
+CRUCE = "cruce"
+
+
+def test_etiqueta_llana_traduce_un_codigo_conocido():
+    assert tr.etiqueta_llana(REGLA_03) == "Pulso de limpieza: la sal obstruye la membrana"
+
+
+def test_etiqueta_llana_devuelve_el_codigo_desconocido():
+    assert tr.etiqueta_llana(CODIGO_DESCONOCIDO) == CODIGO_DESCONOCIDO
+
+
+def test_condiciones_de_cambio_una_frase_por_conjetura(resultado_prd):
+    frases = tr.condiciones_de_cambio(resultado_prd)
+    assert len(frases) == 3
+    for frase in frases:
+        assert ", no validada." in frase
+
+
+def test_condiciones_de_cambio_calcula_la_distancia_de_la_recuperacion(resultado_prd):
+    frase = tr.condiciones_de_cambio(resultado_prd)[0]
+    assert "88.81 frente al umbral >= 90, a 1.19 del umbral." in frase
+    assert f"{config.EFICACIA_MINIMA_C1:.2f}" in frase
+
+
+def test_condiciones_de_cambio_omite_los_indicadores_que_cumplen(resultado_prd):
+    frase = tr.condiciones_de_cambio(resultado_prd)[0]
+    assert "Ahorro de energía" not in frase
+
+
+def test_condiciones_de_cambio_del_rendimiento_nocturno(resultado_prd):
+    frase = tr.condiciones_de_cambio(resultado_prd)[2]
+    assert "5.95 frente al umbral >= 12" in frase
+    assert "calibrar el flujo" in frase
+
+
+def test_condiciones_de_cambio_de_una_conjetura_validada(resultado):
+    # SEQUIA con 85 % valida la Conjetura 3.
+    frase = tr.condiciones_de_cambio(resultado)[2]
+    assert frase.startswith("Conjetura 3. Saber territorial, validada.")
+    assert "con un margen de" in frase
+    assert "Fallaría" in frase
+
+
+def test_condiciones_de_cambio_indicador_sin_datos_y_desconocido():
+    detalle = {
+        "conjetura_1_eficiencia": {
+            "validada": False,
+            "indicadores": {
+                "recuperacion_caudal_promedio_pct": {"valor": None, "umbral": 90.0, "operador": ">=", "cumple": False},
+                "indicador_nuevo": {"valor": 2.0, "umbral": 5.0, "operador": ">=", "cumple": False},
+            },
+        }
+    }
+    frase = tr.condiciones_de_cambio({tr.CLAVE_DETALLE: detalle})[0]
+    assert "no tiene datos" in frase
+    assert "indicador_nuevo: 2.00 frente al umbral >= 5, a 3.00 del umbral." in frase
+    assert "Depende de los parámetros supuestos del modelo." in frase
+
+
+@pytest.mark.parametrize("respuesta", [{}, {tr.CLAVE_DETALLE: None}])
+def test_condiciones_de_cambio_sin_detalle(respuesta):
+    assert tr.condiciones_de_cambio(respuesta) == []
+
+
+def test_palancas_cubren_los_indicadores_de_las_conjeturas(resultado):
+    for verificacion in resultado[tr.CLAVE_DETALLE].values():
+        for clave in verificacion["indicadores"]:
+            assert clave in tr.PALANCAS_INDICADOR
+
+
+# ---------------------------------------------------------------------------
+# Robustez de la respuesta
+# ---------------------------------------------------------------------------
+@pytest.fixture(scope="module")
+def robustez_real():
+    """Robustez real con semilla 42 y humedad inicial de 85 %, como en docs/04, sección 8.8."""
+    return ejecutar_robustez(RobustezConfig()).model_dump(mode="json")
+
+
+def _combinacion(estado, incrustacion=None, carga=None, reduccion=90.0):
+    """Combinación sintética de la robustez con un punto y el cruce indicado."""
+    punto = {tr.CLAVE_CARGA: 60.0, "reduccion_desgaste_pct": reduccion, tr.CLAVE_INCRUSTACION: 1000.0}
+    return {
+        "flujo_niebla_maximo_l_m2_h": 1.0,
+        "eficacia_maxima_pulso": 0.9,
+        "barrido": {
+            tr.CLAVE_PUNTOS: [punto],
+            CRUCE: {"estado": estado, "incrustacion_diaria_ohm": incrustacion, tr.CLAVE_CARGA: carga},
+        },
+    }
+
+
+def test_configuracion_robustez_acota_las_semillas():
+    assert tr.configuracion_robustez(85, 9) == {"humedad_ambiente_inicial_pct": 85.0, "semillas": [1, 2, 3]}
+    assert tr.configuracion_robustez(85, 0)["semillas"] == [1]
+
+
+def test_tabla_robustez_con_datos_reales(robustez_real):
+    tabla = tr.tabla_robustez(robustez_real)
+    assert list(tabla.columns) == tr.COLUMNAS_ROBUSTEZ
+    assert len(tabla) == 9
+    primera = tabla.iloc[0]
+    assert primera[tr.COLUMNA_CRUCE] == tr.etiqueta_llana(tr.ESTADO_INTERPOLADO)
+    assert primera["Incrustación diaria del cruce (Ohm/día)"] == pytest.approx(1819.82, abs=0.01)
+    assert primera["Reducción del desgaste mínima (%)"] == pytest.approx(73.26, abs=0.01)
+
+
+def test_tabla_robustez_sin_cruce_deja_celdas_vacias(robustez_real):
+    ultima = tr.tabla_robustez(robustez_real).iloc[-1]
+    assert ultima[tr.COLUMNA_CRUCE] == tr.etiqueta_llana("SIN_DATOS")
+    assert pd.isna(ultima["Incrustación diaria del cruce (Ohm/día)"])
+
+
+def test_tabla_robustez_vacia():
+    tabla = tr.tabla_robustez({})
+    assert tabla.empty
+    assert list(tabla.columns) == tr.COLUMNAS_ROBUSTEZ
+
+
+def test_lectura_robustez_con_datos_reales(robustez_real):
+    frases = tr.lectura_robustez(robustez_real)
+    assert "reduce el desgaste entre 73.3 % y 100.0 %" in frases[0]
+    assert frases[1].startswith("6 de 9 combinaciones cruzan")
+    assert "1633 a 1839 Ohm por día" in frases[1]
+    assert "Es coherente con H1-Ciclo 3" in frases[2]
+    assert frases[3].startswith("3 de 9 combinaciones: sin datos suficientes")
+
+
+def test_lectura_robustez_sin_cruce_ni_reduccion():
+    resultado = {tr.CLAVE_COMBINACIONES: [_combinacion("SIN_CRUCE_NEURO_INFERIOR")]}
+    frases = tr.lectura_robustez(resultado)
+    assert frases[0] == "No hay datos para calcular la reducción del desgaste."
+    assert frases[1].startswith("Ninguna de las 1 combinaciones cruza")
+    assert "el temporizador recupera igual o más" in frases[2]
+
+
+def test_lectura_robustez_que_no_apoya_la_hipotesis():
+    resultado = {
+        tr.CLAVE_COMBINACIONES: [
+            _combinacion(tr.ESTADO_INTERPOLADO, incrustacion=1000.0, carga=50.0),
+            _combinacion(tr.ESTADO_INTERPOLADO, incrustacion=3000.0, carga=60.0),
+        ],
+        "reduccion_desgaste_min_pct": 80.0,
+        "reduccion_desgaste_max_pct": 95.0,
+        "combinaciones_con_cruce": 2,
+        "incrustacion_diaria_cruce_min_ohm": 1000.0,
+        "incrustacion_diaria_cruce_max_ohm": 3000.0,
+    }
+    frases = tr.lectura_robustez(resultado)
+    assert "no apoya H1-Ciclo 3" in frases[2]
+
+
+def test_lectura_robustez_con_un_solo_cruce_no_compara_la_variacion():
+    resultado = {
+        tr.CLAVE_COMBINACIONES: [_combinacion(tr.ESTADO_INTERPOLADO, incrustacion=1700.0, carga=55.0)],
+        "incrustacion_diaria_cruce_min_ohm": 1700.0,
+        "incrustacion_diaria_cruce_max_ohm": 1700.0,
+    }
+    frases = tr.lectura_robustez(resultado)
+    assert len(frases) == 2
+
+
+def test_lectura_robustez_sin_combinaciones():
+    assert tr.lectura_robustez({}) == ["La robustez no devolvió combinaciones."]
+
+
+# ---------------------------------------------------------------------------
+# Barrido frente a la incrustación diaria
+# ---------------------------------------------------------------------------
+def test_serie_barrido_por_incrustacion(barrido_real):
+    serie = tr.serie_barrido_por_incrustacion(barrido_real)
+    assert list(serie.columns) == tr.COLUMNAS_INCRUSTACION
+    assert len(serie) == 12
+    assert serie["incrustacion"].min() == pytest.approx(666.6, abs=0.1)
+
+
+def test_serie_barrido_omite_puntos_sin_incrustacion_o_sin_recuperacion():
+    sin_incrustacion = _punto_barrido(20.0, 88.0, 95.0)
+    sin_recuperacion = {**_punto_barrido(40.0, None, 92.0), tr.CLAVE_INCRUSTACION: 1200.0}
+    serie = tr.serie_barrido_por_incrustacion(_barrido(sin_incrustacion, sin_recuperacion))
+    assert len(serie) == 1
+    assert serie.iloc[0]["Modo"] == TEMPORIZADOR
+
+
+def test_serie_barrido_vacia():
+    assert tr.serie_barrido_por_incrustacion({}).empty
+
+
+def test_incrustacion_cruce_del_barrido_real(barrido_real):
+    assert tr.incrustacion_cruce(barrido_real) == pytest.approx(1789.12, abs=0.01)
+
+
+def test_incrustacion_cruce_sin_campo():
+    assert tr.incrustacion_cruce({}) is None
+
+
+def test_lectura_cruce_con_datos_reales(barrido_real):
+    frase = tr.lectura_cruce(barrido_real)
+    assert frase.startswith("Cruza: el control basado en reglas pasa a recuperar más.")
+    assert "1789 Ohm por día" in frase
+    assert "55.9 Ohm por L/m²" in frase
+
+
+def test_lectura_cruce_sin_valor():
+    resultado = {CRUCE: {"estado": "SIN_DATOS", "incrustacion_diaria_ohm": None, tr.CLAVE_CARGA: None}}
+    assert tr.lectura_cruce(resultado) == f"{tr.etiqueta_llana('SIN_DATOS')}."
+
+
+def test_lectura_cruce_con_api_anterior():
+    assert "0.3.0" in tr.lectura_cruce({})
+
+
+def test_etiqueta_sitio():
+    perfil = {"nombre": "CABO_DE_LA_VELA", "flujo_niebla_maximo_l_m2_h": 6.0}
+    assert tr.etiqueta_sitio(perfil) == "CABO_DE_LA_VELA (6 L/m²/h)"
+
+
+def test_configuracion_barrido_con_flujo():
+    carga = tr.configuracion_barrido_con_flujo(85, 2, 1.83)
+    assert carga["flujo_niebla_maximo_l_m2_h"] == pytest.approx(1.83)
+    assert carga["semillas"] == [1, 2]
+
+
+def test_configuracion_barrido_sin_flujo():
+    assert "flujo_niebla_maximo_l_m2_h" not in tr.configuracion_barrido_con_flujo(85, 1, None)
+
+
+# ---------------------------------------------------------------------------
+# Dimensionamiento
+# ---------------------------------------------------------------------------
+@pytest.fixture(scope="module")
+def dimensionamiento_real():
+    """Dimensionamiento real para 50 personas en DIA_NORMAL con humedad inicial de 85 %."""
+    cfg = DimensionamientoConfig(personas=50, escenario=Escenario.DIA_NORMAL, humedad_ambiente_inicial_pct=85.0)
+    return ejecutar_dimensionamiento(cfg).model_dump(mode="json")
+
+
+def test_configuracion_dimensionamiento():
+    assert tr.configuracion_dimensionamiento(50, "OMS_20", "DIA_NORMAL", 85) == {
+        "personas": 50,
+        "estandar": "OMS_20",
+        "escenario": "DIA_NORMAL",
+        "humedad_ambiente_inicial_pct": 85.0,
+    }
+
+
+def test_estandares_de_consumo_usan_config():
+    assert f"{config.CONSUMO_ACCESO_BASICO_L_PERSONA_DIA:g} L" in tr.ESTANDARES_CONSUMO["OMS_20"]
+
+
+def test_resumen_dimensionamiento_con_datos_reales(dimensionamiento_real):
+    frases = tr.resumen_dimensionamiento(dimensionamiento_real)
+    assert frases[0] == "Consumo de 20 L por persona al día."
+    assert "flujo supuesto (6 L/m²/h)" in frases[1]
+    assert "32 nodos de 1 m²" in frases[1]
+    assert "332 nodos" in frases[3]
+    assert "entre 100.0 y 333.3 m²" in frases[4]
+
+
+def test_resumen_dimensionamiento_sin_rendimiento_ni_literatura():
+    resultado = {
+        "consumo_l_persona_dia": 15.0,
+        "dimensiones": [
+            {
+                "origen_flujo": "CALIBRADO_MIN",
+                "flujo_niebla_maximo_l_m2_h": 0.49,
+                "rendimiento_neuro_l_m2_dia": 0.0,
+                "area_colector_m2": None,
+                "nodos_requeridos": None,
+            }
+        ],
+    }
+    frases = tr.resumen_dimensionamiento(resultado)
+    assert len(frases) == 2
+    assert "no capta agua" in frases[1]
+
+
+def test_resumen_dimensionamiento_sin_resultados():
+    assert tr.resumen_dimensionamiento({}) == ["El dimensionamiento no devolvió resultados."]
+
+
+# ---------------------------------------------------------------------------
+# Explorador de hipótesis
+# ---------------------------------------------------------------------------
+SITIO_EXPLORADOR = {
+    "nombre": "mi sitio-1",
+    "flujo_niebla_maximo_l_m2_h": 2,
+    "temperatura_media_c": 25,
+    "amplitud_temperatura_c": 5,
+    "amplitud_humedad_pct": 12,
+}
+
+
+@pytest.mark.parametrize(
+    ("texto", "esperado"),
+    [
+        ("mi sitio-1", "MI_SITIO_1"),
+        ("  ", tr.NOMBRE_SITIO_POR_DEFECTO),
+        ("ñandú", "_AND_"),
+        ("A" * 50, "A" * 40),
+    ],
+)
+def test_normalizar_nombre_sitio(texto, esperado):
+    assert tr.normalizar_nombre_sitio(texto) == esperado
+
+
+def test_configuracion_explorador():
+    carga = tr.configuracion_explorador("DIA_NORMAL", "ALTA", 85, 0.95, SITIO_EXPLORADOR)
+    assert carga["duracion_horas"] == 24
+    assert carga["eficacia_maxima_pulso"] == pytest.approx(0.95)
+    assert carga["sitio"]["nombre"] == "MI_SITIO_1"
+    assert isinstance(carga["sitio"]["flujo_niebla_maximo_l_m2_h"], float)
+    assert set(carga["sitio"]) == set(tr.CAMPOS_SITIO)
+
+
+def test_parametros_usados_a_dataframe(resultado):
+    tabla = tr.parametros_usados_a_dataframe(resultado)
+    assert len(tabla) == 6
+    assert tabla.iloc[0]["Valor"] == "CABO_DE_LA_VELA"
+
+
+def test_parametros_usados_sin_campo():
+    tabla = tr.parametros_usados_a_dataframe({})
+    assert tabla.empty
+    assert list(tabla.columns) == ["Parámetro", "Valor"]
+
+
+@pytest.fixture(scope="module")
+def incertidumbre_explorador():
+    """Incertidumbre real en INCRUSTACION_SALINA_RAPIDA con 5 muestras."""
+    return _incertidumbre_real(Escenario.INCRUSTACION_SALINA_RAPIDA, 5)
+
+
+def test_hipotesis_siguientes_sin_analisis():
+    preguntas = tr.hipotesis_siguientes(None, None, None)
+    assert len(preguntas) == 3
+    assert "vista 4, parte a" in preguntas[0]
+    assert "vista 4, parte c" in preguntas[1]
+    assert "vista 5" in preguntas[2]
+
+
+def test_hipotesis_siguientes_con_datos_reales(robustez_real, incertidumbre_explorador, resultado_prd):
+    preguntas = tr.hipotesis_siguientes(robustez_real, incertidumbre_explorador, resultado_prd)
+    assert "1633 a 1839 Ohm por día en 6 de 9 combinaciones" in preguntas[0]
+    assert "proporción de 0.00" in preguntas[1]
+    assert "En CABO_DE_LA_VELA, el control basado en reglas rinde 10.21 L/m² al día" in preguntas[2]
+    assert "160 a 183 Ohm por L/m²" in preguntas[2]
+    assert "Con una eficacia de 0.90" in preguntas[3]
+
+
+def test_hipotesis_siguientes_sin_cruce_ni_muestras_ni_agua():
+    robustez = {tr.CLAVE_COMBINACIONES: [_combinacion("SIN_DATOS")], "combinaciones_con_cruce": 0}
+    incertidumbre = {"probabilidad_ventaja_recuperacion": None}
+    simulacion = {"impacto_comunitario": {tr.MODO_NEURO: {"rendimiento_l_m2_dia": 0.0}}}
+    preguntas = tr.hipotesis_siguientes(robustez, incertidumbre, simulacion)
+    assert preguntas[0].startswith("Ninguna de las 1 combinaciones cruza")
+    assert preguntas[1].startswith("Ninguna muestra de la incertidumbre")
+    assert "el sitio simulado" in preguntas[2]
+    assert "no captó agua" in preguntas[2]
+    assert len(preguntas) == 3
+
+
+def test_hipotesis_siguientes_sin_pregunta_de_eficacia_si_se_validan():
+    simulacion = {
+        "conjeturas_validadas": {"conjetura_1_eficiencia": True, "conjetura_2_autorreparacion": True},
+        "parametros_usados": {"eficacia_maxima_pulso": 0.97, "nombre_sitio": "SITIO"},
+        "impacto_comunitario": {},
+    }
+    assert len(tr.hipotesis_siguientes(None, None, simulacion)) == 3
+
+
+def test_frase_ventaja_con_datos_reales(incertidumbre_explorador):
+    frase = tr.frase_ventaja_incertidumbre(incertidumbre_explorador)
+    assert "en 0 de 5 muestras con pulsos en ambos modos (probabilidad 0.00)" in frase
+    assert "entre los percentiles 5 y 95" in frase
+
+
+def test_frase_ventaja_sin_campo():
+    assert tr.frase_ventaja_incertidumbre({}) is None
+
+
+def test_frase_ventaja_sin_muestras_con_pulsos():
+    frase = tr.frase_ventaja_incertidumbre({"probabilidad_ventaja_recuperacion": None})
+    assert frase.startswith("Ninguna muestra tiene pulsos en ambos modos")
+
+
+def test_frase_ventaja_sin_resumen():
+    resultado = {
+        "probabilidad_ventaja_recuperacion": 1.0,
+        tr.CLAVE_MUESTRAS: [{"ventaja_recuperacion_pts": 2.0}, {"ventaja_recuperacion_pts": None}],
+    }
+    frase = tr.frase_ventaja_incertidumbre(resultado)
+    assert "en 1 de 1 muestras" in frase
+    assert "percentiles" not in frase

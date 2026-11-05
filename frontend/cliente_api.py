@@ -31,8 +31,8 @@ def _formatear_errores_validacion(detalle: Any) -> list:
     return lineas
 
 
-def _solicitar(metodo: str, ruta: str, timeout: float, cuerpo: Optional[dict] = None) -> dict:
-    """Ejecuta una solicitud y devuelve el cuerpo JSON, o lanza ErrorApiAxioma."""
+def _solicitar(metodo: str, ruta: str, timeout: float, cuerpo: dict | None = None) -> Any:
+    """Ejecuta una solicitud y devuelve el cuerpo JSON (objeto o lista), o lanza ErrorApiAxioma."""
     url = f"{config.API_URL}{ruta}"
     try:
         respuesta = requests.request(metodo, url, json=cuerpo, timeout=timeout)
@@ -103,3 +103,18 @@ def ejecutar_sensibilidad(configuracion: dict) -> dict:
 def ejecutar_incertidumbre(configuracion: dict) -> dict:
     """Propaga la incertidumbre de los parámetros supuestos en POST /api/v1/analisis/incertidumbre."""
     return _solicitar("POST", "/api/v1/analisis/incertidumbre", config.TIMEOUT_ANALISIS_SEG, configuracion)
+
+
+def ejecutar_robustez(carga: dict) -> dict:
+    """Repite el barrido con la grilla de parámetros supuestos en POST /api/v1/analisis/robustez-respuesta."""
+    return _solicitar("POST", "/api/v1/analisis/robustez-respuesta", config.TIMEOUT_ANALISIS_SEG, carga)
+
+
+def dimensionar(carga: dict) -> dict:
+    """Dimensiona el captador para un número de personas en POST /api/v1/analisis/dimensionamiento."""
+    return _solicitar("POST", "/api/v1/analisis/dimensionamiento", config.TIMEOUT_ANALISIS_SEG, carga)
+
+
+def obtener_sitios() -> list[dict]:
+    """Consulta los perfiles de sitio de referencia en GET /api/v1/sitios."""
+    return _solicitar("GET", "/api/v1/sitios", config.TIMEOUT_SITIOS_SEG)

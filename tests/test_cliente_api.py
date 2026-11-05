@@ -171,6 +171,8 @@ def test_api_url_se_toma_del_entorno(monkeypatch):
         (cliente_api.ejecutar_barrido, "/api/v1/analisis/barrido-salinidad"),
         (cliente_api.ejecutar_sensibilidad, "/api/v1/analisis/sensibilidad"),
         (cliente_api.ejecutar_incertidumbre, "/api/v1/analisis/incertidumbre"),
+        (cliente_api.ejecutar_robustez, "/api/v1/analisis/robustez-respuesta"),
+        (cliente_api.dimensionar, "/api/v1/analisis/dimensionamiento"),
     ],
 )
 def test_analisis_usa_su_ruta_y_timeout(request_simulado, funcion, ruta):
@@ -194,3 +196,27 @@ def test_analisis_con_semillas_repetidas_reporta_422(request_simulado):
 
 def test_timeout_de_analisis_mayor_que_el_de_simulacion():
     assert config.TIMEOUT_ANALISIS_SEG > config.TIMEOUT_SIMULACION_SEG
+
+
+def test_obtener_sitios_devuelve_la_lista(request_simulado):
+    perfiles = [{"nombre": "CABO_DE_LA_VELA", "flujo_niebla_maximo_l_m2_h": 6.0}]
+    request_simulado.return_value = respuesta_simulada(200, perfiles)
+    assert cliente_api.obtener_sitios() == perfiles
+    request_simulado.assert_called_once_with(
+        "GET", f"{config.API_URL}/api/v1/sitios", json=None, timeout=config.TIMEOUT_SITIOS_SEG
+    )
+
+
+def test_obtener_sitios_con_api_anterior_reporta_404(request_simulado):
+    request_simulado.return_value = respuesta_simulada(404, {"detail": "Not Found"}, texto="Not Found")
+    with pytest.raises(cliente_api.ErrorApiAxioma) as error:
+        cliente_api.obtener_sitios()
+    assert error.value.codigo_estado == 404
+
+
+def test_dimensionar_con_personas_invalidas_reporta_422(request_simulado):
+    detalle = [{"loc": ["body", "personas"], "msg": "Input should be greater than or equal to 1"}]
+    request_simulado.return_value = respuesta_simulada(422, {"detail": detalle})
+    with pytest.raises(cliente_api.ErrorApiAxioma) as error:
+        cliente_api.dimensionar({"personas": 0})
+    assert error.value.detalle == ["personas: Input should be greater than or equal to 1"]

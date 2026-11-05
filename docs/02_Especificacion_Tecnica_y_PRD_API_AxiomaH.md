@@ -113,6 +113,158 @@ Este documento sirve como **Documento de Requerimientos de Producto (PRD) y Espe
 
 Estos endpoints se agregaron en la implementación del Ciclo 2 y no forman parte de la especificación original. Ninguno modifica la configuración global del modelo: cada solicitud construye su propia copia inmutable de los parámetros (`ParametrosModelo`), por lo que solicitudes simultáneas no comparten estado. Las corridas individuales se guardan en una caché de hasta 256 resultados.
 
+#### Respuestas calculadas de los endpoints generales, de evaluación y de simulación
+
+Los ejemplos de las secciones 3.1 y 3.2 conservan los valores ilustrativos del PRD original. Los siguientes son los que calcula el modelo con la versión 0.3.0 y la semilla 42; los valores de `timestamp` y `tiempo_actividad_seg` dependen del momento de la consulta.
+
+##### GET /api/v1/health
+
+```json
+{
+  "estado": "SALUDABLE",
+  "servicio": "Axioma-H Engine",
+  "version": "0.3.0",
+  "timestamp": "2026-10-28T03:01:23.035280+00:00",
+  "tiempo_actividad_seg": 0.05
+}
+```
+
+##### POST /api/v1/nodo/evaluar
+
+Solicitud:
+
+```json
+{
+  "nodo_id": "NODO_04",
+  "impedancia_ohms": 1650.5,
+  "temperatura_celsius": 36.2,
+  "reserva_calor_pct": 55.0,
+  "humedad_relativa_pct": 42.0,
+  "flujo_actual_ml_min": 14.5,
+  "modo_operacion": "NEURO_SIMBOLICO"
+}
+```
+
+Respuesta:
+
+```json
+{
+  "nodo_id": "NODO_04",
+  "timestamp": "2026-10-28T03:01:23.041067Z",
+  "estado_nodo": "CRISTALIZACION_DETECTADA",
+  "accion_recomendada": "APLICAR_PULSO_RESISTIVO",
+  "pulso_termico_activo": true,
+  "temperatura_objetivo_c": 44.0,
+  "duracion_pulso_seg": 90,
+  "ajuste_caudal_pct": 80.0,
+  "regla_activada": "REGLA_03_DESPRENDIMIENTO_SAL_POR_IMPEDANCIA",
+  "motivo": "Impedancia 1650.5 Ohm sobre el umbral de 1500.0 Ohm: cristalización salina detectada. Se aplica un pulso de 90 s hacia 44.0 °C y el caudal se ajusta al 80 %.",
+  "metricas_conjeturas": {
+    "eficiencia_energetica_pct": 82.44,
+    "recuperacion_hidraulica_pct": 84.32,
+    "preservacion_ecologica_ok": true
+  }
+}
+```
+
+La solicitud admite además el campo opcional `anulacion_manual` (`NINGUNA` por defecto, `SUSPENDER_EXTRACCION` o `INHIBIR_PULSO`), que aplica la supervisión humana de la REGLA_06 (sección 4). Con el mismo payload y `"anulacion_manual": "INHIBIR_PULSO"`, la respuesta cambia a `"estado_nodo": "SUPERVISION_HUMANA"`, `"accion_recomendada": "REDUCIR_CAUDAL_SIN_PULSO"`, `"pulso_termico_activo": false`, `"ajuste_caudal_pct": 50.0` y `"regla_activada": "REGLA_06_SUPERVISION_HUMANA"`, y el motivo indica que el motor habría aplicado la REGLA_03 sin la intervención.
+
+##### POST /api/v1/simulacion/ejecutar
+
+Solicitud: es el payload de ejemplo del PRD. Los campos `numero_nodos` (1 a 8, por defecto 8), `paso_minutos` (1 a 60, por defecto 5) y `semilla` (por defecto 42) son opcionales, igual que `sitio` (perfil con nombre, flujo máximo de niebla, temperatura media y amplitudes térmica y de humedad) y `eficacia_maxima_pulso`. Sin ellos se usan los valores de Cabo de la Vela y los resultados no cambian. El procedimiento para transferir el modelo a otro sitio está en [04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 8.10.
+
+```json
+{
+  "duracion_horas": 24,
+  "escenario": "TORMENTA_DE_SAL_Y_CALOR_EXTREMO",
+  "humedad_ambiente_inicial_pct": 45.0,
+  "tasa_salinizacion": "ALTA"
+}
+```
+
+Respuesta calculada por el modelo (abreviada). Los valores de la respuesta de ejemplo del PRD son ilustrativos.
+
+```json
+{
+  "comparativa": {
+    "modo_neuro_simbolico": {
+      "litros_totales_agua": 81.652,
+      "pulsos_termicos_ejecutados": 19,
+      "consumo_energia_wh": 323.155,
+      "integridad_membrana_final_pct": 99.9525,
+      "violaciones_ecologicas": 0,
+      "recuperacion_caudal_promedio_pct": 88.8126,
+      "degradacion_acumulada_pct": 0.0475
+    },
+    "modo_temporizador_fijo": {
+      "litros_totales_agua": 120.408,
+      "pulsos_termicos_ejecutados": 88,
+      "consumo_energia_wh": 1065.067,
+      "integridad_membrana_final_pct": 97.0941,
+      "violaciones_ecologicas": 8,
+      "recuperacion_caudal_promedio_pct": 91.882,
+      "degradacion_acumulada_pct": 2.9059
+    },
+    "modo_temporizador_tope_ecologico": {
+      "litros_totales_agua": 91.784,
+      "pulsos_termicos_ejecutados": 88,
+      "consumo_energia_wh": 1065.067,
+      "integridad_membrana_final_pct": 97.0941,
+      "violaciones_ecologicas": 0,
+      "recuperacion_caudal_promedio_pct": 93.9574,
+      "degradacion_acumulada_pct": 2.9059
+    }
+  },
+  "conjeturas_validadas": {
+    "conjetura_1_eficiencia": false,
+    "conjetura_2_autorreparacion": false,
+    "conjetura_3_saber_territorial": false
+  },
+  "detalle_verificacion": {
+    "conjetura_2_autorreparacion": {
+      "validada": false,
+      "indicadores": {
+        "tiempo_regeneracion_promedio_seg": { "valor": 22263.1579, "umbral": 120.0, "operador": "<", "cumple": false },
+        "perdida_integridad_termica_pct": { "valor": 0.0, "umbral": 0.0, "operador": "<=", "cumple": true }
+      },
+      "indicadores_informativos": {
+        "pulsos_regenerados": 0,
+        "pulsos_totales": 19,
+        "tiempo_desprendimiento_t95_promedio_seg": 64.4395,
+        "impedancia_promedio_tras_pulso_ohms": 1125.9662
+      },
+      "causas_no_validacion": ["DEPENDE_DE_PARAMETRO_SUPUESTO"]
+    },
+    "...": "conjetura_1_eficiencia y conjetura_3_saber_territorial con la misma estructura"
+  },
+  "series_temporales": [ { "minuto": 0, "humedad_relativa_pct": 84.85, "...": "..." } ],
+  "bitacora": [ { "minuto": 0, "nodo_id": "NODO_01", "regla_activada": "REGLA_05_OPERACION_NOMINAL", "motivo": "..." } ],
+  "impacto_comunitario": {
+    "modo_neuro_simbolico": {
+      "litros_dia_red": 81.652,
+      "rendimiento_l_m2_dia": 10.2065,
+      "personas_supervivencia": 5.4435,
+      "personas_acceso_basico": 4.0826,
+      "area_m2_por_persona_basico_literatura_min": 2.0,
+      "area_m2_por_persona_basico_literatura_max": 6.6667
+    },
+    "...": "modo_temporizador_fijo y modo_temporizador_tope_ecologico con la misma estructura"
+  },
+  "parametros_usados": {
+    "nombre_sitio": "CABO_DE_LA_VELA",
+    "flujo_niebla_maximo_l_m2_h": 6.0,
+    "eficacia_maxima_pulso": 0.9,
+    "temperatura_media_c": 30.0,
+    "amplitud_temperatura_c": 4.5,
+    "amplitud_humedad_pct": 10.0
+  }
+}
+```
+
+`impacto_comunitario` es informativo y no interviene en la validación: traduce el agua de cada modo en personas abastecidas (`docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md`, sección 7.6).
+
+Los escenarios disponibles son `DIA_NORMAL`, `INCRUSTACION_SALINA_RAPIDA`, `SEQUIA`, `TORMENTA_DE_ARENA` y `TORMENTA_DE_SAL_Y_CALOR_EXTREMO`. Las tasas de salinización son `BAJA`, `MEDIA` y `ALTA`.
+
 #### Barrido de salinidad
 * **Ruta:** `POST /api/v1/analisis/barrido-salinidad`
 * **Descripción:** Simula `DIA_NORMAL` e `INCRUSTACION_SALINA_RAPIDA` con las tasas BAJA, MEDIA y ALTA (cargas de 20 a 240 Ohm por L/m²), una vez por semilla, y entrega la media y la desviación estándar muestral de la recuperación tras pulso y de la degradación de ambos modos, ordenadas por carga salina. Cada punto informa además el rendimiento del neuro-simbólico, la incrustación diaria (carga salina por ese rendimiento, en Ohm por día), la ventaja en recuperación (neuro-simbólico menos temporizador, en puntos) y los pulsos del neuro-simbólico. El resultado informa el flujo de niebla y la eficacia usados y el cruce de la ventaja en recuperación frente a la incrustación diaria (`docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md`, sección 8.8).
@@ -424,7 +576,8 @@ La API y el dashboard están implementados en `backend/` (FastAPI) y `frontend/`
 - **Temperatura objetivo del pulso.** Es 44.0 °C. Con 45.0 °C el pulso activaría el corte térmico de la REGLA_01 (`>= 45.0`). El ejemplo de la sección 3.1 se actualizó en consecuencia.
 - **Orden de evaluación.** La REGLA_04 se evalúa antes que la REGLA_03, porque ambas comparten la condición de impedancia alta. El caudal se expresa como porcentaje del tope ecológico del 33 %.
 - **Escenarios y endpoints adicionales.** El simulador incluye el escenario `TORMENTA_DE_SAL_Y_CALOR_EXTREMO`, además de los cuatro de la sección 5. La API expone también `GET /` y `GET /api/v1/health`, y los endpoints de la sección 3.3 (`POST /api/v1/analisis/barrido-salinidad`, `POST /api/v1/analisis/robustez-respuesta`, `POST /api/v1/analisis/sensibilidad`, `POST /api/v1/analisis/incertidumbre`, `POST /api/v1/analisis/dimensionamiento` y `GET /api/v1/sitios`). El de incertidumbre usa por defecto un rango de flujo de niebla calibrado contra la literatura (0.49 a 1.83 L/m²/h); el valor por defecto del modelo sigue siendo 6.0 L/m²/h.
-- **Dashboard.** Los cuatro elementos de la sección 5 están implementados. El panel de telemetría, con las cuatro tarjetas y sus barras de nivel, está en la vista "Evaluación manual de nodo". El selector de escenarios, la consola de decisiones y los gráficos comparativos están en la vista "Simulación comparativa", que incluye además el escenario `TORMENTA_DE_SAL_Y_CALOR_EXTREMO`. El dashboard agrega dos vistas que la especificación no pedía: "Investigación y guía", con la pregunta, las conjeturas, las reglas y las perspectivas del estudio, y "Respuesta a la pregunta", que consume los endpoints de barrido, sensibilidad e incertidumbre de la sección 3.3. La robustez de la respuesta, el dimensionamiento y los perfiles de sitio todavía no tienen controles en el dashboard; se usan desde la API. La descripción de cada vista está en `docs/03_Funcionamiento_General_AxiomaH.md`, sección 5.
+- **Dashboard.** Los cuatro elementos de la sección 5 están implementados. El panel de telemetría, con las cuatro tarjetas y sus barras de nivel, está en la vista "Evaluación manual de nodo". El selector de escenarios, la consola de decisiones y los gráficos comparativos están en la vista "Simulación comparativa", que incluye además el escenario `TORMENTA_DE_SAL_Y_CALOR_EXTREMO`. El dashboard agrega tres vistas que la especificación no pedía: "Investigación y guía", con la pregunta, la tesis, las conjeturas, las reglas, los supuestos clave y las perspectivas del estudio; "Respuesta a la pregunta", que consume los endpoints de robustez, barrido, incertidumbre, sensibilidad, dimensionamiento y sitios de la sección 3.3 en cuatro partes; y "Explorador de hipótesis", que simula con una eficacia del pulso y un perfil de sitio propios. La descripción de cada vista está en `docs/03_Funcionamiento_General_AxiomaH.md`, sección 5.
+- **Contrato OpenAPI.** El esquema completo de la API, con todos los endpoints y sus límites de validación, se publica en `docs/api/openapi.json`, generado desde `backend.main.app` por `scripts/generar_resultados_referencia.py`. Su uso desde otros sistemas está en `docs/05_Despliegue_y_Operacion_AxiomaH.md`, sección 7.
 - **Valores de ejemplo.** Los valores numéricos de la respuesta de ejemplo de la sección 3.2 son ilustrativos. Los resultados calculados por el modelo para ese payload están en `docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md`, sección 5.1.
 - **Despliegue.** La API y el dashboard están desplegados en Render, en el plan gratuito, como los servicios web `axioma-h-api` (https://axioma-h-api.onrender.com) y `axioma-h-dashboard` (https://axioma-h-dashboard.onrender.com), definidos en `render.yaml`. Render despliega desde `main` solo cuando las pruebas y la Quality Gate de SonarQube Cloud están en verde. El dashboard obtiene la URL de la API de la variable `AXIOMA_API_URL`; los orígenes CORS adicionales se configuran con `AXIOMA_CORS_ORIGINS`. La configuración, la verificación y la operación están en `docs/05_Despliegue_y_Operacion_AxiomaH.md`.
 

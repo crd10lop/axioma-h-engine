@@ -9,7 +9,7 @@ from typing import Iterable, List, Optional
 
 import pandas as pd
 
-from frontend import config
+from frontend import config, contenido
 
 # Claves de la comparativa de modos en la respuesta de la API.
 MODO_NEURO = "modo_neuro_simbolico"
@@ -731,4 +731,520 @@ def lectura_incertidumbre(resultado: dict) -> list[str]:
             "recuperación ni tiempo de regeneración que medir, y las Conjeturas 1 y 2 no se validan por "
             "falta de datos, no por un mal resultado."
         )
+    ventaja = frase_ventaja_incertidumbre(resultado)
+    if ventaja is not None:
+        frases.append(ventaja)
     return frases
+
+
+def frase_ventaja_incertidumbre(resultado: dict) -> str | None:
+    """Probabilidad de que el control basado en reglas recupere más que el temporizador entre las muestras.
+
+    Devuelve None si la respuesta no incluye el campo, por ejemplo con una API anterior a 0.3.0.
+    """
+    if "probabilidad_ventaja_recuperacion" not in resultado:
+        return None
+    probabilidad = resultado["probabilidad_ventaja_recuperacion"]
+    if probabilidad is None:
+        return "Ninguna muestra tiene pulsos en ambos modos: no se puede estimar la ventaja en recuperación."
+    ventajas = [
+        muestra["ventaja_recuperacion_pts"]
+        for muestra in resultado.get(CLAVE_MUESTRAS, [])
+        if muestra.get("ventaja_recuperacion_pts") is not None
+    ]
+    positivas = sum(ventaja > _TOLERANCIA_CERO for ventaja in ventajas)
+    frase = (
+        f"El control basado en reglas recupera más que el temporizador en {positivas} de {len(ventajas)} muestras "
+        f"con pulsos en ambos modos (probabilidad {probabilidad:.2f})."
+    )
+    resumen = resultado.get("ventaja_recuperacion") or {}
+    if resumen.get("n_validos"):
+        frase += (
+            f" La ventaja va de {resumen['p5']:.2f} a {resumen['p95']:.2f} puntos entre los percentiles 5 y 95."
+        )
+    return frase
+
+
+# ---------------------------------------------------------------------------
+# Lenguaje llano y condiciones de cambio de cada conjetura
+# ---------------------------------------------------------------------------
+_TOLERANCIA_CERO = 1e-9
+CLAVE_DETALLE = "detalle_verificacion"
+CONTROL_REGLAS = "el control basado en reglas"
+
+# Qué cambiaría un indicador que no cumple y qué haría fallar uno que cumple.
+# Origen: docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md, secciones 6.2, 6.3, 7.4, 8.6 y 8.10.
+PALANCAS_INDICADOR: dict[str, tuple[str, str]] = {
+    "recuperacion_caudal_promedio_pct": (
+        (f"Cambiaría si un pulso remueve más sal: con el flujo supuesto, validarla exige una eficacia del pulso "
+        f"de al menos {config.EFICACIA_MINIMA_C1:.2f}, frente a {config.EFICACIA_SUPUESTA:.2f} supuesta "
+        "(docs/04, sección 6.2). Lo decide medir qué fracción de la costra remueve un pulso de 90 s a 44 °C "
+        "(docs/04, sección 6.3)."),
+        "Fallaría si la eficacia medida del pulso resulta menor que la usada en la corrida.",
+    ),
+    "ahorro_energia_pulsos_pct": (
+        ("Cambiaría con menos pulsos o con pulsos de menor costo: depende de la carga salina, que fija cuántas "
+        "veces se dispara el pulso, y de la capacidad térmica y las pérdidas de la matriz, todos supuestos."),
+        "Fallaría si la carga salina obliga a pulsar casi tantas veces como el temporizador.",
+    ),
+    "tiempo_regeneracion_promedio_seg": (
+        (f"Cambiaría si un pulso deja la membrana bajo 1100 Ω: con el flujo supuesto exige una eficacia de al "
+        f"menos {config.EFICACIA_MINIMA_C2:.2f} (docs/04, sección 6.2). Lo decide la misma medición de la "
+        "eficacia del pulso (docs/04, sección 6.3)."),
+        "Fallaría si la eficacia medida del pulso no alcanza para volver bajo 1100 Ω.",
+    ),
+    "perdida_integridad_termica_pct": (
+        ("Cambiaría si la matriz deja de alcanzar 45 °C: depende de la temperatura del sitio y del "
+        "calentamiento solar de la matriz."),
+        "Fallaría en un sitio más cálido, donde la matriz supere 45 °C durante la operación.",
+    ),
+    "violaciones_ecologicas": (
+        "Cambiaría si el control deja de pausar la extracción con humedad menor que 30 % (REGLA_02).",
+        "Fallaría con una sola extracción con humedad menor que 30 % o por encima del tope de 33 %.",
+    ),
+    "rendimiento_nocturno_l_m2_noche": (
+        ("Cambiaría con más niebla disponible: depende del flujo de niebla supuesto. Lo decide medir el "
+        "rendimiento de niebla del sitio y calibrar el flujo (docs/04, secciones 8.6 y 8.10)."),
+        ("Fallaría con un flujo de niebla como el de la literatura: con el flujo calibrado no se alcanza "
+        "(docs/04, sección 8.6)."),
+    ),
+}
+_PALANCA_GENERICA = ("Depende de los parámetros supuestos del modelo.", "Depende de los parámetros supuestos del modelo.")
+_SIN_DATOS_INDICADOR = (
+    "no tiene datos: la corrida no aplicó pulsos o no cubrió horas nocturnas, de modo que el indicador no se "
+    "puso a prueba. Con más humedad, más salinidad o más horas se podría medir."
+)
+
+
+def etiqueta_llana(codigo: str) -> str:
+    """Traduce un código de regla, estado, acción o cruce a lenguaje llano; si no lo conoce, lo devuelve igual."""
+    return contenido.ETIQUETAS_LLANAS.get(codigo, codigo)
+
+
+def _distancia_umbral(indicador: dict) -> float:
+    """Distancia positiva entre el valor y el umbral de un indicador con datos."""
+    return abs(indicador["valor"] - indicador["umbral"])
+
+
+def _frase_indicador(clave: str, indicador: dict) -> str:
+    """Valor, umbral, distancia y palanca de un indicador: qué lo cambiaría o qué lo haría fallar."""
+    nombre = NOMBRES_INDICADOR.get(clave, clave)
+    if indicador.get("valor") is None:
+        return f"{nombre} {_SIN_DATOS_INDICADOR}"
+    si_no_cumple, si_cumple = PALANCAS_INDICADOR.get(clave, _PALANCA_GENERICA)
+    comparacion = f"{nombre}: {indicador['valor']:.2f} frente al umbral {indicador['operador']} {indicador['umbral']:g}"
+    distancia = _distancia_umbral(indicador)
+    if indicador["cumple"]:
+        return f"{comparacion}, con un margen de {distancia:.2f}. {si_cumple}"
+    return f"{comparacion}, a {distancia:.2f} del umbral. {si_no_cumple}"
+
+
+def _condicion_conjetura(clave: str, verificacion: dict) -> str:
+    """Frase de una conjetura: los indicadores que fallan si no se valida, o todos si se valida."""
+    validada = verificacion.get("validada", False)
+    indicadores = verificacion.get("indicadores", {})
+    seleccion = [
+        _frase_indicador(nombre, indicador)
+        for nombre, indicador in indicadores.items()
+        if validada or not indicador.get("cumple", False)
+    ]
+    estado = "validada" if validada else "no validada"
+    return " ".join([f"{NOMBRES_CONJETURA.get(clave, clave)}, {estado}."] + seleccion)
+
+
+def condiciones_de_cambio(resultado: dict) -> list[str]:
+    """Una frase por conjetura, en el orden de NOMBRES_CONJETURA, sobre qué cambiaría su resultado.
+
+    Para una conjetura no validada se describe cada indicador que no cumple: su valor, el umbral, la
+    distancia y la medición o el parámetro que lo cambiaría. Para una validada se describe el margen de
+    cada indicador y qué la haría fallar. Devuelve una lista vacía si la respuesta no tiene
+    detalle_verificacion.
+    """
+    detalle = resultado.get(CLAVE_DETALLE) or {}
+    return [_condicion_conjetura(clave, detalle[clave]) for clave in NOMBRES_CONJETURA if clave in detalle]
+
+
+# ---------------------------------------------------------------------------
+# Robustez de la respuesta (docs/04, sección 8.8)
+# ---------------------------------------------------------------------------
+CLAVE_COMBINACIONES = "combinaciones"
+CLAVE_CRUCE = "cruce"
+CLAVE_INCRUSTACION = "incrustacion_diaria_ohm_media"
+ESTADO_INTERPOLADO = "INTERPOLADO"
+MAXIMO_SEMILLAS_ROBUSTEZ = 3
+COLUMNA_CRUCE = "Cruce"
+COLUMNAS_ROBUSTEZ = [
+    "Flujo (L/m²/h)",
+    "Eficacia",
+    COLUMNA_CRUCE,
+    "Incrustación diaria del cruce (Ohm/día)",
+    "Carga salina del cruce (Ohm por L/m²)",
+    "Reducción del desgaste mínima (%)",
+    "Reducción del desgaste máxima (%)",
+    "Incrustación diaria máxima (Ohm/día)",
+]
+
+
+def configuracion_robustez(humedad: float, numero_semillas: int) -> dict:
+    """Carga de la robustez con semillas consecutivas desde 1, acotadas entre 1 y 3."""
+    cantidad = max(1, min(MAXIMO_SEMILLAS_ROBUSTEZ, int(numero_semillas)))
+    return {"humedad_ambiente_inicial_pct": float(humedad), "semillas": list(range(1, cantidad + 1))}
+
+
+def _valores_no_nulos(puntos: list[dict], clave: str) -> list[float]:
+    """Valores de un campo de los puntos de un barrido, sin los nulos."""
+    return [punto[clave] for punto in puntos if punto.get(clave) is not None]
+
+
+def _extremos(valores: list[float]) -> tuple[float | None, float | None]:
+    """Mínimo y máximo, o (None, None) si no hay valores."""
+    return (min(valores), max(valores)) if valores else (None, None)
+
+
+def _fila_robustez(combinacion: dict) -> dict:
+    """Una fila de la tabla de robustez a partir de una combinación de flujo y eficacia."""
+    barrido = combinacion.get("barrido", {})
+    puntos = barrido.get(CLAVE_PUNTOS, [])
+    cruce = barrido.get(CLAVE_CRUCE) or {}
+    reduccion_min, reduccion_max = _extremos(_valores_no_nulos(puntos, "reduccion_desgaste_pct"))
+    _, incrustacion_max = _extremos(_valores_no_nulos(puntos, CLAVE_INCRUSTACION))
+    valores = [
+        combinacion.get("flujo_niebla_maximo_l_m2_h"),
+        combinacion.get("eficacia_maxima_pulso"),
+        etiqueta_llana(cruce.get("estado", "SIN_DATOS")),
+        cruce.get("incrustacion_diaria_ohm"),
+        cruce.get(CLAVE_CARGA),
+        reduccion_min,
+        reduccion_max,
+        incrustacion_max,
+    ]
+    return dict(zip(COLUMNAS_ROBUSTEZ, valores))
+
+
+def tabla_robustez(resultado: dict) -> pd.DataFrame:
+    """Una fila por combinación de flujo y eficacia con su cruce y el rango de la reducción del desgaste."""
+    filas = [_fila_robustez(combinacion) for combinacion in resultado.get(CLAVE_COMBINACIONES, [])]
+    return pd.DataFrame(filas, columns=COLUMNAS_ROBUSTEZ)
+
+
+def _cruces_interpolados(combinaciones: list[dict]) -> list[dict]:
+    """Cruces con estado INTERPOLADO de las combinaciones."""
+    cruces = [(combinacion.get("barrido", {}).get(CLAVE_CRUCE) or {}) for combinacion in combinaciones]
+    return [cruce for cruce in cruces if cruce.get("estado") == ESTADO_INTERPOLADO]
+
+
+def _frase_desgaste_robustez(resultado: dict, total: int) -> str:
+    """Rango de la reducción del desgaste entre todas las combinaciones."""
+    minimo = resultado.get("reduccion_desgaste_min_pct")
+    maximo = resultado.get("reduccion_desgaste_max_pct")
+    if minimo is None or maximo is None:
+        return "No hay datos para calcular la reducción del desgaste."
+    return (
+        f"En las {total} combinaciones, {CONTROL_REGLAS} reduce el desgaste entre {minimo:.1f} % y "
+        f"{maximo:.1f} % frente al temporizador."
+    )
+
+
+def _frase_dependencia_cruce(cruces: list[dict]) -> str | None:
+    """Compara la variación relativa de la carga por litro y de la incrustación diaria en los cruces."""
+    cargas = [cruce[CLAVE_CARGA] for cruce in cruces if cruce.get(CLAVE_CARGA)]
+    incrustaciones = [cruce["incrustacion_diaria_ohm"] for cruce in cruces if cruce.get("incrustacion_diaria_ohm")]
+    if len(cargas) < 2 or len(incrustaciones) < 2:
+        return None
+    variacion_carga = max(cargas) / min(cargas)
+    variacion_incrustacion = max(incrustaciones) / min(incrustaciones)
+    inicio = f"La carga salina por litro del cruce va de {min(cargas):.0f} a {max(cargas):.0f} Ohm por L/m²"
+    if variacion_carga > variacion_incrustacion:
+        return (
+            f"{inicio}: varía {variacion_carga:.1f} veces, más que la incrustación diaria del cruce "
+            f"({variacion_incrustacion:.2f} veces). Es coherente con H1-Ciclo 3: el cruce depende de la "
+            "incrustación diaria y no de la carga por litro."
+        )
+    return (
+        f"{inicio}: varía {variacion_carga:.1f} veces, no más que la incrustación diaria del cruce "
+        f"({variacion_incrustacion:.2f} veces). Este resultado no apoya H1-Ciclo 3."
+    )
+
+
+def _frases_cruce_robustez(resultado: dict, combinaciones: list[dict]) -> list[str]:
+    """Combinaciones con cruce, rango de la incrustación diaria del cruce y estados sin cruce."""
+    total = len(combinaciones)
+    cruces = _cruces_interpolados(combinaciones)
+    minimo = resultado.get("incrustacion_diaria_cruce_min_ohm")
+    maximo = resultado.get("incrustacion_diaria_cruce_max_ohm")
+    if not cruces or minimo is None or maximo is None:
+        frases = [f"Ninguna de las {total} combinaciones cruza: {CONTROL_REGLAS} no pasa a recuperar más."]
+    else:
+        frases = [
+            f"{len(cruces)} de {total} combinaciones cruzan: {CONTROL_REGLAS} pasa a recuperar más que el "
+            f"temporizador desde una incrustación diaria de {minimo:.0f} a {maximo:.0f} Ohm por día."
+        ]
+        dependencia = _frase_dependencia_cruce(cruces)
+        if dependencia is not None:
+            frases.append(dependencia)
+    estados = [(c.get("barrido", {}).get(CLAVE_CRUCE) or {}).get("estado", "SIN_DATOS") for c in combinaciones]
+    for estado in sorted(set(estados) - {ESTADO_INTERPOLADO}):
+        frases.append(f"{estados.count(estado)} de {total} combinaciones: {etiqueta_llana(estado).lower()}.")
+    return frases
+
+
+def lectura_robustez(resultado: dict) -> list[str]:
+    """Frases calculadas con la reducción del desgaste, las combinaciones con cruce y su incrustación diaria."""
+    combinaciones = resultado.get(CLAVE_COMBINACIONES, [])
+    if not combinaciones:
+        return ["La robustez no devolvió combinaciones."]
+    return [_frase_desgaste_robustez(resultado, len(combinaciones))] + _frases_cruce_robustez(
+        resultado, combinaciones
+    )
+
+
+# ---------------------------------------------------------------------------
+# Barrido frente a la incrustación diaria
+# ---------------------------------------------------------------------------
+COLUMNAS_INCRUSTACION = ["incrustacion", "carga", "Modo", "recuperacion"]
+
+
+def serie_barrido_por_incrustacion(resultado: dict) -> pd.DataFrame:
+    """Recuperación media de ambos modos frente a la incrustación diaria, en formato largo.
+
+    Se omiten los puntos sin incrustación diaria y las combinaciones de punto y modo sin recuperación.
+    """
+    filas = []
+    for punto in resultado.get(CLAVE_PUNTOS, []):
+        incrustacion = punto.get(CLAVE_INCRUSTACION)
+        if incrustacion is None:
+            continue
+        for sufijo, modo in _SUFIJOS_MODO.items():
+            recuperacion = punto.get(f"{COLUMNA_RECUPERACION}_{sufijo}_media")
+            if recuperacion is not None:
+                filas.append(
+                    {"incrustacion": incrustacion, "carga": punto[CLAVE_CARGA], "Modo": modo, "recuperacion": recuperacion}
+                )
+    return pd.DataFrame(filas, columns=COLUMNAS_INCRUSTACION)
+
+
+def incrustacion_cruce(resultado: dict) -> float | None:
+    """Incrustación diaria del cruce del barrido, o None si no hay cruce o la respuesta no lo incluye."""
+    return (resultado.get(CLAVE_CRUCE) or {}).get("incrustacion_diaria_ohm")
+
+
+def lectura_cruce(resultado: dict) -> str:
+    """Frase con el estado del cruce del barrido y, si existe, su incrustación diaria y su carga."""
+    cruce = resultado.get(CLAVE_CRUCE)
+    if not cruce:
+        return "La respuesta no incluye el cruce; requiere la API 0.3.0 o posterior."
+    frase = f"{etiqueta_llana(cruce['estado'])}."
+    if cruce.get("incrustacion_diaria_ohm") is None:
+        return frase
+    return (
+        f"{frase} El cruce está en una incrustación diaria de {cruce['incrustacion_diaria_ohm']:.0f} Ohm por día "
+        f"(carga salina de {cruce[CLAVE_CARGA]:.1f} Ohm por L/m²)."
+    )
+
+
+def etiqueta_sitio(perfil: dict) -> str:
+    """Nombre de un perfil de sitio con su flujo máximo de niebla, para un selector."""
+    return f"{perfil['nombre']} ({perfil['flujo_niebla_maximo_l_m2_h']:g} L/m²/h)"
+
+
+def configuracion_barrido_con_flujo(humedad: float, numero_semillas: int, flujo: float | None) -> dict:
+    """Carga del barrido con el flujo de niebla del perfil elegido; sin flujo usa el de la API."""
+    carga = configuracion_barrido(humedad, numero_semillas)
+    if flujo is not None:
+        carga["flujo_niebla_maximo_l_m2_h"] = float(flujo)
+    return carga
+
+
+# ---------------------------------------------------------------------------
+# Dimensionamiento (docs/04, sección 7.7)
+# ---------------------------------------------------------------------------
+ESTANDARES_CONSUMO = {
+    "OMS_20": f"OMS, acceso básico ({config.CONSUMO_ACCESO_BASICO_L_PERSONA_DIA:g} L por persona al día)",
+    "SPHERE_15": f"Sphere, supervivencia ({config.CONSUMO_SUPERVIVENCIA_L_PERSONA_DIA:g} L por persona al día)",
+}
+
+
+def configuracion_dimensionamiento(personas: int, estandar: str, escenario: str, humedad: float) -> dict:
+    """Carga del dimensionamiento con la tasa ALTA y la semilla 42 por defecto de la API."""
+    return {
+        "personas": int(personas),
+        "estandar": estandar,
+        "escenario": escenario,
+        "humedad_ambiente_inicial_pct": float(humedad),
+    }
+
+
+def _frase_dimension(dimension: dict) -> str:
+    """Área y nodos necesarios con un flujo de referencia, o aviso si el control no capta agua."""
+    inicio = (
+        f"Con el {etiqueta_llana(dimension['origen_flujo'])} ({dimension['flujo_niebla_maximo_l_m2_h']:g} L/m²/h)"
+    )
+    if dimension.get("area_colector_m2") is None:
+        return f"{inicio}, {CONTROL_REGLAS} no capta agua y no es posible dimensionar."
+    return (
+        f"{inicio}, {CONTROL_REGLAS} rinde {dimension['rendimiento_neuro_l_m2_dia']:.2f} L/m² al día: harían "
+        f"falta {dimension['area_colector_m2']:.1f} m² de colector, es decir, {dimension['nodos_requeridos']} "
+        "nodos de 1 m²."
+    )
+
+
+def resumen_dimensionamiento(resultado: dict) -> list[str]:
+    """Frases con el área y los nodos de cada flujo de referencia y el rango de área de la literatura."""
+    dimensiones = resultado.get("dimensiones", [])
+    if not dimensiones:
+        return ["El dimensionamiento no devolvió resultados."]
+    frases = [f"Consumo de {resultado['consumo_l_persona_dia']:g} L por persona al día."]
+    frases.extend(_frase_dimension(dimension) for dimension in dimensiones)
+    minimo = resultado.get("area_literatura_min_m2")
+    maximo = resultado.get("area_literatura_max_m2")
+    if minimo is not None and maximo is not None:
+        frases.append(
+            f"Con los rendimientos de {config.RENDIMIENTO_LITERATURA_MIN_L_M2_DIA:g} a "
+            f"{config.RENDIMIENTO_LITERATURA_MAX_L_M2_DIA:g} L/m² al día de proyectos reales (Klemm et al., 2012) "
+            f"harían falta entre {minimo:.1f} y {maximo:.1f} m²."
+        )
+    return frases
+
+
+# ---------------------------------------------------------------------------
+# Explorador de hipótesis
+# ---------------------------------------------------------------------------
+LONGITUD_MAXIMA_NOMBRE_SITIO = 40
+NOMBRE_SITIO_POR_DEFECTO = "SITIO_PROPIO"
+_CARACTERES_NOMBRE = set("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
+CAMPOS_SITIO = (
+    "nombre",
+    "flujo_niebla_maximo_l_m2_h",
+    "temperatura_media_c",
+    "amplitud_temperatura_c",
+    "amplitud_humedad_pct",
+)
+ETIQUETAS_PARAMETROS_USADOS = {
+    "nombre_sitio": "Sitio",
+    "flujo_niebla_maximo_l_m2_h": "Flujo máximo de niebla (L/m²/h)",
+    "eficacia_maxima_pulso": "Eficacia máxima del pulso",
+    "temperatura_media_c": "Temperatura media (°C)",
+    "amplitud_temperatura_c": "Amplitud térmica diurna (°C)",
+    "amplitud_humedad_pct": "Amplitud diurna de humedad (puntos)",
+}
+
+
+def normalizar_nombre_sitio(texto: str) -> str:
+    """Convierte un texto en un nombre de sitio válido para la API: mayúsculas, dígitos y guion bajo.
+
+    Los demás caracteres se reemplazan por guion bajo, el resultado se recorta a 40 caracteres y, si queda
+    vacío, se usa SITIO_PROPIO.
+    """
+    nombre = "".join(caracter if caracter in _CARACTERES_NOMBRE else "_" for caracter in texto.strip().upper())
+    return nombre[:LONGITUD_MAXIMA_NOMBRE_SITIO] or NOMBRE_SITIO_POR_DEFECTO
+
+
+def configuracion_explorador(escenario: str, tasa: str, humedad: float, eficacia: float, sitio: dict) -> dict:
+    """Carga de una simulación de 24 h con la eficacia del pulso y el perfil de sitio elegidos."""
+    perfil = {campo: sitio[campo] for campo in CAMPOS_SITIO}
+    perfil["nombre"] = normalizar_nombre_sitio(str(perfil["nombre"]))
+    for campo in CAMPOS_SITIO[1:]:
+        perfil[campo] = float(perfil[campo])
+    return {
+        "duracion_horas": 24,
+        "escenario": escenario,
+        "humedad_ambiente_inicial_pct": float(humedad),
+        "tasa_salinizacion": tasa,
+        "eficacia_maxima_pulso": float(eficacia),
+        "sitio": perfil,
+    }
+
+
+def parametros_usados_a_dataframe(resultado: dict) -> pd.DataFrame:
+    """Tabla con el sitio y los parámetros con que se ejecutó la simulación; vacía si la API no los informa."""
+    usados = resultado.get("parametros_usados") or {}
+    filas = [
+        {"Parámetro": etiqueta, "Valor": str(usados[clave])}
+        for clave, etiqueta in ETIQUETAS_PARAMETROS_USADOS.items()
+        if clave in usados
+    ]
+    return pd.DataFrame(filas, columns=["Parámetro", "Valor"])
+
+
+def _pregunta_robustez(robustez: dict | None) -> str:
+    """Pregunta sobre el cruce de la ventaja en recuperación, o qué análisis ejecutar."""
+    if robustez is None:
+        return "Falta la robustez de la respuesta: ejecútela en la vista 4, parte a, para preguntar por el cruce."
+    total = len(robustez.get(CLAVE_COMBINACIONES, []))
+    minimo = robustez.get("incrustacion_diaria_cruce_min_ohm")
+    maximo = robustez.get("incrustacion_diaria_cruce_max_ohm")
+    if not robustez.get("combinaciones_con_cruce") or minimo is None or maximo is None:
+        return (
+            f"Ninguna de las {total} combinaciones cruza: ¿con qué incrustación diaria, mayor que la del barrido, "
+            "aparecería la ventaja en recuperación?"
+        )
+    return (
+        f"La ventaja en recuperación aparece desde {minimo:.0f} a {maximo:.0f} Ohm por día en "
+        f"{robustez['combinaciones_con_cruce']} de {total} combinaciones: ¿se reproduce ese umbral al medir en "
+        "laboratorio la incrustación diaria y la recuperación de membranas con ambos controles (H1-Ciclo 3)?"
+    )
+
+
+def _pregunta_incertidumbre(incertidumbre: dict | None) -> str:
+    """Pregunta sobre la probabilidad de ventaja con el flujo calibrado, o qué análisis ejecutar."""
+    if incertidumbre is None:
+        return "Falta la incertidumbre: ejecútela en la vista 4, parte c, para preguntar por el flujo real."
+    probabilidad = incertidumbre.get("probabilidad_ventaja_recuperacion")
+    if probabilidad is None:
+        return (
+            "Ninguna muestra de la incertidumbre tiene pulsos en ambos modos: ¿con qué humedad o salinidad "
+            "empiezan los pulsos cuando el flujo de niebla es como el de la literatura?"
+        )
+    return (
+        f"Con el flujo calibrado, {CONTROL_REGLAS} recupera más en una proporción de {probabilidad:.2f} de las "
+        "muestras: ¿qué rendimiento de niebla y qué carga salina tiene el sitio real, y quedan por encima o por "
+        "debajo del cruce?"
+    )
+
+
+def _pregunta_simulacion(simulacion: dict | None) -> str:
+    """Pregunta sobre la carga salina que exigiría la ventaja en el sitio simulado, o qué ejecutar."""
+    if simulacion is None:
+        return "Falta una simulación: ejecútela en la vista 5 para preguntar por su sitio y su eficacia."
+    usados = simulacion.get("parametros_usados") or {}
+    rendimiento = ((simulacion.get("impacto_comunitario") or {}).get(MODO_NEURO) or {}).get("rendimiento_l_m2_dia")
+    sitio = usados.get("nombre_sitio", "el sitio simulado")
+    if not rendimiento or rendimiento <= 0:
+        return (
+            f"En {sitio}, {CONTROL_REGLAS} no captó agua: ¿qué humedad mínima necesita el sitio para que empiecen "
+            "la captación y los pulsos?"
+        )
+    carga_min = config.INCRUSTACION_CRUCE_MIN_OHM_DIA / rendimiento
+    carga_max = config.INCRUSTACION_CRUCE_MAX_OHM_DIA / rendimiento
+    return (
+        f"En {sitio}, {CONTROL_REGLAS} rinde {rendimiento:.2f} L/m² al día: según H1-Ciclo 3, la ventaja en "
+        f"recuperación exigiría una carga salina de unos {carga_min:.0f} a {carga_max:.0f} Ohm por L/m². ¿Es esa "
+        "la carga salina de la niebla del sitio?"
+    )
+
+
+def _pregunta_eficacia(simulacion: dict | None) -> str | None:
+    """Pregunta sobre la eficacia medida si la simulación no valida la Conjetura 1 o la 2."""
+    if simulacion is None:
+        return None
+    validadas = simulacion.get(CLAVE_VALIDADAS) or {}
+    eficacia = (simulacion.get("parametros_usados") or {}).get("eficacia_maxima_pulso")
+    falla = not validadas.get("conjetura_1_eficiencia", True) or not validadas.get("conjetura_2_autorreparacion", True)
+    if not falla or eficacia is None:
+        return None
+    return (
+        f"Con una eficacia de {eficacia:.2f}, al menos una de las Conjeturas 1 y 2 no se valida: ¿qué fracción de "
+        "la costra remueve un pulso real de 90 s a 44 °C (docs/04, sección 6.3)?"
+    )
+
+
+def hipotesis_siguientes(robustez: dict | None, incertidumbre: dict | None, simulacion: dict | None) -> list[str]:
+    """Preguntas para el Ciclo 3 calculadas con los análisis disponibles en la sesión.
+
+    Cada análisis aporta una pregunta; si falta, la frase indica cuál ejecutar y en qué vista.
+    """
+    preguntas = [_pregunta_robustez(robustez), _pregunta_incertidumbre(incertidumbre), _pregunta_simulacion(simulacion)]
+    eficacia = _pregunta_eficacia(simulacion)
+    if eficacia is not None:
+        preguntas.append(eficacia)
+    return preguntas

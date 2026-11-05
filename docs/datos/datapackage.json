@@ -1,0 +1,500 @@
+{
+  "profile": "tabular-data-package",
+  "name": "axioma-h-resultados-referencia",
+  "title": "Resultados de referencia del modelo Axioma-H",
+  "version": "0.3.0",
+  "licenses": [
+    {
+      "name": "MIT",
+      "path": "https://opensource.org/licenses/MIT",
+      "title": "MIT License"
+    }
+  ],
+  "resources": [
+    {
+      "name": "resultados_escenarios",
+      "path": "resultados_escenarios.csv",
+      "profile": "tabular-data-resource",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "schema": {
+        "fields": [
+          {
+            "name": "escenario",
+            "type": "string",
+            "description": "Escenario ambiental."
+          },
+          {
+            "name": "humedad_inicial_pct",
+            "type": "number",
+            "description": "Humedad relativa a las 18:00 (%)."
+          },
+          {
+            "name": "neuro_litros",
+            "type": "number",
+            "description": "Control basado en reglas (modo neuro-simbólico). Agua captada por los 8 nodos (L)."
+          },
+          {
+            "name": "neuro_pulsos",
+            "type": "integer",
+            "description": "Control basado en reglas (modo neuro-simbólico). Pulsos resistivos ejecutados."
+          },
+          {
+            "name": "neuro_energia_wh",
+            "type": "number",
+            "description": "Control basado en reglas (modo neuro-simbólico). Energía consumida, pulsos y electrónica (Wh)."
+          },
+          {
+            "name": "neuro_integridad_final_pct",
+            "type": "number",
+            "description": "Control basado en reglas (modo neuro-simbólico). Integridad promedio de las membranas al final (%)."
+          },
+          {
+            "name": "neuro_degradacion_pct",
+            "type": "number",
+            "description": "Control basado en reglas (modo neuro-simbólico). Degradación acumulada, 100 - integridad final (%)."
+          },
+          {
+            "name": "neuro_violaciones",
+            "type": "integer",
+            "description": "Control basado en reglas (modo neuro-simbólico). Episodios de extracción fuera del límite ecológico."
+          },
+          {
+            "name": "neuro_recuperacion_pct",
+            "type": "number",
+            "description": "Control basado en reglas (modo neuro-simbólico). Conductancia relativa promedio tras cada pulso (%)."
+          },
+          {
+            "name": "temporizador_litros",
+            "type": "number",
+            "description": "Temporizador fijo (fracción 0.45). Agua captada por los 8 nodos (L)."
+          },
+          {
+            "name": "temporizador_pulsos",
+            "type": "integer",
+            "description": "Temporizador fijo (fracción 0.45). Pulsos resistivos ejecutados."
+          },
+          {
+            "name": "temporizador_energia_wh",
+            "type": "number",
+            "description": "Temporizador fijo (fracción 0.45). Energía consumida, pulsos y electrónica (Wh)."
+          },
+          {
+            "name": "temporizador_integridad_final_pct",
+            "type": "number",
+            "description": "Temporizador fijo (fracción 0.45). Integridad promedio de las membranas al final (%)."
+          },
+          {
+            "name": "temporizador_degradacion_pct",
+            "type": "number",
+            "description": "Temporizador fijo (fracción 0.45). Degradación acumulada, 100 - integridad final (%)."
+          },
+          {
+            "name": "temporizador_violaciones",
+            "type": "integer",
+            "description": "Temporizador fijo (fracción 0.45). Episodios de extracción fuera del límite ecológico."
+          },
+          {
+            "name": "temporizador_recuperacion_pct",
+            "type": "number",
+            "description": "Temporizador fijo (fracción 0.45). Conductancia relativa promedio tras cada pulso (%)."
+          },
+          {
+            "name": "temporizador_tope_litros",
+            "type": "number",
+            "description": "Temporizador con tope ecológico (fracción 0.33). Agua captada por los 8 nodos (L)."
+          },
+          {
+            "name": "temporizador_tope_pulsos",
+            "type": "integer",
+            "description": "Temporizador con tope ecológico (fracción 0.33). Pulsos resistivos ejecutados."
+          },
+          {
+            "name": "temporizador_tope_energia_wh",
+            "type": "number",
+            "description": "Temporizador con tope ecológico (fracción 0.33). Energía consumida, pulsos y electrónica (Wh)."
+          },
+          {
+            "name": "temporizador_tope_integridad_final_pct",
+            "type": "number",
+            "description": "Temporizador con tope ecológico (fracción 0.33). Integridad promedio de las membranas al final (%)."
+          },
+          {
+            "name": "temporizador_tope_degradacion_pct",
+            "type": "number",
+            "description": "Temporizador con tope ecológico (fracción 0.33). Degradación acumulada, 100 - integridad final (%)."
+          },
+          {
+            "name": "temporizador_tope_violaciones",
+            "type": "integer",
+            "description": "Temporizador con tope ecológico (fracción 0.33). Episodios de extracción fuera del límite ecológico."
+          },
+          {
+            "name": "temporizador_tope_recuperacion_pct",
+            "type": "number",
+            "description": "Temporizador con tope ecológico (fracción 0.33). Conductancia relativa promedio tras cada pulso (%)."
+          },
+          {
+            "name": "c1_validada",
+            "type": "boolean",
+            "description": "Estado de la Conjetura 1 (True o False)."
+          },
+          {
+            "name": "c2_validada",
+            "type": "boolean",
+            "description": "Estado de la Conjetura 2 (True o False)."
+          },
+          {
+            "name": "c3_validada",
+            "type": "boolean",
+            "description": "Estado de la Conjetura 3 (True o False)."
+          },
+          {
+            "name": "c1_recuperacion_pct",
+            "type": "number",
+            "description": "Indicador de la Conjetura 1: recuperación de caudal (umbral >= 90 %)."
+          },
+          {
+            "name": "c1_ahorro_energia_pct",
+            "type": "number",
+            "description": "Indicador de la Conjetura 1: ahorro de energía en pulsos (umbral >= 35 %)."
+          },
+          {
+            "name": "c2_tiempo_regeneracion_s",
+            "type": "number",
+            "description": "Indicador de la Conjetura 2: tiempo de regeneración (umbral < 120 s)."
+          },
+          {
+            "name": "c2_perdida_termica_pct",
+            "type": "number",
+            "description": "Indicador de la Conjetura 2: pérdida de integridad térmica (umbral 0 %)."
+          },
+          {
+            "name": "c3_violaciones",
+            "type": "number",
+            "description": "Indicador de la Conjetura 3: violaciones ecológicas (umbral 0)."
+          },
+          {
+            "name": "c3_rendimiento_nocturno_l_m2_noche",
+            "type": "number",
+            "description": "Indicador de la Conjetura 3: rendimiento nocturno (umbral >= 12 L/m²/noche)."
+          },
+          {
+            "name": "c1_reduccion_degradacion_pct",
+            "type": "number",
+            "description": "Informativo: reducción de la degradación frente al temporizador (%)."
+          },
+          {
+            "name": "c2_pulsos_regenerados",
+            "type": "integer",
+            "description": "Informativo: pulsos que alcanzaron 1100 Ohm."
+          },
+          {
+            "name": "c2_pulsos_totales",
+            "type": "integer",
+            "description": "Informativo: pulsos totales del control basado en reglas."
+          },
+          {
+            "name": "c2_t95_promedio_s",
+            "type": "number",
+            "description": "Informativo: tiempo hasta el 95 % de la remoción de cada pulso (s)."
+          },
+          {
+            "name": "c2_impedancia_tras_pulso_ohm",
+            "type": "number",
+            "description": "Informativo: impedancia promedio al terminar cada pulso (Ohm)."
+          },
+          {
+            "name": "c3_rendimiento_temporizador_l_m2_noche",
+            "type": "number",
+            "description": "Informativo: rendimiento nocturno del temporizador fijo."
+          },
+          {
+            "name": "c1_causas",
+            "type": "string",
+            "description": "Causas de no validación de la Conjetura 1, separadas por punto y coma."
+          },
+          {
+            "name": "c2_causas",
+            "type": "string",
+            "description": "Causas de no validación de la Conjetura 2, separadas por punto y coma."
+          },
+          {
+            "name": "c3_causas",
+            "type": "string",
+            "description": "Causas de no validación de la Conjetura 3, separadas por punto y coma."
+          },
+          {
+            "name": "neuro_personas_acceso_basico",
+            "type": "number",
+            "description": "Control basado en reglas (modo neuro-simbólico). Informativo: personas abastecidas con 20 L por persona al día (acceso básico de la OMS)."
+          },
+          {
+            "name": "neuro_rendimiento_l_m2_dia",
+            "type": "number",
+            "description": "Control basado en reglas (modo neuro-simbólico). Informativo: litros por día y por m² de colector de la red (8 m²)."
+          },
+          {
+            "name": "temporizador_personas_acceso_basico",
+            "type": "number",
+            "description": "Temporizador fijo (fracción 0.45). Informativo: personas abastecidas con 20 L por persona al día (acceso básico de la OMS)."
+          },
+          {
+            "name": "temporizador_rendimiento_l_m2_dia",
+            "type": "number",
+            "description": "Temporizador fijo (fracción 0.45). Informativo: litros por día y por m² de colector de la red (8 m²)."
+          },
+          {
+            "name": "temporizador_tope_personas_acceso_basico",
+            "type": "number",
+            "description": "Temporizador con tope ecológico (fracción 0.33). Informativo: personas abastecidas con 20 L por persona al día (acceso básico de la OMS)."
+          },
+          {
+            "name": "temporizador_tope_rendimiento_l_m2_dia",
+            "type": "number",
+            "description": "Temporizador con tope ecológico (fracción 0.33). Informativo: litros por día y por m² de colector de la red (8 m²)."
+          }
+        ],
+        "missingValues": [
+          ""
+        ]
+      }
+    },
+    {
+      "name": "barrido_salinidad",
+      "path": "barrido_salinidad.csv",
+      "profile": "tabular-data-resource",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "schema": {
+        "fields": [
+          {
+            "name": "escenario",
+            "type": "string",
+            "description": "Escenario ambiental."
+          },
+          {
+            "name": "tasa_salinizacion",
+            "type": "string",
+            "description": "Tasa de salinización de la combinación simulada."
+          },
+          {
+            "name": "carga_salina_ohm_l_m2",
+            "type": "number",
+            "description": "Aumento de impedancia por litro captado por m²."
+          },
+          {
+            "name": "n_semillas",
+            "type": "integer",
+            "description": "Corridas promediadas, una por semilla."
+          },
+          {
+            "name": "recuperacion_neuro_media",
+            "type": "number",
+            "description": "Media de la recuperación tras pulso del control basado en reglas (%)."
+          },
+          {
+            "name": "recuperacion_neuro_desv",
+            "type": "number",
+            "description": "Desviación estándar muestral de la recuperación del control basado en reglas."
+          },
+          {
+            "name": "recuperacion_temporizador_media",
+            "type": "number",
+            "description": "Media de la recuperación tras pulso del temporizador fijo (%)."
+          },
+          {
+            "name": "recuperacion_temporizador_desv",
+            "type": "number",
+            "description": "Desviación estándar muestral de la recuperación del temporizador fijo."
+          },
+          {
+            "name": "degradacion_neuro_media",
+            "type": "number",
+            "description": "Media de la degradación acumulada del control basado en reglas (%)."
+          },
+          {
+            "name": "degradacion_neuro_desv",
+            "type": "number",
+            "description": "Desviación estándar muestral de la degradación del control basado en reglas."
+          },
+          {
+            "name": "degradacion_temporizador_media",
+            "type": "number",
+            "description": "Media de la degradación acumulada del temporizador fijo (%)."
+          },
+          {
+            "name": "degradacion_temporizador_desv",
+            "type": "number",
+            "description": "Desviación estándar muestral de la degradación del temporizador fijo."
+          },
+          {
+            "name": "reduccion_desgaste_pct",
+            "type": "number",
+            "description": "Reducción del desgaste, (D_temp - D_neuro) / D_temp * 100, con las medias."
+          },
+          {
+            "name": "rendimiento_neuro_l_m2_dia_media",
+            "type": "number",
+            "description": "Media del rendimiento del control basado en reglas (L/m² al día)."
+          },
+          {
+            "name": "incrustacion_diaria_ohm_media",
+            "type": "number",
+            "description": "Media de la carga salina por el rendimiento del control basado en reglas (Ohm/día)."
+          },
+          {
+            "name": "ventaja_recuperacion_pts",
+            "type": "number",
+            "description": "Recuperación media del control basado en reglas menos la del temporizador (puntos)."
+          },
+          {
+            "name": "pulsos_neuro_media",
+            "type": "number",
+            "description": "Media de los pulsos del control basado en reglas en toda la red."
+          },
+          {
+            "name": "humedad_inicial_pct",
+            "type": "number",
+            "description": "Humedad relativa a las 18:00 (%)."
+          }
+        ],
+        "missingValues": [
+          ""
+        ]
+      }
+    },
+    {
+      "name": "robustez_respuesta",
+      "path": "robustez_respuesta.csv",
+      "profile": "tabular-data-resource",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "schema": {
+        "fields": [
+          {
+            "name": "flujo_niebla_maximo_l_m2_h",
+            "type": "number",
+            "description": "Flujo máximo de niebla de la combinación (L/m²/h)."
+          },
+          {
+            "name": "eficacia_maxima_pulso",
+            "type": "number",
+            "description": "Eficacia máxima del pulso de la combinación."
+          },
+          {
+            "name": "cruce_estado",
+            "type": "string",
+            "description": "Estado del cruce de la ventaja en recuperación frente a la incrustación diaria."
+          },
+          {
+            "name": "cruce_incrustacion_diaria_ohm",
+            "type": "number",
+            "description": "Incrustación diaria interpolada donde la ventaja vale 0 (Ohm/día)."
+          },
+          {
+            "name": "cruce_carga_salina_ohm_l_m2",
+            "type": "number",
+            "description": "Carga salina interpolada donde la ventaja vale 0 (Ohm por L/m²)."
+          },
+          {
+            "name": "escenario",
+            "type": "string",
+            "description": "Escenario ambiental."
+          },
+          {
+            "name": "tasa_salinizacion",
+            "type": "string",
+            "description": "Tasa de salinización de la combinación simulada."
+          },
+          {
+            "name": "carga_salina_ohm_l_m2",
+            "type": "number",
+            "description": "Aumento de impedancia por litro captado por m²."
+          },
+          {
+            "name": "n_semillas",
+            "type": "integer",
+            "description": "Corridas promediadas, una por semilla."
+          },
+          {
+            "name": "recuperacion_neuro_media",
+            "type": "number",
+            "description": "Media de la recuperación tras pulso del control basado en reglas (%)."
+          },
+          {
+            "name": "recuperacion_neuro_desv",
+            "type": "number",
+            "description": "Desviación estándar muestral de la recuperación del control basado en reglas."
+          },
+          {
+            "name": "recuperacion_temporizador_media",
+            "type": "number",
+            "description": "Media de la recuperación tras pulso del temporizador fijo (%)."
+          },
+          {
+            "name": "recuperacion_temporizador_desv",
+            "type": "number",
+            "description": "Desviación estándar muestral de la recuperación del temporizador fijo."
+          },
+          {
+            "name": "degradacion_neuro_media",
+            "type": "number",
+            "description": "Media de la degradación acumulada del control basado en reglas (%)."
+          },
+          {
+            "name": "degradacion_neuro_desv",
+            "type": "number",
+            "description": "Desviación estándar muestral de la degradación del control basado en reglas."
+          },
+          {
+            "name": "degradacion_temporizador_media",
+            "type": "number",
+            "description": "Media de la degradación acumulada del temporizador fijo (%)."
+          },
+          {
+            "name": "degradacion_temporizador_desv",
+            "type": "number",
+            "description": "Desviación estándar muestral de la degradación del temporizador fijo."
+          },
+          {
+            "name": "reduccion_desgaste_pct",
+            "type": "number",
+            "description": "Reducción del desgaste, (D_temp - D_neuro) / D_temp * 100, con las medias."
+          },
+          {
+            "name": "rendimiento_neuro_l_m2_dia_media",
+            "type": "number",
+            "description": "Media del rendimiento del control basado en reglas (L/m² al día)."
+          },
+          {
+            "name": "incrustacion_diaria_ohm_media",
+            "type": "number",
+            "description": "Media de la carga salina por el rendimiento del control basado en reglas (Ohm/día)."
+          },
+          {
+            "name": "ventaja_recuperacion_pts",
+            "type": "number",
+            "description": "Recuperación media del control basado en reglas menos la del temporizador (puntos)."
+          },
+          {
+            "name": "pulsos_neuro_media",
+            "type": "number",
+            "description": "Media de los pulsos del control basado en reglas en toda la red."
+          },
+          {
+            "name": "humedad_inicial_pct",
+            "type": "number",
+            "description": "Humedad relativa a las 18:00 (%)."
+          }
+        ],
+        "missingValues": [
+          ""
+        ]
+      }
+    }
+  ]
+}

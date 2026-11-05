@@ -29,10 +29,10 @@ Características comunes de ambos servicios, según `render.yaml`:
 
 | Recurso | URL | Qué se espera |
 |---|---|---|
-| Dashboard | https://axioma-h-dashboard.onrender.com | La barra lateral muestra **Estado: SALUDABLE** y el recorrido de cuatro vistas. |
+| Dashboard | https://axioma-h-dashboard.onrender.com | La barra lateral muestra **Estado: SALUDABLE** y el recorrido de cinco vistas. |
 | API, documentación interactiva | https://axioma-h-api.onrender.com/docs | Interfaz Swagger con los endpoints de evaluación, simulación y análisis de robustez. |
 | API, salud | https://axioma-h-api.onrender.com/api/v1/health | Código 200 con `"estado": "SALUDABLE"`. |
-| API, esquema OpenAPI | https://axioma-h-api.onrender.com/openapi.json | Publica las seis rutas de la API. |
+| API, esquema OpenAPI | https://axioma-h-api.onrender.com/openapi.json | Publica todas las rutas de la API; la copia versionada está en `docs/api/openapi.json` (sección 7). |
 
 Los endpoints disponibles se describen en `README.md` (sección Endpoints) y en [02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md](02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md), secciones 3.1 a 3.3.
 
@@ -111,6 +111,7 @@ El script imprime una tabla con el resultado, la duración y el detalle de cada 
 | 2026-11-04 | `main` en el commit `f89a294`; la API reporta la versión 0.1.0 | 19 de 19 comprobaciones exitosas, incluidos los endpoints de análisis. El barrido de salinidad con una semilla respondió en 2.3 s. |
 | 2026-11-04 | Commit "docs: alinear terminología, versión 0.2.0 y cifras con la verificación integral", sobre `902a4d6`; la API reporta la versión 0.2.0 | Verificación local, con la API y el dashboard en el equipo: 22 de 22 comprobaciones exitosas, y recorrido de las cuatro vistas del dashboard con `streamlit.testing.v1.AppTest` (simulación, barrido, sensibilidad e incertidumbre) sin excepciones. La verificación contra los servicios publicados se completa después del despliegue de este commit. |
 | 2026-11-04 | Cambios de la versión 0.3.0 (robustez de la respuesta, dimensionamiento y perfil de sitio), antes del commit; la API reporta la versión 0.3.0 | Verificación local, con la API y el dashboard en el equipo: 26 de 26 comprobaciones exitosas. La robustez de la respuesta con una semilla respondió en 1.9 s. La vista "Investigación y guía" se recorrió con `streamlit.testing.v1.AppTest` sin excepciones. La verificación contra los servicios publicados se completa después del despliegue. |
+| 2026-11-05 | Dashboard de cinco vistas, Data Package y OpenAPI versionado sobre la API 0.3.0, antes del commit | Verificación local, con la API y el dashboard en el equipo: 26 de 26 comprobaciones exitosas. Recorrido de las cinco vistas con `streamlit.testing.v1.AppTest`, ejecutando la robustez, el barrido con el flujo calibrado máximo, la incertidumbre, la sensibilidad, el dimensionamiento y una simulación del explorador con perfil editado, sin excepciones. La verificación contra los servicios publicados se completa después del despliegue. |
 
 Después de cada despliegue relevante se recomienda repetir el script y actualizar esta tabla.
 
@@ -150,4 +151,84 @@ python scripts/verificar_despliegue.py --api https://otra-api.onrender.com --das
 
 ### 6.3 Uso sin el despliegue
 
-La aplicación no depende de Render. El backend y el dashboard se ejecutan en local sin conexión a internet, y los resultados de referencia se regeneran sin la API con `python scripts/generar_resultados_referencia.py`. Con `python scripts/generar_resultados_referencia.py --comprobar` se verifica, sin modificar `docs/datos/`, que los archivos publicados coinciden con el modelo actual; el script termina con código 0 si coinciden y con código 1 si alguno difiere o falta (ver `README.md`, sección Uso local sin conexión, y [datos/README.md](datos/README.md)).
+La aplicación no depende de Render. El backend y el dashboard se ejecutan en local sin conexión a internet, y los resultados de referencia se regeneran sin la API con `python scripts/generar_resultados_referencia.py`. Con `python scripts/generar_resultados_referencia.py --comprobar` se verifica, sin modificar `docs/datos/`, que los archivos publicados coinciden con el modelo actual; el script termina con código 0 si coinciden y con código 1 si alguno difiere o falta (ver `README.md`, sección Instalación y ejecución, y [datos/README.md](datos/README.md)). El mismo comando verifica también `docs/api/openapi.json`.
+
+## 7. Integración con otros sistemas
+
+El artefacto se puede reutilizar sin el dashboard: la API publica un contrato estable y los resultados de referencia se distribuyen como datos abiertos tipados. Nada de lo que sigue requiere dependencias adicionales a las de `requirements.txt`, salvo la validación opcional de la sección 7.3.
+
+### 7.1 Consumo de la API
+
+El contrato completo está en [api/openapi.json](api/openapi.json), generado desde `backend.main.app` por `scripts/generar_resultados_referencia.py` y verificado con `--comprobar`. La misma información se sirve en `GET /openapi.json` de la API desplegada. A partir de ese archivo, cualquier generador de clientes OpenAPI puede producir un cliente en otro lenguaje.
+
+Ejemplos con `curl`, contra la API local (`http://127.0.0.1:8000`) o la desplegada (`https://axioma-h-api.onrender.com`):
+
+```bash
+# Salud del servicio
+curl https://axioma-h-api.onrender.com/api/v1/health
+
+# Perfiles de sitio de referencia
+curl https://axioma-h-api.onrender.com/api/v1/sitios
+
+# Simulación con un perfil de sitio y una eficacia del pulso propios
+curl -X POST https://axioma-h-api.onrender.com/api/v1/simulacion/ejecutar \
+  -H "Content-Type: application/json" \
+  -d '{"escenario": "DIA_NORMAL", "humedad_ambiente_inicial_pct": 85, "tasa_salinizacion": "ALTA",
+       "eficacia_maxima_pulso": 0.95,
+       "sitio": {"nombre": "SITIO_EJEMPLO", "flujo_niebla_maximo_l_m2_h": 1.2, "temperatura_media_c": 24,
+                 "amplitud_temperatura_c": 6, "amplitud_humedad_pct": 15}}'
+
+# Dimensionamiento para 50 personas con el estándar de la OMS
+curl -X POST https://axioma-h-api.onrender.com/api/v1/analisis/dimensionamiento \
+  -H "Content-Type: application/json" \
+  -d '{"personas": 50, "estandar": "OMS_20", "escenario": "DIA_NORMAL", "humedad_ambiente_inicial_pct": 85}'
+```
+
+Los valores del perfil del ejemplo son ilustrativos, no de un sitio real. Una solicitud que no supera la validación devuelve `422` con el detalle de cada campo. Una página web que consuma la API desde el navegador necesita que su dominio se agregue en `AXIOMA_CORS_ORIGINS` (sección 3); un programa de servidor, como un script de Python o un flujo de datos, no lo necesita.
+
+### 7.2 Lectura de los datos abiertos con pandas
+
+Los CSV de [datos/](datos/README.md) están en UTF-8, con punto decimal y celdas vacías para los valores sin datos. Se leen directamente desde el repositorio:
+
+```python
+import pandas as pd
+
+base = "https://raw.githubusercontent.com/crd10lop/axioma-h-engine/main/docs/datos/"
+robustez = pd.read_csv(base + "robustez_respuesta.csv")
+cruces = robustez.drop_duplicates(["flujo_niebla_maximo_l_m2_h", "eficacia_maxima_pulso"])
+print(cruces[["flujo_niebla_maximo_l_m2_h", "eficacia_maxima_pulso", "cruce_estado", "cruce_incrustacion_diaria_ohm"]])
+```
+
+El tipo y la descripción de cada columna están en `datapackage.json` y en [datos/README.md](datos/README.md), secciones 3 a 5.
+
+### 7.3 Validación con el Data Package
+
+[datos/datapackage.json](datos/datapackage.json) es un descriptor Frictionless Data Package con licencia MIT, la versión del servicio y, por cada CSV, el esquema de sus campos. Herramientas compatibles con esa especificación pueden validar los datos sin conocer el proyecto. Por ejemplo, con la herramienta de línea de comandos de Frictionless, que no forma parte de las dependencias del proyecto y se instala aparte:
+
+```bash
+frictionless validate docs/datos/datapackage.json
+```
+
+Dentro del proyecto, `tests/test_scripts.py` comprueba sin dependencias adicionales que el encabezado de cada CSV coincide con su esquema y que cada celda cumple el tipo declarado.
+
+### 7.4 Envío de telemetría desde un sensor real
+
+`POST /api/v1/nodo/evaluar` recibe un `TelemetryInput` y devuelve un `ControlDecision` ([02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md](02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md), sección 3.1). El simulador y el dashboard usan el mismo contrato que usaría un nodo físico, de modo que un sensor real no requiere cambios en la API: basta con que el microcontrolador o una pasarela envíe periódicamente la lectura en JSON y aplique la decisión.
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/nodo/evaluar \
+  -H "Content-Type: application/json" \
+  -d '{"nodo_id": "NODO_04", "impedancia_ohms": 1650.5, "temperatura_celsius": 36.2, "reserva_calor_pct": 55.0,
+       "humedad_relativa_pct": 42.0, "flujo_actual_ml_min": 14.5, "modo_operacion": "NEURO_SIMBOLICO"}'
+```
+
+La respuesta indica la acción (`accion_recomendada`), si se ordena un pulso (`pulso_termico_activo`, `temperatura_objetivo_c`, `duracion_pulso_seg`), el caudal como porcentaje del tope ecológico (`ajuste_caudal_pct`) y el motivo legible. El identificador del nodo debe estar entre `NODO_01` y `NODO_08`, y los valores fuera de rango se rechazan con `422`.
+
+### 7.5 Rutas de integración propuestas para el Ciclo 3
+
+Las siguientes rutas son una **propuesta** del equipo y no están implementadas:
+
+- **Pasarela de campo.** Un servicio en el sitio que reciba la telemetría de los nodos por un protocolo de bajo consumo, la convierta en `TelemetryInput` y consulte la API, de modo que el control siga funcionando si se pierde la conexión con un servidor remoto.
+- **Registro de mediciones.** Guardar cada lectura y cada decisión con su marca de tiempo, para estimar en campo la incrustación diaria (pendiente de la impedancia entre pulsos) y contrastar la hipótesis H1-Ciclo 3 ([04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 8.9).
+- **Perfiles de sitio con fuente.** Publicar en `GET /api/v1/sitios` perfiles medidos en otros lugares, con la referencia de cada medición, cuando existan.
+- **Gobernanza de los datos.** Definir con las comunidades quién accede a la telemetría y a los resultados antes de cualquier piloto ([01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2.7).

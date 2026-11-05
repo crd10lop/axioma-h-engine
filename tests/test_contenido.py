@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from backend.schemas import AccionControl, EstadoCruce, EstadoNodo
 from frontend import config
 from frontend import contenido
 
@@ -13,6 +14,7 @@ VISTA_INVESTIGACION = "Investigación y guía"
 VISTA_EVALUACION = "Evaluación manual de nodo"
 VISTA_SIMULACION = "Simulación comparativa"
 VISTA_RESPUESTA = "Respuesta a la pregunta"
+VISTA_EXPLORADOR = "Explorador de hipótesis"
 REGLA_03 = "REGLA_03_DESPRENDIMIENTO_SAL_POR_IMPEDANCIA"
 REGLA_04 = "REGLA_04_PROTECCION_RESERVA_CRITICA"
 REGLA_06 = "REGLA_06_SUPERVISION_HUMANA"
@@ -121,13 +123,15 @@ def test_supuestos_clave():
     assert any(valor.startswith("6.0 L/m²/h") for valor in valores)
     for supuesto in contenido.SUPUESTOS_CLAVE:
         assert set(supuesto) == set(contenido.COLUMNAS_SUPUESTOS)
-        assert "sin fuente" in supuesto["origen"]
+        for texto in supuesto.values():
+            assert texto.strip()
 
 
 def test_supuesto_de_flujo_incluye_el_rango_calibrado():
     flujo = contenido.SUPUESTOS_CLAVE[1]
     assert "0.49 a 1.83 L/m²/h" in flujo["valor"]
-    assert "calibración inversa" in flujo["origen"]
+    assert "Klemm et al. (2012)" in flujo["origen"]
+    assert "calibración inversa" in flujo["medicion"]
 
 
 def test_perspectivas_y_titulos():
@@ -267,7 +271,9 @@ def test_constantes_de_pulso_y_tope():
 # Recorrido guiado
 # ---------------------------------------------------------------------------
 def test_vistas_en_orden():
-    assert contenido.VISTAS == [VISTA_INVESTIGACION, VISTA_EVALUACION, VISTA_SIMULACION, VISTA_RESPUESTA]
+    assert contenido.VISTAS == [
+        VISTA_INVESTIGACION, VISTA_EVALUACION, VISTA_SIMULACION, VISTA_RESPUESTA, VISTA_EXPLORADOR
+    ]
 
 
 def test_vistas_coinciden_con_app():
@@ -283,6 +289,7 @@ def test_vistas_coinciden_con_app():
         (VISTA_EVALUACION, "2. Evaluación manual de nodo"),
         (VISTA_SIMULACION, "3. Simulación comparativa"),
         (VISTA_RESPUESTA, "4. Respuesta a la pregunta"),
+        (VISTA_EXPLORADOR, "5. Explorador de hipótesis"),
     ],
 )
 def test_etiqueta_vista(vista, esperada):
@@ -295,6 +302,7 @@ def test_etiqueta_vista(vista, esperada):
         (VISTA_INVESTIGACION, VISTA_EVALUACION),
         (VISTA_EVALUACION, VISTA_SIMULACION),
         (VISTA_SIMULACION, VISTA_RESPUESTA),
+        (VISTA_RESPUESTA, VISTA_EXPLORADOR),
     ],
 )
 def test_siguiente_vista(vista, esperada):
@@ -302,7 +310,7 @@ def test_siguiente_vista(vista, esperada):
 
 
 def test_siguiente_vista_de_la_ultima_es_none():
-    assert contenido.siguiente_vista(VISTA_RESPUESTA) is None
+    assert contenido.siguiente_vista(VISTA_EXPLORADOR) is None
 
 
 def test_aviso_exploratorio_cita_la_decision_d5():
@@ -377,3 +385,71 @@ def test_pregunta_de_investigacion_conserva_la_formulacion_del_equipo():
     assert contenido.PREGUNTA_INVESTIGACION.startswith(
         "¿En qué medida un sistema de control neuro-simbólico, evaluado mediante simulación"
     )
+
+
+# ---------------------------------------------------------------------------
+# Tesis, etiquetas llanas, supuestos y guía por disciplina
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("fragmento", ["73.3 % y 100 %", "incrustación diaria", "1633 a 1867 Ohm por día"])
+def test_tesis_usa_las_cifras_de_docs_04(fragmento):
+    assert fragmento in contenido.TESIS
+
+
+@pytest.mark.parametrize("enumerado", [EstadoNodo, AccionControl, EstadoCruce])
+def test_etiquetas_llanas_cubren_los_enumerados_de_la_api(enumerado):
+    for valor in enumerado:
+        assert contenido.ETIQUETAS_LLANAS[valor.value].strip()
+
+
+def test_etiquetas_llanas_cubren_las_reglas():
+    for regla in contenido.REGLAS:
+        assert regla["regla"] in contenido.ETIQUETAS_LLANAS
+
+
+@pytest.mark.parametrize("origen", ["SUPUESTO", "CALIBRADO_MAX", "CALIBRADO_MIN"])
+def test_etiquetas_llanas_cubren_los_origenes_del_flujo(origen):
+    assert origen in contenido.ETIQUETAS_LLANAS
+
+
+def test_supuestos_clave_cubren_los_cinco_parametros():
+    parametros = [supuesto["parametro"] for supuesto in contenido.SUPUESTOS_CLAVE]
+    assert parametros == [
+        "Eficacia máxima del pulso",
+        "Flujo máximo de niebla",
+        "Carga salina por litro",
+        "Degradación por fatiga del pulso",
+        "Tope ecológico de extracción",
+    ]
+
+
+def test_supuestos_clave_citan_su_origen_y_su_efecto():
+    for supuesto in contenido.SUPUESTOS_CLAVE:
+        assert "docs/0" in supuesto["origen"]
+        assert "docs/04" in supuesto["efecto"]
+
+
+def test_guia_por_disciplina():
+    assert list(contenido.GUIA_DISCIPLINAS) == [
+        "Hidrología e ingeniería", "Salud pública", "Ecología", "Ciencias sociales"
+    ]
+    for guia in contenido.GUIA_DISCIPLINAS.values():
+        assert set(guia) == set(contenido.COLUMNAS_GUIA)
+        assert guia["pregunta"].startswith("¿")
+
+
+def test_partes_de_la_respuesta():
+    titulos = [parte["titulo"] for parte in contenido.PARTES_RESPUESTA.values()]
+    assert [titulo[:2] for titulo in titulos] == ["a)", "b)", "c)", "d)"]
+    for parte in contenido.PARTES_RESPUESTA.values():
+        assert parte["frase"].startswith("Esta parte responde") or parte["frase"].startswith("Esta parte traduce")
+
+
+def test_intro_del_explorador_cita_la_decision_d5():
+    assert "decisión D5" in contenido.INTRO_EXPLORADOR
+
+
+def test_guia_por_disciplina_coincide_con_docs_03():
+    documento = (RUTA_APP.parent.parent / "docs" / "03_Funcionamiento_General_AxiomaH.md").read_text(encoding="utf-8")
+    for guia in contenido.GUIA_DISCIPLINAS.values():
+        assert guia["donde"] in documento
+        assert guia["pregunta"] in documento

@@ -1,0 +1,2533 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Axioma-H Engine",
+    "description": "Motor de control neuro-simbólico para la captación pasiva de agua atmosférica.",
+    "version": "0.3.0"
+  },
+  "paths": {
+    "/api/v1/nodo/evaluar": {
+      "post": {
+        "tags": [
+          "Control de Nodos"
+        ],
+        "summary": "Evaluar Nodo",
+        "description": "Evalúa la telemetría de un nodo y devuelve la acción de control recomendada.",
+        "operationId": "evaluar_nodo_api_v1_nodo_evaluar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelemetryInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ControlDecision"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/simulacion/ejecutar": {
+      "post": {
+        "tags": [
+          "Simulación"
+        ],
+        "summary": "Ejecutar",
+        "description": "Ejecuta la simulación comparativa entre el control neuro-simbólico y el temporizador fijo.",
+        "operationId": "ejecutar_api_v1_simulacion_ejecutar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulationConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulationResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analisis/barrido-salinidad": {
+      "post": {
+        "tags": [
+          "Análisis de robustez"
+        ],
+        "summary": "Barrido Salinidad",
+        "description": "Compara ambos modos en seis niveles de carga salina, con media y dispersión entre semillas.",
+        "operationId": "barrido_salinidad_api_v1_analisis_barrido_salinidad_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BarridoConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BarridoResultado"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analisis/sensibilidad": {
+      "post": {
+        "tags": [
+          "Análisis de robustez"
+        ],
+        "summary": "Sensibilidad",
+        "description": "Repite la simulación con varios valores de un parámetro supuesto, sin modificar la configuración global.",
+        "operationId": "sensibilidad_api_v1_analisis_sensibilidad_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SensibilidadConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensibilidadResultado"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analisis/incertidumbre": {
+      "post": {
+        "tags": [
+          "Análisis de robustez"
+        ],
+        "summary": "Incertidumbre",
+        "description": "Propaga la incertidumbre de la eficacia del pulso y del flujo de niebla, sin modificar la configuración global.",
+        "operationId": "incertidumbre_api_v1_analisis_incertidumbre_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncertidumbreConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncertidumbreResultado"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analisis/robustez-respuesta": {
+      "post": {
+        "tags": [
+          "Análisis de robustez"
+        ],
+        "summary": "Robustez Respuesta",
+        "description": "Repite el barrido de salinidad con 3 flujos de niebla y 3 eficacias del pulso, sin modificar la configuración global.",
+        "operationId": "robustez_respuesta_api_v1_analisis_robustez_respuesta_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RobustezConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RobustezResultado"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analisis/dimensionamiento": {
+      "post": {
+        "tags": [
+          "Análisis de robustez"
+        ],
+        "summary": "Dimensionamiento",
+        "description": "Calcula el área de colector y los nodos necesarios para abastecer a un número de personas.",
+        "operationId": "dimensionamiento_api_v1_analisis_dimensionamiento_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DimensionamientoConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DimensionamientoResultado"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sitios": {
+      "get": {
+        "tags": [
+          "Sitios"
+        ],
+        "summary": "Listar Sitios",
+        "description": "Devuelve los perfiles de Cabo de la Vela con el flujo supuesto y con los extremos de la calibración.",
+        "operationId": "listar_sitios_api_v1_sitios_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PerfilSitio"
+                  },
+                  "type": "array",
+                  "title": "Response Listar Sitios Api V1 Sitios Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "tags": [
+          "General"
+        ],
+        "summary": "Obtener Estado Motor",
+        "description": "Devuelve el estado general del motor y la ruta de su documentación.",
+        "operationId": "obtener_estado_motor__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoMotor"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "Monitoreo"
+        ],
+        "summary": "Verificar Salud",
+        "description": "Informa la salud del servicio junto con su tiempo de actividad.",
+        "operationId": "verificar_salud_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoSalud"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AccionControl": {
+        "type": "string",
+        "enum": [
+          "CORTE_DE_EMERGENCIA",
+          "PAUSA_ECOLOGICA",
+          "REDUCIR_CAUDAL_SIN_PULSO",
+          "APLICAR_PULSO_RESISTIVO",
+          "FILTRACION_PASIVA_CONTINUA",
+          "SUSPENSION_MANUAL"
+        ],
+        "title": "AccionControl",
+        "description": "Acción recomendada por el motor de reglas."
+      },
+      "AnulacionManual": {
+        "type": "string",
+        "enum": [
+          "NINGUNA",
+          "SUSPENDER_EXTRACCION",
+          "INHIBIR_PULSO"
+        ],
+        "title": "AnulacionManual",
+        "description": "Intervención de un operador sobre la decisión del motor; solo puede ser más conservadora."
+      },
+      "BarridoConfig": {
+        "properties": {
+          "humedad_ambiente_inicial_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Humedad Ambiente Inicial Pct",
+            "description": "Humedad relativa al inicio de cada corrida (18:00 hora local).",
+            "default": 85.0
+          },
+          "duracion_horas": {
+            "type": "integer",
+            "maximum": 72.0,
+            "minimum": 1.0,
+            "title": "Duracion Horas",
+            "description": "Horas simuladas en cada corrida.",
+            "default": 24
+          },
+          "numero_nodos": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Numero Nodos",
+            "description": "Cantidad de nodos simulados.",
+            "default": 8
+          },
+          "semillas": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Semillas",
+            "description": "Semillas del entorno, sin repetir; cada combinación se simula una vez por semilla."
+          },
+          "flujo_niebla_maximo_l_m2_h": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 20.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flujo Niebla Maximo L M2 H",
+            "description": "Flujo máximo de niebla en L/m²/h, en (0, 20]. Nulo para usar el valor de backend/config.py."
+          },
+          "eficacia_maxima_pulso": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eficacia Maxima Pulso",
+            "description": "Eficacia máxima del pulso, en (0, 1]. Nulo para usar el valor de backend/config.py."
+          }
+        },
+        "type": "object",
+        "title": "BarridoConfig",
+        "description": "Parámetros del barrido de salinidad con una o varias semillas.",
+        "examples": [
+          {
+            "humedad_ambiente_inicial_pct": 85.0,
+            "semillas": [
+              42
+            ]
+          }
+        ]
+      },
+      "BarridoResultado": {
+        "properties": {
+          "puntos": {
+            "items": {
+              "$ref": "#/components/schemas/PuntoBarrido"
+            },
+            "type": "array",
+            "title": "Puntos"
+          },
+          "flujo_niebla_maximo_l_m2_h": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flujo Niebla Maximo L M2 H",
+            "description": "Flujo máximo de niebla usado en las corridas (L/m²/h)."
+          },
+          "eficacia_maxima_pulso": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eficacia Maxima Pulso",
+            "description": "Eficacia máxima del pulso usada en las corridas."
+          },
+          "cruce": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CruceRecuperacion"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Cruce de la ventaja en recuperación frente a la incrustación diaria."
+          }
+        },
+        "type": "object",
+        "required": [
+          "puntos"
+        ],
+        "title": "BarridoResultado",
+        "description": "Barrido de salinidad ordenado por carga salina creciente."
+      },
+      "CausaNoValidacion": {
+        "type": "string",
+        "enum": [
+          "SIN_DATOS",
+          "DEPENDE_DE_PARAMETRO_SUPUESTO",
+          "LIMITE_DEL_RECURSO_ATMOSFERICO",
+          "DESEMPENO_DEL_CONTROL"
+        ],
+        "title": "CausaNoValidacion",
+        "description": "Motivo por el que un indicador de una conjetura no cumple su umbral."
+      },
+      "CombinacionRobustez": {
+        "properties": {
+          "flujo_niebla_maximo_l_m2_h": {
+            "type": "number",
+            "title": "Flujo Niebla Maximo L M2 H",
+            "description": "Flujo máximo de niebla en L/m²/h."
+          },
+          "eficacia_maxima_pulso": {
+            "type": "number",
+            "title": "Eficacia Maxima Pulso",
+            "description": "Eficacia máxima del pulso."
+          },
+          "barrido": {
+            "$ref": "#/components/schemas/BarridoResultado"
+          }
+        },
+        "type": "object",
+        "required": [
+          "flujo_niebla_maximo_l_m2_h",
+          "eficacia_maxima_pulso",
+          "barrido"
+        ],
+        "title": "CombinacionRobustez",
+        "description": "Barrido de salinidad con un par de flujo de niebla y eficacia del pulso."
+      },
+      "ComparativaModos": {
+        "properties": {
+          "modo_neuro_simbolico": {
+            "$ref": "#/components/schemas/ResultadoModo"
+          },
+          "modo_temporizador_fijo": {
+            "$ref": "#/components/schemas/ResultadoModo"
+          },
+          "modo_temporizador_tope_ecologico": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResultadoModo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Temporizador fijo con la misma fracción de 0.33 del modo neuro-simbólico; referencia para separar el efecto del tope ecológico del de la lógica de control."
+          }
+        },
+        "type": "object",
+        "required": [
+          "modo_neuro_simbolico",
+          "modo_temporizador_fijo"
+        ],
+        "title": "ComparativaModos",
+        "description": "Resultados de ambos modos sobre el mismo entorno."
+      },
+      "ConjeturasValidadas": {
+        "properties": {
+          "conjetura_1_eficiencia": {
+            "type": "boolean",
+            "title": "Conjetura 1 Eficiencia"
+          },
+          "conjetura_2_autorreparacion": {
+            "type": "boolean",
+            "title": "Conjetura 2 Autorreparacion"
+          },
+          "conjetura_3_saber_territorial": {
+            "type": "boolean",
+            "title": "Conjetura 3 Saber Territorial"
+          }
+        },
+        "type": "object",
+        "required": [
+          "conjetura_1_eficiencia",
+          "conjetura_2_autorreparacion",
+          "conjetura_3_saber_territorial"
+        ],
+        "title": "ConjeturasValidadas",
+        "description": "Estado de validación de cada conjetura."
+      },
+      "ControlDecision": {
+        "properties": {
+          "nodo_id": {
+            "type": "string",
+            "title": "Nodo Id",
+            "description": "Identificador del nodo evaluado."
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp",
+            "description": "Instante de la decisión en UTC."
+          },
+          "estado_nodo": {
+            "$ref": "#/components/schemas/EstadoNodo",
+            "description": "Diagnóstico del nodo."
+          },
+          "accion_recomendada": {
+            "$ref": "#/components/schemas/AccionControl",
+            "description": "Acción que debe ejecutar el nodo."
+          },
+          "pulso_termico_activo": {
+            "type": "boolean",
+            "title": "Pulso Termico Activo",
+            "description": "Indica si se ordena un pulso resistivo."
+          },
+          "temperatura_objetivo_c": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperatura Objetivo C",
+            "description": "Temperatura objetivo del pulso en °C, o nulo si no hay pulso."
+          },
+          "duracion_pulso_seg": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Duracion Pulso Seg",
+            "description": "Duración del pulso en segundos; 0 si no hay pulso."
+          },
+          "ajuste_caudal_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Ajuste Caudal Pct",
+            "description": "Caudal ordenado como porcentaje del tope ecológico del 33 %."
+          },
+          "regla_activada": {
+            "type": "string",
+            "title": "Regla Activada",
+            "description": "Identificador de la regla que determinó la decisión."
+          },
+          "motivo": {
+            "type": "string",
+            "title": "Motivo",
+            "description": "Explicación legible de la decisión para la consola del tablero."
+          },
+          "metricas_conjeturas": {
+            "$ref": "#/components/schemas/MetricasConjeturas",
+            "description": "Indicadores asociados a las conjeturas."
+          }
+        },
+        "type": "object",
+        "required": [
+          "nodo_id",
+          "timestamp",
+          "estado_nodo",
+          "accion_recomendada",
+          "pulso_termico_activo",
+          "duracion_pulso_seg",
+          "ajuste_caudal_pct",
+          "regla_activada",
+          "motivo",
+          "metricas_conjeturas"
+        ],
+        "title": "ControlDecision",
+        "description": "Decisión de control emitida para un nodo."
+      },
+      "CruceRecuperacion": {
+        "properties": {
+          "estado": {
+            "$ref": "#/components/schemas/EstadoCruce",
+            "description": "INTERPOLADO: la ventaja pasa de <= 0 a > 0 al crecer la incrustación diaria. CRUCE_DESCENDENTE: solo pasa de > 0 a <= 0. SIN_CRUCE_NEURO_SUPERIOR o SIN_CRUCE_NEURO_INFERIOR: no cambia de signo. SIN_DATOS: menos de dos puntos con ventaja."
+          },
+          "incrustacion_diaria_ohm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incrustacion Diaria Ohm",
+            "description": "Incrustación diaria interpolada en el cruce (Ohm/día); nula sin cruce."
+          },
+          "carga_salina_ohm_l_m2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carga Salina Ohm L M2",
+            "description": "Carga salina interpolada en el cruce (Ohm por L/m²); nula sin cruce."
+          }
+        },
+        "type": "object",
+        "required": [
+          "estado"
+        ],
+        "title": "CruceRecuperacion",
+        "description": "Incrustación diaria y carga salina donde la ventaja en recuperación vale 0, por interpolación lineal."
+      },
+      "DetalleVerificacion": {
+        "properties": {
+          "conjetura_1_eficiencia": {
+            "$ref": "#/components/schemas/VerificacionConjetura"
+          },
+          "conjetura_2_autorreparacion": {
+            "$ref": "#/components/schemas/VerificacionConjetura"
+          },
+          "conjetura_3_saber_territorial": {
+            "$ref": "#/components/schemas/VerificacionConjetura"
+          }
+        },
+        "type": "object",
+        "required": [
+          "conjetura_1_eficiencia",
+          "conjetura_2_autorreparacion",
+          "conjetura_3_saber_territorial"
+        ],
+        "title": "DetalleVerificacion",
+        "description": "Detalle de verificación de las tres conjeturas."
+      },
+      "DimensionPorFlujo": {
+        "properties": {
+          "origen_flujo": {
+            "type": "string",
+            "title": "Origen Flujo",
+            "description": "SUPUESTO, CALIBRADO_MAX o CALIBRADO_MIN."
+          },
+          "flujo_niebla_maximo_l_m2_h": {
+            "type": "number",
+            "title": "Flujo Niebla Maximo L M2 H",
+            "description": "Flujo máximo de niebla en L/m²/h."
+          },
+          "rendimiento_neuro_l_m2_dia": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Rendimiento Neuro L M2 Dia",
+            "description": "Rendimiento del neuro-simbólico en L/m²/día."
+          },
+          "area_colector_m2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area Colector M2",
+            "description": "Área de colector requerida en m²; nula si el rendimiento es 0."
+          },
+          "nodos_requeridos": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nodos Requeridos",
+            "description": "Nodos de 1 m² requeridos (área redondeada hacia arriba); nulo si el rendimiento es 0."
+          }
+        },
+        "type": "object",
+        "required": [
+          "origen_flujo",
+          "flujo_niebla_maximo_l_m2_h",
+          "rendimiento_neuro_l_m2_dia"
+        ],
+        "title": "DimensionPorFlujo",
+        "description": "Área de colector y nodos necesarios con un flujo de niebla."
+      },
+      "DimensionamientoConfig": {
+        "properties": {
+          "personas": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Personas",
+            "description": "Personas que se quiere abastecer."
+          },
+          "estandar": {
+            "$ref": "#/components/schemas/EstandarConsumo",
+            "description": "Estándar de consumo diario.",
+            "default": "OMS_20"
+          },
+          "escenario": {
+            "$ref": "#/components/schemas/Escenario",
+            "description": "Escenario ambiental."
+          },
+          "humedad_ambiente_inicial_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Humedad Ambiente Inicial Pct",
+            "description": "Humedad relativa al inicio de la simulación (18:00 hora local)."
+          },
+          "tasa_salinizacion": {
+            "$ref": "#/components/schemas/TasaSalinizacion",
+            "description": "Velocidad de incrustación salina.",
+            "default": "ALTA"
+          },
+          "semilla": {
+            "type": "integer",
+            "title": "Semilla",
+            "description": "Semilla del generador aleatorio del entorno.",
+            "default": 42
+          }
+        },
+        "type": "object",
+        "required": [
+          "personas",
+          "escenario",
+          "humedad_ambiente_inicial_pct"
+        ],
+        "title": "DimensionamientoConfig",
+        "description": "Parámetros del dimensionamiento del captador para un número de personas.",
+        "examples": [
+          {
+            "escenario": "DIA_NORMAL",
+            "estandar": "OMS_20",
+            "humedad_ambiente_inicial_pct": 85.0,
+            "personas": 50
+          }
+        ]
+      },
+      "DimensionamientoResultado": {
+        "properties": {
+          "consumo_l_persona_dia": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Consumo L Persona Dia",
+            "description": "Consumo diario por persona del estándar elegido."
+          },
+          "dimensiones": {
+            "items": {
+              "$ref": "#/components/schemas/DimensionPorFlujo"
+            },
+            "type": "array",
+            "title": "Dimensiones",
+            "description": "Una dimensión por flujo de referencia."
+          },
+          "area_literatura_min_m2": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Area Literatura Min M2",
+            "description": "Área con el rendimiento máximo de la literatura (10 L/m²/día, Klemm et al., 2012)."
+          },
+          "area_literatura_max_m2": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Area Literatura Max M2",
+            "description": "Área con el rendimiento mínimo de la literatura (3 L/m²/día, Klemm et al., 2012)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "consumo_l_persona_dia",
+          "dimensiones",
+          "area_literatura_min_m2",
+          "area_literatura_max_m2"
+        ],
+        "title": "DimensionamientoResultado",
+        "description": "Dimensionamiento con los tres flujos de referencia y el rango de área de la literatura."
+      },
+      "Escenario": {
+        "type": "string",
+        "enum": [
+          "DIA_NORMAL",
+          "INCRUSTACION_SALINA_RAPIDA",
+          "SEQUIA",
+          "TORMENTA_DE_ARENA",
+          "TORMENTA_DE_SAL_Y_CALOR_EXTREMO"
+        ],
+        "title": "Escenario",
+        "description": "Escenarios ambientales disponibles en el simulador."
+      },
+      "EstadoCruce": {
+        "type": "string",
+        "enum": [
+          "INTERPOLADO",
+          "CRUCE_DESCENDENTE",
+          "SIN_CRUCE_NEURO_SUPERIOR",
+          "SIN_CRUCE_NEURO_INFERIOR",
+          "SIN_DATOS"
+        ],
+        "title": "EstadoCruce",
+        "description": "Resultado de la búsqueda del punto donde la ventaja en recuperación cambia de signo."
+      },
+      "EstadoMotor": {
+        "properties": {
+          "servicio": {
+            "type": "string",
+            "title": "Servicio",
+            "description": "Nombre del servicio."
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "Versión desplegada del servicio."
+          },
+          "estado": {
+            "type": "string",
+            "title": "Estado",
+            "description": "Estado operativo del motor."
+          },
+          "descripcion": {
+            "type": "string",
+            "title": "Descripcion",
+            "description": "Descripción breve del motor."
+          },
+          "documentacion": {
+            "type": "string",
+            "title": "Documentacion",
+            "description": "Ruta de la documentación interactiva."
+          }
+        },
+        "type": "object",
+        "required": [
+          "servicio",
+          "version",
+          "estado",
+          "descripcion",
+          "documentacion"
+        ],
+        "title": "EstadoMotor",
+        "description": "Estado general del motor expuesto en la raíz de la API."
+      },
+      "EstadoNodo": {
+        "type": "string",
+        "enum": [
+          "EMERGENCIA_TERMICA",
+          "PAUSA_ECOLOGICA",
+          "RESERVA_CRITICA",
+          "CRISTALIZACION_DETECTADA",
+          "NOMINAL",
+          "SUPERVISION_HUMANA"
+        ],
+        "title": "EstadoNodo",
+        "description": "Diagnóstico del nodo emitido por el motor de reglas."
+      },
+      "EstadoSalud": {
+        "properties": {
+          "estado": {
+            "type": "string",
+            "title": "Estado",
+            "description": "Resultado de la verificación de salud."
+          },
+          "servicio": {
+            "type": "string",
+            "title": "Servicio",
+            "description": "Nombre del servicio."
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "Versión desplegada del servicio."
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "Fecha y hora de la consulta en ISO 8601 (UTC)."
+          },
+          "tiempo_actividad_seg": {
+            "type": "number",
+            "title": "Tiempo Actividad Seg",
+            "description": "Segundos transcurridos desde el arranque del servicio."
+          }
+        },
+        "type": "object",
+        "required": [
+          "estado",
+          "servicio",
+          "version",
+          "timestamp",
+          "tiempo_actividad_seg"
+        ],
+        "title": "EstadoSalud",
+        "description": "Resultado de la verificación de salud del servicio."
+      },
+      "EstandarConsumo": {
+        "type": "string",
+        "enum": [
+          "SPHERE_15",
+          "OMS_20"
+        ],
+        "title": "EstandarConsumo",
+        "description": "Consumo diario por persona: Sphere (15 L, supervivencia) u OMS (20 L, acceso básico)."
+      },
+      "EventoBitacora": {
+        "properties": {
+          "minuto": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Minuto",
+            "description": "Minuto en que se activó la regla."
+          },
+          "nodo_id": {
+            "type": "string",
+            "title": "Nodo Id",
+            "description": "Nodo afectado."
+          },
+          "regla_activada": {
+            "type": "string",
+            "title": "Regla Activada",
+            "description": "Regla que pasó a gobernar el nodo."
+          },
+          "motivo": {
+            "type": "string",
+            "title": "Motivo",
+            "description": "Explicación emitida por el motor de reglas."
+          }
+        },
+        "type": "object",
+        "required": [
+          "minuto",
+          "nodo_id",
+          "regla_activada",
+          "motivo"
+        ],
+        "title": "EventoBitacora",
+        "description": "Cambio de regla activa en un nodo del modo neuro-simbólico."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ImpactoComunitario": {
+        "properties": {
+          "litros_dia_red": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Litros Dia Red",
+            "description": "Agua captada por la red, normalizada a litros por día."
+          },
+          "rendimiento_l_m2_dia": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Rendimiento L M2 Dia",
+            "description": "Litros por día y por m² de colector de la red simulada."
+          },
+          "personas_supervivencia": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Personas Supervivencia",
+            "description": "Personas abastecidas con 15 L/persona/día (Sphere, estándar 2.1)."
+          },
+          "personas_acceso_basico": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Personas Acceso Basico",
+            "description": "Personas abastecidas con 20 L/persona/día (acceso básico, OMS)."
+          },
+          "area_m2_por_persona_basico_literatura_min": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Area M2 Por Persona Basico Literatura Min",
+            "description": "m² de colector por persona para el acceso básico con el rendimiento máximo de la literatura (10 L/m²/día, Klemm et al., 2012)."
+          },
+          "area_m2_por_persona_basico_literatura_max": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Area M2 Por Persona Basico Literatura Max",
+            "description": "m² de colector por persona para el acceso básico con el rendimiento mínimo de la literatura (3 L/m²/día, Klemm et al., 2012)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "litros_dia_red",
+          "rendimiento_l_m2_dia",
+          "personas_supervivencia",
+          "personas_acceso_basico",
+          "area_m2_por_persona_basico_literatura_min",
+          "area_m2_por_persona_basico_literatura_max"
+        ],
+        "title": "ImpactoComunitario",
+        "description": "Estimación del abastecimiento que permitiría el agua captada por un modo de control.\n\nEs un indicador informativo: no interviene en la validación de las conjeturas."
+      },
+      "IncertidumbreConfig": {
+        "properties": {
+          "escenario": {
+            "$ref": "#/components/schemas/Escenario",
+            "description": "Escenario ambiental."
+          },
+          "humedad_ambiente_inicial_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Humedad Ambiente Inicial Pct",
+            "description": "Humedad relativa al inicio de la simulación (18:00 hora local)."
+          },
+          "tasa_salinizacion": {
+            "$ref": "#/components/schemas/TasaSalinizacion",
+            "description": "Velocidad de incrustación salina."
+          },
+          "duracion_horas": {
+            "type": "integer",
+            "maximum": 72.0,
+            "minimum": 1.0,
+            "title": "Duracion Horas",
+            "description": "Horas simuladas en cada corrida.",
+            "default": 24
+          },
+          "semilla": {
+            "type": "integer",
+            "title": "Semilla",
+            "description": "Semilla del entorno; es la misma en todas las muestras.",
+            "default": 42
+          },
+          "semilla_muestreo": {
+            "type": "integer",
+            "title": "Semilla Muestreo",
+            "description": "Semilla del muestreo de los parámetros.",
+            "default": 7
+          },
+          "n_muestras": {
+            "type": "integer",
+            "maximum": 30.0,
+            "minimum": 5.0,
+            "title": "N Muestras",
+            "description": "Número de muestras simuladas.",
+            "default": 20
+          },
+          "eficacia_min": {
+            "type": "number",
+            "maximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Eficacia Min",
+            "description": "Eficacia máxima del pulso, en (0, 1].",
+            "default": 0.8
+          },
+          "eficacia_max": {
+            "type": "number",
+            "maximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Eficacia Max",
+            "description": "Eficacia máxima del pulso, en (0, 1].",
+            "default": 1.0
+          },
+          "flujo_min": {
+            "type": "number",
+            "maximum": 20.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Flujo Min",
+            "description": "Flujo máximo de niebla en L/m²/h, en (0, 20].",
+            "default": 0.49
+          },
+          "flujo_max": {
+            "type": "number",
+            "maximum": 20.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Flujo Max",
+            "description": "Flujo máximo de niebla en L/m²/h, en (0, 20].",
+            "default": 1.83
+          }
+        },
+        "type": "object",
+        "required": [
+          "escenario",
+          "humedad_ambiente_inicial_pct",
+          "tasa_salinizacion"
+        ],
+        "title": "IncertidumbreConfig",
+        "description": "Parámetros de la propagación de la incertidumbre de la eficacia del pulso y del flujo de niebla.\n\nCada muestra toma una eficacia y un flujo con distribución uniforme en los\nrangos indicados y simula una corrida con esos valores. Los rangos por\ndefecto son los de `backend/config.py`: eficacia de 0.80 a 1.00 (supuesto)\ny flujo de 0.49 a 1.83 L/m²/h (calibración inversa contra la literatura).",
+        "examples": [
+          {
+            "escenario": "DIA_NORMAL",
+            "humedad_ambiente_inicial_pct": 85.0,
+            "n_muestras": 20,
+            "tasa_salinizacion": "ALTA"
+          }
+        ]
+      },
+      "IncertidumbreResultado": {
+        "properties": {
+          "probabilidad_c1": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Probabilidad C1",
+            "description": "Proporción de muestras que validan la Conjetura 1."
+          },
+          "probabilidad_c2": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Probabilidad C2",
+            "description": "Proporción de muestras que validan la Conjetura 2."
+          },
+          "probabilidad_c3": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Probabilidad C3",
+            "description": "Proporción de muestras que validan la Conjetura 3."
+          },
+          "recuperacion": {
+            "$ref": "#/components/schemas/ResumenDistribucion",
+            "description": "Recuperación de caudal tras pulso (%)."
+          },
+          "rendimiento": {
+            "$ref": "#/components/schemas/ResumenDistribucion",
+            "description": "Rendimiento del neuro-simbólico (L/m²/día)."
+          },
+          "reduccion_degradacion": {
+            "$ref": "#/components/schemas/ResumenDistribucion",
+            "description": "Reducción de la degradación frente al temporizador (%)."
+          },
+          "muestras": {
+            "items": {
+              "$ref": "#/components/schemas/MuestraIncertidumbre"
+            },
+            "type": "array",
+            "title": "Muestras",
+            "description": "Muestras en el orden en que se generaron."
+          },
+          "ventaja_recuperacion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResumenDistribucion"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Ventaja en recuperación del neuro-simbólico frente al temporizador (puntos)."
+          },
+          "probabilidad_ventaja_recuperacion": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Probabilidad Ventaja Recuperacion",
+            "description": "Proporción de las muestras con ambas recuperaciones en que la ventaja es positiva; nula si ninguna muestra tiene ambas."
+          }
+        },
+        "type": "object",
+        "required": [
+          "probabilidad_c1",
+          "probabilidad_c2",
+          "probabilidad_c3",
+          "recuperacion",
+          "rendimiento",
+          "reduccion_degradacion",
+          "muestras"
+        ],
+        "title": "IncertidumbreResultado",
+        "description": "Probabilidad de validar cada conjetura y dispersión de los indicadores entre las muestras."
+      },
+      "IndicadorVerificacion": {
+        "properties": {
+          "valor": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor",
+            "description": "Valor calculado; nulo si la simulación no generó datos para medirlo."
+          },
+          "umbral": {
+            "type": "number",
+            "title": "Umbral",
+            "description": "Umbral de la Matriz de Operacionalización."
+          },
+          "operador": {
+            "type": "string",
+            "title": "Operador",
+            "description": "Comparación aplicada entre valor y umbral."
+          },
+          "cumple": {
+            "type": "boolean",
+            "title": "Cumple",
+            "description": "Indica si el valor satisface el umbral."
+          }
+        },
+        "type": "object",
+        "required": [
+          "umbral",
+          "operador",
+          "cumple"
+        ],
+        "title": "IndicadorVerificacion",
+        "description": "Valor obtenido de un indicador frente a su umbral."
+      },
+      "MetricasConjeturas": {
+        "properties": {
+          "eficiencia_energetica_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Eficiencia Energetica Pct",
+            "description": "Relación entre la recuperación obtenida y la reserva consumida."
+          },
+          "recuperacion_hidraulica_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Recuperacion Hidraulica Pct",
+            "description": "Conductancia relativa estimada después de la acción."
+          },
+          "preservacion_ecologica_ok": {
+            "type": "boolean",
+            "title": "Preservacion Ecologica Ok",
+            "description": "Indica si la acción respeta el límite de humedad y el tope de extracción del 33 %."
+          }
+        },
+        "type": "object",
+        "required": [
+          "eficiencia_energetica_pct",
+          "recuperacion_hidraulica_pct",
+          "preservacion_ecologica_ok"
+        ],
+        "title": "MetricasConjeturas",
+        "description": "Indicadores de la decisión asociados a las conjeturas de investigación."
+      },
+      "ModoOperacion": {
+        "type": "string",
+        "enum": [
+          "NEURO_SIMBOLICO",
+          "TEMPORIZADOR_FIJO"
+        ],
+        "title": "ModoOperacion",
+        "description": "Estrategia de control aplicada al nodo."
+      },
+      "MuestraIncertidumbre": {
+        "properties": {
+          "eficacia": {
+            "type": "number",
+            "title": "Eficacia",
+            "description": "Eficacia máxima del pulso de la muestra."
+          },
+          "flujo": {
+            "type": "number",
+            "title": "Flujo",
+            "description": "Flujo máximo de niebla de la muestra en L/m²/h."
+          },
+          "conjeturas_validadas": {
+            "$ref": "#/components/schemas/ConjeturasValidadas"
+          },
+          "recuperacion_caudal_promedio_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recuperacion Caudal Promedio Pct",
+            "description": "Indicador de la Conjetura 1; nulo sin pulsos."
+          },
+          "rendimiento_l_m2_dia": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento L M2 Dia",
+            "description": "Agua del modo neuro-simbólico por día y por m² de colector."
+          },
+          "reduccion_degradacion_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reduccion Degradacion Pct",
+            "description": "Reducción de la degradación frente al temporizador (%); informativo."
+          },
+          "recuperacion_temporizador_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recuperacion Temporizador Pct",
+            "description": "Recuperación media tras pulso del temporizador (%); nula sin pulsos."
+          },
+          "ventaja_recuperacion_pts": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ventaja Recuperacion Pts",
+            "description": "Recuperación del neuro-simbólico menos la del temporizador, en puntos; nula si falta alguna."
+          }
+        },
+        "type": "object",
+        "required": [
+          "eficacia",
+          "flujo",
+          "conjeturas_validadas"
+        ],
+        "title": "MuestraIncertidumbre",
+        "description": "Resultado de una corrida con una muestra de los parámetros supuestos."
+      },
+      "ParametroSensible": {
+        "type": "string",
+        "enum": [
+          "EFICACIA_MAXIMA_PULSO",
+          "FLUJO_NIEBLA_MAXIMO"
+        ],
+        "title": "ParametroSensible",
+        "description": "Parámetros supuestos del modelo que admite el análisis de sensibilidad."
+      },
+      "ParametrosUsados": {
+        "properties": {
+          "nombre_sitio": {
+            "type": "string",
+            "title": "Nombre Sitio",
+            "description": "Identificador del perfil de sitio usado."
+          },
+          "flujo_niebla_maximo_l_m2_h": {
+            "type": "number",
+            "title": "Flujo Niebla Maximo L M2 H",
+            "description": "Flujo máximo de niebla en L/m²/h."
+          },
+          "eficacia_maxima_pulso": {
+            "type": "number",
+            "title": "Eficacia Maxima Pulso",
+            "description": "Eficacia máxima del pulso resistivo."
+          },
+          "temperatura_media_c": {
+            "type": "number",
+            "title": "Temperatura Media C",
+            "description": "Temperatura ambiente media en °C."
+          },
+          "amplitud_temperatura_c": {
+            "type": "number",
+            "title": "Amplitud Temperatura C",
+            "description": "Amplitud del ciclo térmico diurno en °C."
+          },
+          "amplitud_humedad_pct": {
+            "type": "number",
+            "title": "Amplitud Humedad Pct",
+            "description": "Amplitud del ciclo diurno de humedad en puntos de HR."
+          }
+        },
+        "type": "object",
+        "required": [
+          "nombre_sitio",
+          "flujo_niebla_maximo_l_m2_h",
+          "eficacia_maxima_pulso",
+          "temperatura_media_c",
+          "amplitud_temperatura_c",
+          "amplitud_humedad_pct"
+        ],
+        "title": "ParametrosUsados",
+        "description": "Sitio y parámetros supuestos con los que se ejecutó una simulación."
+      },
+      "PerfilSitio": {
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "pattern": "^[A-Z0-9_]{1,40}$",
+            "title": "Nombre",
+            "description": "Identificador del sitio: mayúsculas, dígitos y guion bajo, hasta 40 caracteres.",
+            "default": "CABO_DE_LA_VELA"
+          },
+          "flujo_niebla_maximo_l_m2_h": {
+            "type": "number",
+            "maximum": 20.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Flujo Niebla Maximo L M2 H",
+            "description": "Flujo máximo de niebla en L/m²/h, en (0, 20].",
+            "default": 6.0
+          },
+          "temperatura_media_c": {
+            "type": "number",
+            "maximum": 45.0,
+            "minimum": 0.0,
+            "title": "Temperatura Media C",
+            "description": "Temperatura ambiente media en °C.",
+            "default": 30.0
+          },
+          "amplitud_temperatura_c": {
+            "type": "number",
+            "maximum": 15.0,
+            "minimum": 0.0,
+            "title": "Amplitud Temperatura C",
+            "description": "Amplitud del ciclo térmico diurno en °C.",
+            "default": 4.5
+          },
+          "amplitud_humedad_pct": {
+            "type": "number",
+            "maximum": 30.0,
+            "minimum": 0.0,
+            "title": "Amplitud Humedad Pct",
+            "description": "Amplitud del ciclo diurno de humedad en puntos de HR.",
+            "default": 10.0
+          }
+        },
+        "type": "object",
+        "title": "PerfilSitio",
+        "description": "Perfil climático de un sitio de captación, para transferir el modelo a otro lugar.\n\nLos valores por defecto son los supuestos de Cabo de la Vela en\n`backend/config.py`. El ciclo diurno conserva sus horas de máximo (04:00\npara la humedad y 14:00 para la temperatura). El procedimiento está en\ndocs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md, sección 8.10."
+      },
+      "PuntoBarrido": {
+        "properties": {
+          "escenario": {
+            "$ref": "#/components/schemas/Escenario"
+          },
+          "tasa_salinizacion": {
+            "$ref": "#/components/schemas/TasaSalinizacion"
+          },
+          "carga_salina_ohm_l_m2": {
+            "type": "number",
+            "title": "Carga Salina Ohm L M2",
+            "description": "Aumento de impedancia por litro captado por m²."
+          },
+          "n_semillas": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "N Semillas",
+            "description": "Corridas promediadas, una por semilla."
+          },
+          "recuperacion_neuro_media": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recuperacion Neuro Media",
+            "description": "Media de la recuperación tras pulso del neuro-simbólico (%); nula sin pulsos."
+          },
+          "recuperacion_neuro_desv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recuperacion Neuro Desv",
+            "description": "Desviación estándar muestral de la recuperación del neuro-simbólico."
+          },
+          "recuperacion_temporizador_media": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recuperacion Temporizador Media",
+            "description": "Media de la recuperación tras pulso del temporizador (%); nula sin pulsos."
+          },
+          "recuperacion_temporizador_desv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recuperacion Temporizador Desv",
+            "description": "Desviación estándar muestral de la recuperación del temporizador."
+          },
+          "degradacion_neuro_media": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Degradacion Neuro Media",
+            "description": "Media de la degradación acumulada del neuro-simbólico (%)."
+          },
+          "degradacion_neuro_desv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Degradacion Neuro Desv",
+            "description": "Desviación estándar muestral de la degradación del neuro-simbólico."
+          },
+          "degradacion_temporizador_media": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Degradacion Temporizador Media",
+            "description": "Media de la degradación acumulada del temporizador (%)."
+          },
+          "degradacion_temporizador_desv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Degradacion Temporizador Desv",
+            "description": "Desviación estándar muestral de la degradación del temporizador."
+          },
+          "reduccion_desgaste_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reduccion Desgaste Pct",
+            "description": "(D_temp - D_neuro) / D_temp * 100 con las medias; nula si el temporizador no se degrada."
+          },
+          "rendimiento_neuro_l_m2_dia_media": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento Neuro L M2 Dia Media",
+            "description": "Media del rendimiento del neuro-simbólico en L/m²/día."
+          },
+          "incrustacion_diaria_ohm_media": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incrustacion Diaria Ohm Media",
+            "description": "Media de la carga salina por el rendimiento del neuro-simbólico, en Ohm de impedancia por día."
+          },
+          "ventaja_recuperacion_pts": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ventaja Recuperacion Pts",
+            "description": "Recuperación media del neuro-simbólico menos la del temporizador, en puntos porcentuales; nula si falta alguna."
+          },
+          "pulsos_neuro_media": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pulsos Neuro Media",
+            "description": "Media de los pulsos ejecutados por el neuro-simbólico en toda la red."
+          }
+        },
+        "type": "object",
+        "required": [
+          "escenario",
+          "tasa_salinizacion",
+          "carga_salina_ohm_l_m2",
+          "n_semillas"
+        ],
+        "title": "PuntoBarrido",
+        "description": "Resultado agregado de una combinación de escenario y tasa de salinización."
+      },
+      "PuntoSensibilidad": {
+        "properties": {
+          "valor": {
+            "type": "number",
+            "title": "Valor",
+            "description": "Valor del parámetro en esta corrida."
+          },
+          "conjeturas_validadas": {
+            "$ref": "#/components/schemas/ConjeturasValidadas"
+          },
+          "recuperacion_caudal_promedio_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recuperacion Caudal Promedio Pct",
+            "description": "Indicador de la Conjetura 1; nulo sin pulsos."
+          },
+          "tiempo_regeneracion_promedio_seg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tiempo Regeneracion Promedio Seg",
+            "description": "Indicador de la Conjetura 2; nulo sin pulsos."
+          },
+          "rendimiento_nocturno_l_m2_noche": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendimiento Nocturno L M2 Noche",
+            "description": "Indicador de la Conjetura 3; nulo sin horas nocturnas."
+          },
+          "litros_neuro": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Litros Neuro",
+            "description": "Agua captada por el modo neuro-simbólico en litros."
+          }
+        },
+        "type": "object",
+        "required": [
+          "valor",
+          "conjeturas_validadas",
+          "litros_neuro"
+        ],
+        "title": "PuntoSensibilidad",
+        "description": "Resultado de una simulación con un valor del parámetro sensible."
+      },
+      "PuntoSerieTemporal": {
+        "properties": {
+          "minuto": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Minuto",
+            "description": "Minuto transcurrido desde el inicio."
+          },
+          "humedad_relativa_pct": {
+            "type": "number",
+            "title": "Humedad Relativa Pct",
+            "description": "Humedad relativa ambiente promedio."
+          },
+          "temperatura_c": {
+            "type": "number",
+            "title": "Temperatura C",
+            "description": "Temperatura ambiente en °C."
+          },
+          "impedancia_promedio_neuro_ohms": {
+            "type": "number",
+            "title": "Impedancia Promedio Neuro Ohms"
+          },
+          "impedancia_promedio_temporizador_ohms": {
+            "type": "number",
+            "title": "Impedancia Promedio Temporizador Ohms"
+          },
+          "litros_acumulados_neuro": {
+            "type": "number",
+            "title": "Litros Acumulados Neuro"
+          },
+          "litros_acumulados_temporizador": {
+            "type": "number",
+            "title": "Litros Acumulados Temporizador"
+          },
+          "energia_acumulada_neuro_wh": {
+            "type": "number",
+            "title": "Energia Acumulada Neuro Wh"
+          },
+          "energia_acumulada_temporizador_wh": {
+            "type": "number",
+            "title": "Energia Acumulada Temporizador Wh"
+          },
+          "integridad_promedio_neuro_pct": {
+            "type": "number",
+            "title": "Integridad Promedio Neuro Pct"
+          },
+          "integridad_promedio_temporizador_pct": {
+            "type": "number",
+            "title": "Integridad Promedio Temporizador Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "minuto",
+          "humedad_relativa_pct",
+          "temperatura_c",
+          "impedancia_promedio_neuro_ohms",
+          "impedancia_promedio_temporizador_ohms",
+          "litros_acumulados_neuro",
+          "litros_acumulados_temporizador",
+          "energia_acumulada_neuro_wh",
+          "energia_acumulada_temporizador_wh",
+          "integridad_promedio_neuro_pct",
+          "integridad_promedio_temporizador_pct"
+        ],
+        "title": "PuntoSerieTemporal",
+        "description": "Estado agregado de la red en un paso de simulación."
+      },
+      "ResultadoModo": {
+        "properties": {
+          "litros_totales_agua": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Litros Totales Agua",
+            "description": "Agua captada por todos los nodos en litros."
+          },
+          "pulsos_termicos_ejecutados": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Pulsos Termicos Ejecutados",
+            "description": "Pulsos resistivos ejecutados en total."
+          },
+          "consumo_energia_wh": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Consumo Energia Wh",
+            "description": "Energía consumida (pulsos y electrónica) en Wh."
+          },
+          "integridad_membrana_final_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Integridad Membrana Final Pct",
+            "description": "Integridad promedio de las membranas al final."
+          },
+          "violaciones_ecologicas": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Violaciones Ecologicas",
+            "description": "Episodios de extracción fuera del límite ecológico."
+          },
+          "recuperacion_caudal_promedio_pct": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recuperacion Caudal Promedio Pct",
+            "description": "Conductancia relativa promedio tras cada pulso; nulo si el modo no ejecutó pulsos."
+          },
+          "degradacion_acumulada_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Degradacion Acumulada Pct",
+            "description": "Pérdida promedio de integridad de las membranas durante la corrida.",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "litros_totales_agua",
+          "pulsos_termicos_ejecutados",
+          "consumo_energia_wh",
+          "integridad_membrana_final_pct",
+          "violaciones_ecologicas"
+        ],
+        "title": "ResultadoModo",
+        "description": "Resultados agregados de un modo de control."
+      },
+      "ResumenDistribucion": {
+        "properties": {
+          "p5": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P5",
+            "description": "Percentil 5; nulo si ninguna muestra tiene datos."
+          },
+          "p50": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P50",
+            "description": "Mediana; nula si ninguna muestra tiene datos."
+          },
+          "p95": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P95",
+            "description": "Percentil 95; nulo si ninguna muestra tiene datos."
+          },
+          "n_validos": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "N Validos",
+            "description": "Muestras con datos para el indicador."
+          }
+        },
+        "type": "object",
+        "required": [
+          "n_validos"
+        ],
+        "title": "ResumenDistribucion",
+        "description": "Percentiles 5, 50 y 95 de un indicador entre las muestras con datos."
+      },
+      "RobustezConfig": {
+        "properties": {
+          "humedad_ambiente_inicial_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Humedad Ambiente Inicial Pct",
+            "description": "Humedad relativa al inicio de cada corrida (18:00 hora local).",
+            "default": 85.0
+          },
+          "duracion_horas": {
+            "type": "integer",
+            "maximum": 72.0,
+            "minimum": 24.0,
+            "title": "Duracion Horas",
+            "description": "Horas simuladas en cada corrida, de 24 a 72.",
+            "default": 24
+          },
+          "numero_nodos": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Numero Nodos",
+            "description": "Cantidad de nodos simulados.",
+            "default": 8
+          },
+          "semillas": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Semillas",
+            "description": "Semillas del entorno, sin repetir; cada combinación se simula una vez por semilla."
+          }
+        },
+        "type": "object",
+        "title": "RobustezConfig",
+        "description": "Parámetros del barrido de salinidad repetido en la grilla de flujos de niebla y eficacias del pulso.",
+        "examples": [
+          {
+            "humedad_ambiente_inicial_pct": 85.0,
+            "semillas": [
+              42
+            ]
+          }
+        ]
+      },
+      "RobustezResultado": {
+        "properties": {
+          "combinaciones": {
+            "items": {
+              "$ref": "#/components/schemas/CombinacionRobustez"
+            },
+            "type": "array",
+            "title": "Combinaciones",
+            "description": "Combinaciones en orden de flujo y eficacia."
+          },
+          "reduccion_desgaste_min_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reduccion Desgaste Min Pct",
+            "description": "Menor reducción del desgaste entre los puntos de todas las combinaciones."
+          },
+          "reduccion_desgaste_max_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reduccion Desgaste Max Pct",
+            "description": "Mayor reducción del desgaste entre los puntos de todas las combinaciones."
+          },
+          "combinaciones_con_cruce": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Combinaciones Con Cruce",
+            "description": "Combinaciones con cruce INTERPOLADO."
+          },
+          "incrustacion_diaria_cruce_min_ohm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incrustacion Diaria Cruce Min Ohm",
+            "description": "Menor incrustación diaria de cruce entre las combinaciones con cruce INTERPOLADO."
+          },
+          "incrustacion_diaria_cruce_max_ohm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incrustacion Diaria Cruce Max Ohm",
+            "description": "Mayor incrustación diaria de cruce entre las combinaciones con cruce INTERPOLADO."
+          }
+        },
+        "type": "object",
+        "required": [
+          "combinaciones",
+          "combinaciones_con_cruce"
+        ],
+        "title": "RobustezResultado",
+        "description": "Barridos de la grilla de parámetros supuestos y resumen de la respuesta a la pregunta de investigación."
+      },
+      "SensibilidadConfig": {
+        "properties": {
+          "escenario": {
+            "$ref": "#/components/schemas/Escenario",
+            "description": "Escenario ambiental."
+          },
+          "humedad_ambiente_inicial_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Humedad Ambiente Inicial Pct",
+            "description": "Humedad relativa al inicio de la simulación (18:00 hora local)."
+          },
+          "tasa_salinizacion": {
+            "$ref": "#/components/schemas/TasaSalinizacion",
+            "description": "Velocidad de incrustación salina."
+          },
+          "duracion_horas": {
+            "type": "integer",
+            "maximum": 72.0,
+            "minimum": 1.0,
+            "title": "Duracion Horas",
+            "description": "Horas simuladas.",
+            "default": 24
+          },
+          "semilla": {
+            "type": "integer",
+            "title": "Semilla",
+            "description": "Semilla del generador aleatorio del entorno.",
+            "default": 42
+          },
+          "parametro": {
+            "$ref": "#/components/schemas/ParametroSensible",
+            "description": "Parámetro supuesto que se varía."
+          },
+          "valores": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "maxItems": 11,
+            "minItems": 1,
+            "title": "Valores",
+            "description": "Valores del parámetro: eficacia en (0, 1]; flujo de niebla en (0, 20] L/m²/h."
+          }
+        },
+        "type": "object",
+        "required": [
+          "escenario",
+          "humedad_ambiente_inicial_pct",
+          "tasa_salinizacion",
+          "parametro",
+          "valores"
+        ],
+        "title": "SensibilidadConfig",
+        "description": "Parámetros de un análisis de sensibilidad sobre un parámetro supuesto.",
+        "examples": [
+          {
+            "escenario": "DIA_NORMAL",
+            "humedad_ambiente_inicial_pct": 85.0,
+            "parametro": "EFICACIA_MAXIMA_PULSO",
+            "tasa_salinizacion": "ALTA",
+            "valores": [
+              0.9,
+              0.94,
+              0.97
+            ]
+          }
+        ]
+      },
+      "SensibilidadResultado": {
+        "properties": {
+          "parametro": {
+            "$ref": "#/components/schemas/ParametroSensible"
+          },
+          "puntos": {
+            "items": {
+              "$ref": "#/components/schemas/PuntoSensibilidad"
+            },
+            "type": "array",
+            "title": "Puntos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "parametro",
+          "puntos"
+        ],
+        "title": "SensibilidadResultado",
+        "description": "Resultados del análisis de sensibilidad en el orden de los valores solicitados."
+      },
+      "SimulationConfig": {
+        "properties": {
+          "duracion_horas": {
+            "type": "integer",
+            "maximum": 72.0,
+            "minimum": 1.0,
+            "title": "Duracion Horas",
+            "description": "Horas simuladas.",
+            "default": 24
+          },
+          "escenario": {
+            "$ref": "#/components/schemas/Escenario",
+            "description": "Escenario ambiental."
+          },
+          "humedad_ambiente_inicial_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Humedad Ambiente Inicial Pct",
+            "description": "Humedad relativa al inicio de la simulación (18:00 hora local)."
+          },
+          "tasa_salinizacion": {
+            "$ref": "#/components/schemas/TasaSalinizacion",
+            "description": "Velocidad de incrustación salina."
+          },
+          "numero_nodos": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Numero Nodos",
+            "description": "Cantidad de nodos simulados.",
+            "default": 8
+          },
+          "paso_minutos": {
+            "type": "integer",
+            "maximum": 60.0,
+            "minimum": 1.0,
+            "title": "Paso Minutos",
+            "description": "Resolución temporal en minutos.",
+            "default": 5
+          },
+          "semilla": {
+            "type": "integer",
+            "title": "Semilla",
+            "description": "Semilla del generador aleatorio del entorno.",
+            "default": 42
+          },
+          "sitio": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PerfilSitio"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Perfil del sitio; nulo para usar el de Cabo de la Vela de backend/config.py."
+          },
+          "eficacia_maxima_pulso": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eficacia Maxima Pulso",
+            "description": "Eficacia máxima del pulso, en (0, 1]. Nulo para usar el valor de backend/config.py."
+          }
+        },
+        "type": "object",
+        "required": [
+          "escenario",
+          "humedad_ambiente_inicial_pct",
+          "tasa_salinizacion"
+        ],
+        "title": "SimulationConfig",
+        "description": "Parámetros de una simulación comparativa.",
+        "examples": [
+          {
+            "duracion_horas": 24,
+            "escenario": "TORMENTA_DE_SAL_Y_CALOR_EXTREMO",
+            "humedad_ambiente_inicial_pct": 45.0,
+            "tasa_salinizacion": "ALTA"
+          }
+        ]
+      },
+      "SimulationResult": {
+        "properties": {
+          "comparativa": {
+            "$ref": "#/components/schemas/ComparativaModos"
+          },
+          "conjeturas_validadas": {
+            "$ref": "#/components/schemas/ConjeturasValidadas"
+          },
+          "detalle_verificacion": {
+            "$ref": "#/components/schemas/DetalleVerificacion"
+          },
+          "series_temporales": {
+            "items": {
+              "$ref": "#/components/schemas/PuntoSerieTemporal"
+            },
+            "type": "array",
+            "title": "Series Temporales"
+          },
+          "bitacora": {
+            "items": {
+              "$ref": "#/components/schemas/EventoBitacora"
+            },
+            "type": "array",
+            "title": "Bitacora"
+          },
+          "impacto_comunitario": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ImpactoComunitario"
+            },
+            "type": "object",
+            "title": "Impacto Comunitario",
+            "description": "Impacto comunitario estimado por modo, con las claves modo_neuro_simbolico, modo_temporizador_fijo y modo_temporizador_tope_ecologico. Informativo; no interviene en la validación."
+          },
+          "parametros_usados": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ParametrosUsados"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Sitio y parámetros supuestos usados en la corrida; el simulador siempre lo llena."
+          }
+        },
+        "type": "object",
+        "required": [
+          "comparativa",
+          "conjeturas_validadas",
+          "detalle_verificacion",
+          "series_temporales",
+          "bitacora"
+        ],
+        "title": "SimulationResult",
+        "description": "Resultado completo de una simulación comparativa."
+      },
+      "TasaSalinizacion": {
+        "type": "string",
+        "enum": [
+          "BAJA",
+          "MEDIA",
+          "ALTA"
+        ],
+        "title": "TasaSalinizacion",
+        "description": "Velocidad de incrustación salina sobre la membrana."
+      },
+      "TelemetryInput": {
+        "properties": {
+          "nodo_id": {
+            "type": "string",
+            "pattern": "^NODO_0[1-8]$",
+            "title": "Nodo Id",
+            "description": "Identificador del nodo (NODO_01 a NODO_08)."
+          },
+          "impedancia_ohms": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Impedancia Ohms",
+            "description": "Impedancia eléctrica de la membrana en ohmios."
+          },
+          "temperatura_celsius": {
+            "type": "number",
+            "maximum": 120.0,
+            "minimum": -10.0,
+            "title": "Temperatura Celsius",
+            "description": "Temperatura de la matriz en grados Celsius."
+          },
+          "reserva_calor_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Reserva Calor Pct",
+            "description": "Estado de la reserva de energía térmica del nodo en porcentaje."
+          },
+          "humedad_relativa_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Humedad Relativa Pct",
+            "description": "Humedad relativa ambiente en porcentaje."
+          },
+          "flujo_actual_ml_min": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Flujo Actual Ml Min",
+            "description": "Caudal de agua captada en mililitros por minuto."
+          },
+          "modo_operacion": {
+            "$ref": "#/components/schemas/ModoOperacion",
+            "description": "Estrategia de control a aplicar.",
+            "default": "NEURO_SIMBOLICO"
+          },
+          "anulacion_manual": {
+            "$ref": "#/components/schemas/AnulacionManual",
+            "description": "Intervención del operador (REGLA_06). Solo puede ser más conservadora que el motor: SUSPENDER_EXTRACCION detiene la extracción e INHIBIR_PULSO impide el pulso resistivo. Los límites térmico (REGLA_01) y ecológico (REGLA_02) prevalecen. No aplica en modo TEMPORIZADOR_FIJO.",
+            "default": "NINGUNA"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nodo_id",
+          "impedancia_ohms",
+          "temperatura_celsius",
+          "reserva_calor_pct",
+          "humedad_relativa_pct",
+          "flujo_actual_ml_min"
+        ],
+        "title": "TelemetryInput",
+        "description": "Lectura de sensores de un nodo de captación.",
+        "examples": [
+          {
+            "flujo_actual_ml_min": 14.5,
+            "humedad_relativa_pct": 42.0,
+            "impedancia_ohms": 1650.5,
+            "modo_operacion": "NEURO_SIMBOLICO",
+            "nodo_id": "NODO_04",
+            "reserva_calor_pct": 55.0,
+            "temperatura_celsius": 36.2
+          }
+        ]
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VerificacionConjetura": {
+        "properties": {
+          "validada": {
+            "type": "boolean",
+            "title": "Validada",
+            "description": "Verdadero solo si todos los indicadores cumplen."
+          },
+          "indicadores": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/IndicadorVerificacion"
+            },
+            "type": "object",
+            "title": "Indicadores",
+            "description": "Indicadores evaluados por nombre."
+          },
+          "indicadores_informativos": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Indicadores Informativos",
+            "description": "Valores de contexto que se reportan junto a los indicadores y no intervienen en la validación."
+          },
+          "causas_no_validacion": {
+            "items": {
+              "$ref": "#/components/schemas/CausaNoValidacion"
+            },
+            "type": "array",
+            "title": "Causas No Validacion",
+            "description": "Causas de los indicadores que no cumplen, en el orden de los indicadores y sin repetir; vacía si la conjetura se valida. No intervienen en la validación."
+          }
+        },
+        "type": "object",
+        "required": [
+          "validada",
+          "indicadores"
+        ],
+        "title": "VerificacionConjetura",
+        "description": "Detalle de la verificación de una conjetura."
+      }
+    }
+  }
+}

@@ -5,7 +5,9 @@ importlib.util.spec_from_file_location.
 """
 
 import argparse
+import csv
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -64,8 +66,10 @@ def test_comparar_reporta_archivo_faltante(carpetas_iguales):
 
 
 def test_generar_coincide_con_docs_datos(tmp_path):
-    generador.generar(tmp_path)
+    carpeta_api = tmp_path / "api"
+    generador.generar(tmp_path, carpeta_api)
     assert generador.comparar_con_referencia(tmp_path) == []
+    assert generador.comparar_con_referencia(carpeta_api, generador.CARPETA_API, generador.ARCHIVOS_API) == []
 
 
 def test_url_base_acepta_https_y_quita_barra_final():
@@ -96,3 +100,111 @@ def test_filas_robustez_una_fila_por_combinacion_y_punto():
     assert filas[1]["carga_salina_ohm_l_m2"] == pytest.approx(40.0)
     assert filas[0]["cruce_incrustacion_diaria_ohm"] == ""
     assert filas[0][generador.CAMPO_HUMEDAD] == pytest.approx(generador.HUMEDAD_BARRIDO_PCT)
+
+
+# ---------------------------------------------------------------------------
+# Interoperabilidad: diccionario de campos, Data Package y OpenAPI
+# ---------------------------------------------------------------------------
+CARPETA_DATOS = CARPETA_SCRIPTS.parent / "docs" / "datos"
+VALORES_LOGICOS = {"True", "False"}
+CODIFICACION = "utf-8"
+
+
+def _es_valido(valor: str, tipo: str) -> bool:
+    """Indica si una celda de CSV es válida para el tipo Frictionless; la celda vacía es un valor ausente."""
+    if valor == "":
+        return True
+    if tipo == generador.TIPO_LOGICO:
+        return valor in VALORES_LOGICOS
+    if tipo == generador.TIPO_ENTERO:
+        return valor.lstrip("-").isdigit()
+    if tipo == generador.TIPO_NUMERO:
+        try:
+            float(valor)
+        except ValueError:
+            return False
+        return True
+    return True
+
+
+def test_campo_csv_con_clave_exacta():
+    campo = generador.campo_csv("carga_salina_ohm_l_m2")
+    assert campo == {
+        "name": "carga_salina_ohm_l_m2",
+        "type": generador.TIPO_NUMERO,
+        "description": "Aumento de impedancia por litro captado por m².",
+    }
+
+
+@pytest.mark.parametrize(
+    ("columna", "modo"),
+    [("neuro_pulsos", "neuro"), ("temporizador_pulsos", "temporizador"), ("temporizador_tope_pulsos", "temporizador_tope")],
+)
+def test_campo_csv_con_prefijo_de_modo(columna, modo):
+    campo = generador.campo_csv(columna)
+    assert campo["type"] == generador.TIPO_ENTERO
+    assert campo["description"].startswith(generador.NOMBRES_MODO[modo])
+
+
+@pytest.mark.parametrize("columna", ["columna_nueva", "neuro_desconocido"])
+def test_campo_csv_desconocido_lanza_error(columna):
+    with pytest.raises(ValueError, match="DICCIONARIO_CAMPOS"):
+        generador.campo_csv(columna)
+
+
+def test_descriptor_datapackage():
+    descriptor = generador.descriptor_datapackage({"barrido_salinidad.csv": ["escenario", "n_semillas"]})
+    assert descriptor["licenses"][0]["name"] == "MIT"
+    assert descriptor["version"] == generador.VERSION_SERVICIO
+    recurso = descriptor["resources"][0]
+    assert recurso["name"] == "barrido_salinidad"
+    assert recurso["encoding"] == CODIFICACION
+    assert [campo["name"] for campo in recurso["schema"]["fields"]] == ["escenario", "n_semillas"]
+
+
+def test_escribir_json_usa_utf8_y_fin_de_linea_lf(tmp_path):
+    ruta = tmp_path / "prueba.json"
+    generador.escribir_json(ruta, {"texto": "año"})
+    contenido = ruta.read_bytes()
+    assert contenido.endswith(b"}\n")
+    assert b"\r\n" not in contenido
+    assert "año".encode(CODIFICACION) in contenido
+
+
+def test_datapackage_describe_las_columnas_de_cada_csv():
+    descriptor = json.loads((CARPETA_DATOS / generador.ARCHIVO_DATAPACKAGE).read_text(encoding=CODIFICACION))
+    for recurso in descriptor["resources"]:
+        with (CARPETA_DATOS / recurso["path"]).open(encoding=CODIFICACION) as archivo:
+            encabezado = next(csv.reader(archivo))
+        assert [campo["name"] for campo in recurso["schema"]["fields"]] == encabezado
+
+
+def test_celdas_de_los_csv_cumplen_los_tipos_del_datapackage():
+    descriptor = json.loads((CARPETA_DATOS / generador.ARCHIVO_DATAPACKAGE).read_text(encoding=CODIFICACION))
+    for recurso in descriptor["resources"]:
+        tipos = {campo["name"]: campo["type"] for campo in recurso["schema"]["fields"]}
+        with (CARPETA_DATOS / recurso["path"]).open(encoding=CODIFICACION) as archivo:
+            invalidas = [
+                (columna, valor)
+                for fila in csv.DictReader(archivo)
+                for columna, valor in fila.items()
+                if not _es_valido(valor, tipos[columna])
+            ]
+        assert invalidas == []
+
+
+@pytest.mark.parametrize(("valor", "tipo"), [("x", "number"), ("1.5", "integer"), ("si", "boolean")])
+def test_validacion_de_tipos_rechaza_valores_invalidos(valor, tipo):
+    assert _es_valido(valor, tipo) is False
+
+
+def test_readme_de_datos_reproduce_el_diccionario():
+    readme = (CARPETA_DATOS / "README.md").read_text(encoding=CODIFICACION)
+    faltantes = [clave for clave, (_, descripcion) in generador.DICCIONARIO_CAMPOS.items() if descripcion not in readme]
+    assert faltantes == []
+
+
+def test_openapi_publicado_coincide_con_la_aplicacion():
+    publicado = json.loads((generador.CARPETA_API / generador.ARCHIVO_OPENAPI).read_text(encoding=CODIFICACION))
+    assert publicado == generador.app.openapi()
+    assert "/api/v1/sitios" in publicado["paths"]
