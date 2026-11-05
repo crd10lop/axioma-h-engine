@@ -89,17 +89,18 @@ Argumentos opcionales:
 | `--dashboard` | `https://axioma-h-dashboard.onrender.com` | URL base del dashboard. |
 | `--timeout` | `90` | Espera máxima por solicitud, en segundos. Cubre la reactivación de los servicios suspendidos del plan gratuito. |
 
-Comprobaciones realizadas (22 en total):
+Comprobaciones realizadas (26 en total):
 
 1. `GET /api/v1/health` responde 200 con `"estado": "SALUDABLE"`.
-2. `GET /docs` y `GET /openapi.json` responden 200 y el esquema publica `/api/v1/nodo/evaluar`, `/api/v1/simulacion/ejecutar`, `/api/v1/analisis/barrido-salinidad`, `/api/v1/analisis/sensibilidad` y `/api/v1/analisis/incertidumbre`.
+2. `GET /docs` y `GET /openapi.json` responden 200 y el esquema publica `/api/v1/nodo/evaluar`, `/api/v1/simulacion/ejecutar`, `/api/v1/analisis/barrido-salinidad`, `/api/v1/analisis/sensibilidad`, `/api/v1/analisis/incertidumbre`, `/api/v1/analisis/robustez-respuesta`, `/api/v1/analisis/dimensionamiento` y `/api/v1/sitios`.
 3. `POST /api/v1/nodo/evaluar` aplica cada regla del motor (REGLA_01 a REGLA_05) con la acción y el estado esperados, respetando el orden de prioridad. Dos casos más verifican la supervisión humana: `anulacion_manual = SUSPENDER_EXTRACCION` con telemetría nominal activa la REGLA_06 con caudal 0 %, y con la matriz a 46 °C activa la REGLA_01, porque el corte térmico prevalece sobre el operador.
 4. `POST /api/v1/nodo/evaluar` rechaza una telemetría inválida con código 422.
 5. `POST /api/v1/simulacion/ejecutar` responde para el ejemplo del esquema y para cada escenario, con comparativa entre modos (incluido `modo_temporizador_tope_ecologico`), conjeturas validadas, `causas_no_validacion` como lista en cada conjetura, `impacto_comunitario` con los tres modos y serie temporal no vacía.
 6. `POST /api/v1/analisis/barrido-salinidad` responde, con una sola semilla para no exceder el tiempo de espera, seis puntos ordenados por carga salina; y `POST /api/v1/analisis/sensibilidad` responde un punto por cada valor de eficacia solicitado, con el estado de la Conjetura 1; y `POST /api/v1/analisis/incertidumbre` responde, con 5 muestras, probabilidades entre 0 y 1 y percentiles del rendimiento ordenados.
-7. `GET /_stcore/health` del dashboard responde 200 con el cuerpo `ok`.
-8. `GET /` del dashboard responde 200.
-9. Las funciones de `frontend/cliente_api.py` funcionan contra la URL pública de la API.
+7. `POST /api/v1/simulacion/ejecutar` con un perfil de sitio y una eficacia del pulso propios devuelve esos valores en `parametros_usados`; `POST /api/v1/analisis/robustez-respuesta` responde, con una semilla, nueve combinaciones de seis puntos; `POST /api/v1/analisis/dimensionamiento` responde una dimensión por cada flujo de referencia (SUPUESTO, CALIBRADO_MAX y CALIBRADO_MIN); y `GET /api/v1/sitios` devuelve los tres perfiles de Cabo de la Vela.
+8. `GET /_stcore/health` del dashboard responde 200 con el cuerpo `ok`.
+9. `GET /` del dashboard responde 200.
+10. Las funciones de `frontend/cliente_api.py` funcionan contra la URL pública de la API.
 
 El script imprime una tabla con el resultado, la duración y el detalle de cada comprobación, y termina con código 0 si todas pasan o 1 si alguna falla.
 
@@ -109,6 +110,7 @@ El script imprime una tabla con el resultado, la duración y el detalle de cada 
 |---|---|---|
 | 2026-11-04 | `main` en el commit `f89a294`; la API reporta la versión 0.1.0 | 19 de 19 comprobaciones exitosas, incluidos los endpoints de análisis. El barrido de salinidad con una semilla respondió en 2.3 s. |
 | 2026-11-04 | Commit "docs: alinear terminología, versión 0.2.0 y cifras con la verificación integral", sobre `902a4d6`; la API reporta la versión 0.2.0 | Verificación local, con la API y el dashboard en el equipo: 22 de 22 comprobaciones exitosas, y recorrido de las cuatro vistas del dashboard con `streamlit.testing.v1.AppTest` (simulación, barrido, sensibilidad e incertidumbre) sin excepciones. La verificación contra los servicios publicados se completa después del despliegue de este commit. |
+| 2026-11-04 | Cambios de la versión 0.3.0 (robustez de la respuesta, dimensionamiento y perfil de sitio), antes del commit; la API reporta la versión 0.3.0 | Verificación local, con la API y el dashboard en el equipo: 26 de 26 comprobaciones exitosas. La robustez de la respuesta con una semilla respondió en 1.9 s. La vista "Investigación y guía" se recorrió con `streamlit.testing.v1.AppTest` sin excepciones. La verificación contra los servicios publicados se completa después del despliegue. |
 
 Después de cada despliegue relevante se recomienda repetir el script y actualizar esta tabla.
 

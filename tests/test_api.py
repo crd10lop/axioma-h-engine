@@ -8,6 +8,7 @@ from backend.main import app
 cliente = TestClient(app)
 
 RUTA_EVALUAR = "/api/v1/nodo/evaluar"
+RUTA_SIMULACION = "/api/v1/simulacion/ejecutar"
 
 PAYLOAD_TELEMETRIA_PRD = {
     "nodo_id": "NODO_04",
@@ -120,7 +121,7 @@ def test_anulacion_manual_invalida_devuelve_422():
 
 
 def test_ejecutar_simulacion_payload_prd():
-    respuesta = cliente.post("/api/v1/simulacion/ejecutar", json=PAYLOAD_SIMULACION_PRD)
+    respuesta = cliente.post(RUTA_SIMULACION, json=PAYLOAD_SIMULACION_PRD)
     assert respuesta.status_code == 200
     datos = respuesta.json()
     assert set(datos["comparativa"]) == MODOS_COMPARATIVA
@@ -135,7 +136,7 @@ def test_ejecutar_simulacion_payload_prd():
 
 
 def test_simulacion_incluye_impacto_comunitario():
-    respuesta = cliente.post("/api/v1/simulacion/ejecutar", json=PAYLOAD_SIMULACION_PRD)
+    respuesta = cliente.post(RUTA_SIMULACION, json=PAYLOAD_SIMULACION_PRD)
     impacto = respuesta.json()["impacto_comunitario"]
     neuro = impacto["modo_neuro_simbolico"]
     assert set(impacto) == MODOS_COMPARATIVA
@@ -152,7 +153,7 @@ def test_simulacion_incluye_impacto_comunitario():
 
 def test_simulacion_payload_prd_estructura_completa():
     """Ejecuta el payload exacto del PRD y valida la estructura, no los valores ilustrativos."""
-    respuesta = cliente.post("/api/v1/simulacion/ejecutar", json=PAYLOAD_SIMULACION_PRD)
+    respuesta = cliente.post(RUTA_SIMULACION, json=PAYLOAD_SIMULACION_PRD)
     assert respuesta.status_code == 200
     datos = respuesta.json()
     assert set(datos) == {
@@ -162,6 +163,7 @@ def test_simulacion_payload_prd_estructura_completa():
         "series_temporales",
         "bitacora",
         "impacto_comunitario",
+        "parametros_usados",
     }
 
     for modo in MODOS_COMPARATIVA:
@@ -212,7 +214,7 @@ def test_simulacion_payload_prd_estructura_completa():
 
 def test_ejecutar_simulacion_escenario_invalido_devuelve_422():
     payload = {**PAYLOAD_SIMULACION_PRD, "escenario": "HURACAN"}
-    assert cliente.post("/api/v1/simulacion/ejecutar", json=payload).status_code == 422
+    assert cliente.post(RUTA_SIMULACION, json=payload).status_code == 422
 
 
 # ---------------------------------------------------------------------------
@@ -294,3 +296,162 @@ def test_incertidumbre():
 )
 def test_incertidumbre_rechaza_configuracion_invalida(cambios):
     assert cliente.post(RUTA_INCERTIDUMBRE, json={**PAYLOAD_INCERTIDUMBRE, **cambios}).status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Transferencia a otro sitio, robustez de la respuesta y dimensionamiento
+# ---------------------------------------------------------------------------
+RUTA_ROBUSTEZ = "/api/v1/analisis/robustez-respuesta"
+RUTA_DIMENSIONAMIENTO = "/api/v1/analisis/dimensionamiento"
+RUTA_SITIOS = "/api/v1/sitios"
+SITIO_EJEMPLO = {
+    "nombre": "SITIO_PRUEBA_01",
+    "flujo_niebla_maximo_l_m2_h": 1.83,
+    "temperatura_media_c": 28.0,
+    "amplitud_temperatura_c": 5.0,
+    "amplitud_humedad_pct": 12.0,
+}
+PAYLOAD_DIMENSIONAMIENTO = {
+    "personas": 50,
+    "estandar": "OMS_20",
+    "escenario": "DIA_NORMAL",
+    "humedad_ambiente_inicial_pct": 85.0,
+}
+
+
+def test_simulacion_con_sitio_y_eficacia():
+    payload = {**PAYLOAD_SIMULACION_PRD, "sitio": SITIO_EJEMPLO, "eficacia_maxima_pulso": 0.95}
+    respuesta = cliente.post(RUTA_SIMULACION, json=payload)
+    assert respuesta.status_code == 200
+    usados = respuesta.json()["parametros_usados"]
+    assert usados["nombre_sitio"] == "SITIO_PRUEBA_01"
+    assert usados["flujo_niebla_maximo_l_m2_h"] == pytest.approx(1.83)
+    assert usados["eficacia_maxima_pulso"] == pytest.approx(0.95)
+    assert usados["temperatura_media_c"] == pytest.approx(28.0)
+
+
+def test_simulacion_sin_sitio_informa_los_parametros_por_defecto():
+    usados = cliente.post(RUTA_SIMULACION, json=PAYLOAD_SIMULACION_PRD).json()["parametros_usados"]
+    assert usados["nombre_sitio"] == "CABO_DE_LA_VELA"
+    assert usados["flujo_niebla_maximo_l_m2_h"] == pytest.approx(6.0)
+    assert usados["eficacia_maxima_pulso"] == pytest.approx(0.90)
+
+
+@pytest.mark.parametrize(
+    "cambios",
+    [
+        {"nombre": "sitio en minúsculas"},
+        {"nombre": "A" * 41},
+        {"nombre": ""},
+        {"flujo_niebla_maximo_l_m2_h": 0.0},
+        {"flujo_niebla_maximo_l_m2_h": 20.5},
+        {"temperatura_media_c": 46.0},
+        {"amplitud_temperatura_c": -1.0},
+        {"amplitud_humedad_pct": 31.0},
+    ],
+)
+def test_simulacion_rechaza_perfil_de_sitio_invalido(cambios):
+    payload = {**PAYLOAD_SIMULACION_PRD, "sitio": {**SITIO_EJEMPLO, **cambios}}
+    assert cliente.post(RUTA_SIMULACION, json=payload).status_code == 422
+
+
+@pytest.mark.parametrize("eficacia", [0.0, 1.2])
+def test_simulacion_rechaza_eficacia_fuera_de_rango(eficacia):
+    payload = {**PAYLOAD_SIMULACION_PRD, "eficacia_maxima_pulso": eficacia}
+    assert cliente.post(RUTA_SIMULACION, json=payload).status_code == 422
+
+
+def test_barrido_con_flujo_y_eficacia():
+    payload = {"semillas": [42], "duracion_horas": 6, "flujo_niebla_maximo_l_m2_h": 1.83, "eficacia_maxima_pulso": 0.8}
+    datos = cliente.post(RUTA_BARRIDO, json=payload).json()
+    assert datos["flujo_niebla_maximo_l_m2_h"] == pytest.approx(1.83)
+    assert datos["eficacia_maxima_pulso"] == pytest.approx(0.8)
+    assert set(datos["cruce"]) == {"estado", "incrustacion_diaria_ohm", "carga_salina_ohm_l_m2"}
+
+
+@pytest.mark.parametrize("cambios", [{"flujo_niebla_maximo_l_m2_h": 0.0}, {"eficacia_maxima_pulso": 1.5}])
+def test_barrido_rechaza_parametros_fuera_de_rango(cambios):
+    assert cliente.post(RUTA_BARRIDO, json={"semillas": [42], **cambios}).status_code == 422
+
+
+def test_robustez_respuesta():
+    respuesta = cliente.post(RUTA_ROBUSTEZ, json={"semillas": [42]})
+    assert respuesta.status_code == 200
+    datos = respuesta.json()
+    assert len(datos["combinaciones"]) == 9
+    assert datos["combinaciones_con_cruce"] == 6
+    assert len(datos["combinaciones"][0]["barrido"]["puntos"]) == 6
+
+
+@pytest.mark.parametrize(
+    "cambios",
+    [{"duracion_horas": 12}, {"duracion_horas": 80}, {"semillas": [1, 2, 3, 4]}, {"semillas": [7, 7]}, {"numero_nodos": 9}],
+)
+def test_robustez_rechaza_configuracion_invalida(cambios):
+    assert cliente.post(RUTA_ROBUSTEZ, json=cambios).status_code == 422
+
+
+def test_dimensionamiento():
+    respuesta = cliente.post(RUTA_DIMENSIONAMIENTO, json=PAYLOAD_DIMENSIONAMIENTO)
+    assert respuesta.status_code == 200
+    datos = respuesta.json()
+    assert datos["consumo_l_persona_dia"] == pytest.approx(20.0)
+    assert [d["origen_flujo"] for d in datos["dimensiones"]] == ["SUPUESTO", "CALIBRADO_MAX", "CALIBRADO_MIN"]
+    assert datos["dimensiones"][0]["nodos_requeridos"] == 32
+
+
+@pytest.mark.parametrize(
+    "cambios",
+    [
+        {"personas": 0},
+        {"personas": 1001},
+        {"estandar": "OMS_50"},
+        {"escenario": "HURACAN"},
+        {"humedad_ambiente_inicial_pct": 101.0},
+    ],
+)
+def test_dimensionamiento_rechaza_configuracion_invalida(cambios):
+    payload = {**PAYLOAD_DIMENSIONAMIENTO, **cambios}
+    assert cliente.post(RUTA_DIMENSIONAMIENTO, json=payload).status_code == 422
+
+
+def test_dimensionamiento_exige_personas():
+    payload = {clave: valor for clave, valor in PAYLOAD_DIMENSIONAMIENTO.items() if clave != "personas"}
+    assert cliente.post(RUTA_DIMENSIONAMIENTO, json=payload).status_code == 422
+
+
+def test_sitios():
+    respuesta = cliente.get(RUTA_SITIOS)
+    assert respuesta.status_code == 200
+    perfiles = respuesta.json()
+    assert [perfil["nombre"] for perfil in perfiles] == [
+        "CABO_DE_LA_VELA",
+        "CABO_DE_LA_VELA_CALIBRADO_MAX",
+        "CABO_DE_LA_VELA_CALIBRADO_MIN",
+    ]
+    assert set(perfiles[0]) == set(SITIO_EJEMPLO)
+
+
+def test_perfil_de_sitios_se_acepta_en_la_simulacion():
+    perfil = cliente.get(RUTA_SITIOS).json()[1]
+    payload = {**PAYLOAD_SIMULACION_PRD, "duracion_horas": 2, "sitio": perfil}
+    usados = cliente.post(RUTA_SIMULACION, json=payload).json()["parametros_usados"]
+    assert usados["flujo_niebla_maximo_l_m2_h"] == pytest.approx(1.83)
+
+
+def test_endpoints_nuevos_publicados_en_openapi():
+    rutas = cliente.get("/openapi.json").json()["paths"]
+    assert RUTA_ROBUSTEZ in rutas
+    assert RUTA_DIMENSIONAMIENTO in rutas
+    assert RUTA_SITIOS in rutas
+
+
+def test_incertidumbre_informa_la_ventaja_en_recuperacion():
+    datos = cliente.post(RUTA_INCERTIDUMBRE, json=PAYLOAD_INCERTIDUMBRE).json()
+    assert 0.0 <= datos["probabilidad_ventaja_recuperacion"] <= 1.0
+    assert set(datos["ventaja_recuperacion"]) == {"p5", "p50", "p95", "n_validos"}
+    assert "ventaja_recuperacion_pts" in datos["muestras"][0]
+
+
+def test_version_del_servicio():
+    assert cliente.get("/api/v1/health").json()["version"] == "0.3.0"

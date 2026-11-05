@@ -296,6 +296,7 @@ def vista_investigacion() -> None:
     st.info(contenido.PREGUNTA_INVESTIGACION)
     st.markdown(f"**Versión divulgativa.** {contenido.VERSION_DIVULGATIVA}")
     st.markdown(f"**Hipótesis de trabajo.** {contenido.HIPOTESIS}")
+    st.markdown(f"**Hipótesis derivada.** {contenido.HIPOTESIS_DERIVADA}")
 
     st.subheader("Respuesta preliminar del simulador")
     st.markdown(contenido.lista_markdown(contenido.RESPUESTA_PRELIMINAR))

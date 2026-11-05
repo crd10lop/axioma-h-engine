@@ -15,7 +15,7 @@ FRACCION_MAXIMA_EXTRACCION_PCT = 33.0
 URL_REPOSITORIO = "https://github.com/crd10lop/axioma-h-engine"
 
 # ---------------------------------------------------------------------------
-# Pregunta, hipótesis y respuesta preliminar (docs/01, secciones 2.1, 2.5 y 2.6)
+# Pregunta, hipótesis, hipótesis derivada y respuesta preliminar (docs/01, secciones 2.1, 2.5 y 2.6)
 # ---------------------------------------------------------------------------
 PREGUNTA_INVESTIGACION = (
     "¿En qué medida un sistema de control neuro-simbólico, evaluado mediante simulación, mejora la "
@@ -34,6 +34,13 @@ HIPOTESIS = (
     "acumulada menor que el temporizador, y su ventaja crece con el nivel de salinidad."
 )
 
+HIPOTESIS_DERIVADA = (
+    "H1-Ciclo 3. La recuperación tras pulso del control basado en reglas supera a la del temporizador "
+    "cuando la incrustación diaria de la membrana, el aumento de impedancia por sal en un día, supera un "
+    "umbral situado en el modelo entre 1633 y 1867 Ohm por día, cualquiera sea la combinación de flujo "
+    "de niebla y carga salina por litro que la produzca. Se propone para ponerla a prueba en el Ciclo 3."
+)
+
 RESPUESTA_PRELIMINAR: list[str] = [
     "Desgaste. El control basado en reglas (modo neuro-simbólico en la API y el dashboard) reduce la "
     "degradación acumulada entre 74 % y 99 % frente al temporizador en los seis niveles de salinidad. La reducción es mayor con salinidad baja, "
@@ -43,10 +50,18 @@ RESPUESTA_PRELIMINAR: list[str] = [
     "salinidad baja el temporizador recupera más, porque limpia una membrana casi limpia. Desde una "
     "carga de 60 Ohm por L/m² el control basado en reglas lo supera, y la diferencia llega a 22.7 puntos con "
     "la carga más alta.",
-    "La respuesta es condicional: la ventaja en recuperación aparece y crece con la salinidad, "
-    "mientras que la reducción del desgaste se observa en todos los niveles. Estos resultados "
-    "dependen de parámetros físicos supuestos, en particular la eficacia del pulso, que deben "
-    "medirse en laboratorio.",
+    "Robustez frente a los parámetros supuestos. Repetido con tres flujos de niebla (el supuesto y los dos "
+    "extremos calibrados contra la literatura) y tres eficacias del pulso (0.80, 0.90 y 1.00), el control "
+    "basado en reglas reduce el desgaste entre 73.3 % y 100 % en los 54 puntos. La ventaja en recuperación "
+    "no depende de la carga salina por litro sino de la incrustación diaria (la carga salina por el agua "
+    "captada en un día): en las seis combinaciones en que aparece, el cruce está entre 1633 y 1839 Ohm por "
+    "día, mientras que la carga por litro del cruce va de 50 a 191. Con el flujo calibrado mínimo esa "
+    "incrustación no se alcanza y el temporizador recupera más en todos los niveles en que hay pulsos.",
+    "La respuesta es condicional. La reducción del desgaste es robusta: se observa en todos los niveles "
+    "de salinidad y con todos los parámetros evaluados. La ventaja en recuperación aparece solo por encima "
+    "de una incrustación diaria de unos 1633 a 1867 Ohm por día, que con rendimientos como los de la "
+    "literatura solo se alcanza con la carga salina más alta. Estos resultados dependen de parámetros "
+    "físicos supuestos, en particular la eficacia del pulso, que deben medirse en laboratorio.",
 ]
 
 

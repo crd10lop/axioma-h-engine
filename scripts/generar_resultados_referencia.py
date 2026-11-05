@@ -4,14 +4,19 @@ Importa el backend directamente (no llama a la API) y ejecuta:
 
 - los cinco escenarios con humedad inicial de 45 % y 85 % (24 h, tasa ALTA,
   8 nodos, paso de 5 min, semilla 42);
-- el barrido de salinidad con humedad inicial de 85 % y semillas 1 a 5.
+- el barrido de salinidad con humedad inicial de 85 % y semillas 1 a 5;
+- la robustez de la respuesta: el barrido con 3 flujos de niebla por 3
+  eficacias del pulso, humedad inicial de 85 % y semilla 42.
 
 Escribe en docs/datos/:
 
 - resultados_escenarios.csv: una fila por escenario y humedad inicial;
 - barrido_salinidad.csv: una fila por combinación de escenario y tasa;
+- robustez_respuesta.csv: una fila por combinación de flujo y eficacia y por
+  punto del barrido;
 - resultados_completos.json: comparativa, conjeturas y detalle de verificación
-  de cada corrida, el barrido completo y las condiciones de ejecución.
+  de cada corrida, el barrido completo, el resumen de la robustez y las
+  condiciones de ejecución.
 
 La salida es determinista: ejecutar el script dos veces produce archivos
 idénticos. Uso, desde la raíz del proyecto:
@@ -37,16 +42,23 @@ RAIZ_PROYECTO = Path(__file__).resolve().parent.parent
 if str(RAIZ_PROYECTO) not in sys.path:
     sys.path.insert(0, str(RAIZ_PROYECTO))
 
-from backend.analisis import ejecutar_barrido  # noqa: E402
+from backend.analisis import ejecutar_barrido, ejecutar_robustez  # noqa: E402
 from backend.main import VERSION_SERVICIO  # noqa: E402
-from backend.schemas import BarridoConfig, Escenario, SimulationConfig, TasaSalinizacion  # noqa: E402
+from backend.schemas import (  # noqa: E402
+    BarridoConfig,
+    Escenario,
+    RobustezConfig,
+    SimulationConfig,
+    TasaSalinizacion,
+)
 from backend.simulador import ejecutar_simulacion  # noqa: E402
 
 CARPETA_POR_DEFECTO = RAIZ_PROYECTO / "docs" / "datos"
 ARCHIVO_ESCENARIOS = "resultados_escenarios.csv"
 ARCHIVO_BARRIDO = "barrido_salinidad.csv"
 ARCHIVO_JSON = "resultados_completos.json"
-ARCHIVOS = (ARCHIVO_ESCENARIOS, ARCHIVO_BARRIDO, ARCHIVO_JSON)
+ARCHIVO_ROBUSTEZ = "robustez_respuesta.csv"
+ARCHIVOS = (ARCHIVO_ESCENARIOS, ARCHIVO_BARRIDO, ARCHIVO_JSON, ARCHIVO_ROBUSTEZ)
 
 HUMEDADES_PCT = (45.0, 85.0)
 DURACION_HORAS = 24
@@ -54,6 +66,8 @@ TASA = TasaSalinizacion.ALTA
 SEMILLA = 42
 SEMILLAS_BARRIDO = [1, 2, 3, 4, 5]
 HUMEDAD_BARRIDO_PCT = 85.0
+SEMILLAS_ROBUSTEZ = [SEMILLA]
+CAMPO_HUMEDAD = "humedad_inicial_pct"
 
 # Prefijo de columna de cada modo en resultados_escenarios.csv.
 MODOS = {
@@ -106,7 +120,7 @@ def _vacio_si_nulo(valor):
 
 def fila_escenario(escenario: str, humedad: float, resultado: dict) -> dict:
     """Aplana una respuesta de simulación en una fila de resultados_escenarios.csv."""
-    fila = {"escenario": escenario, "humedad_inicial_pct": humedad}
+    fila = {"escenario": escenario, CAMPO_HUMEDAD: humedad}
     comparativa = resultado["comparativa"]
     for prefijo, clave_modo in MODOS.items():
         for campo, sufijo in CAMPOS_MODO.items():
@@ -142,6 +156,31 @@ def ejecutar_escenarios() -> list[tuple[str, float, dict]]:
     return corridas
 
 
+def filas_robustez(robustez: dict) -> list[dict]:
+    """Aplana la robustez serializada: una fila por combinación de flujo y eficacia y por punto del barrido.
+
+    Cada fila lleva el flujo, la eficacia y el cruce de su combinación, seguidos
+    de los campos del punto y de la humedad inicial.
+    """
+    filas = []
+    for combinacion in robustez["combinaciones"]:
+        barrido = combinacion["barrido"]
+        cruce = barrido["cruce"]
+        for punto in barrido["puntos"]:
+            filas.append(
+                {
+                    "flujo_niebla_maximo_l_m2_h": combinacion["flujo_niebla_maximo_l_m2_h"],
+                    "eficacia_maxima_pulso": combinacion["eficacia_maxima_pulso"],
+                    "cruce_estado": cruce["estado"],
+                    "cruce_incrustacion_diaria_ohm": _vacio_si_nulo(cruce["incrustacion_diaria_ohm"]),
+                    "cruce_carga_salina_ohm_l_m2": _vacio_si_nulo(cruce["carga_salina_ohm_l_m2"]),
+                    **punto,
+                    CAMPO_HUMEDAD: HUMEDAD_BARRIDO_PCT,
+                }
+            )
+    return filas
+
+
 def escribir_csv(ruta: Path, filas: list[dict]) -> None:
     """Escribe filas homogéneas en CSV UTF-8 con encabezado."""
     with ruta.open("w", encoding="utf-8", newline="") as archivo:
@@ -163,7 +202,8 @@ def condiciones() -> dict:
             "semilla": SEMILLA,
             "humedades_iniciales_pct": list(HUMEDADES_PCT),
         },
-        "barrido": {"humedad_inicial_pct": HUMEDAD_BARRIDO_PCT, "duracion_horas": DURACION_HORAS, "semillas": SEMILLAS_BARRIDO},
+        "barrido": {CAMPO_HUMEDAD: HUMEDAD_BARRIDO_PCT, "duracion_horas": DURACION_HORAS, "semillas": SEMILLAS_BARRIDO},
+        "robustez": {CAMPO_HUMEDAD: HUMEDAD_BARRIDO_PCT, "duracion_horas": DURACION_HORAS, "semillas": SEMILLAS_ROBUSTEZ},
         "nota": (
             "Las corridas omiten series_temporales y bitacora; se reproducen con POST "
             "/api/v1/simulacion/ejecutar y la misma configuración."
@@ -172,7 +212,7 @@ def condiciones() -> dict:
 
 
 def generar(carpeta: Path = CARPETA_POR_DEFECTO) -> list[Path]:
-    """Ejecuta el modelo y escribe los tres archivos; devuelve sus rutas.
+    """Ejecuta el modelo y escribe los cuatro archivos; devuelve sus rutas.
 
     La carpeta de destino solo la fija el propio script: la constante
     CARPETA_POR_DEFECTO o un directorio de tempfile.TemporaryDirectory(). Nunca
@@ -183,17 +223,21 @@ def generar(carpeta: Path = CARPETA_POR_DEFECTO) -> list[Path]:
     barrido = ejecutar_barrido(
         BarridoConfig(humedad_ambiente_inicial_pct=HUMEDAD_BARRIDO_PCT, semillas=SEMILLAS_BARRIDO)
     ).model_dump(mode="json")
+    robustez = ejecutar_robustez(
+        RobustezConfig(humedad_ambiente_inicial_pct=HUMEDAD_BARRIDO_PCT, semillas=SEMILLAS_ROBUSTEZ)
+    ).model_dump(mode="json")
 
     rutas = [carpeta / nombre for nombre in ARCHIVOS]
     escribir_csv(rutas[0], [fila_escenario(escenario, humedad, r) for escenario, humedad, r in corridas])
-    escribir_csv(rutas[1], [{**punto, "humedad_inicial_pct": HUMEDAD_BARRIDO_PCT} for punto in barrido["puntos"]])
+    escribir_csv(rutas[1], [{**punto, CAMPO_HUMEDAD: HUMEDAD_BARRIDO_PCT} for punto in barrido["puntos"]])
+    escribir_csv(rutas[3], filas_robustez(robustez))
 
     completos = {
         "condiciones": condiciones(),
         "escenarios": [
             {
                 "escenario": escenario,
-                "humedad_inicial_pct": humedad,
+                CAMPO_HUMEDAD: humedad,
                 "comparativa": resultado["comparativa"],
                 "conjeturas_validadas": resultado["conjeturas_validadas"],
                 "detalle_verificacion": resultado["detalle_verificacion"],
@@ -202,6 +246,9 @@ def generar(carpeta: Path = CARPETA_POR_DEFECTO) -> list[Path]:
             for escenario, humedad, resultado in corridas
         ],
         "barrido_salinidad": barrido,
+        "robustez_respuesta": {
+            clave: valor for clave, valor in robustez.items() if clave != "combinaciones"
+        },
     }
     with rutas[2].open("w", encoding="utf-8", newline="\n") as archivo:
         json.dump(completos, archivo, ensure_ascii=False, indent=2)

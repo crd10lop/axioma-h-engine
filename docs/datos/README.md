@@ -18,8 +18,9 @@ La salida es determinista: dos ejecuciones con el mismo código producen archivo
 |---|---|
 | Escenarios | Los cinco escenarios con humedad inicial de 45 % y 85 %; 24 h, inicio a las 18:00, paso de 5 min, 8 nodos, tasa de salinización ALTA, semilla 42. |
 | Barrido de salinidad | `DIA_NORMAL` e `INCRUSTACION_SALINA_RAPIDA` con tasas BAJA, MEDIA y ALTA; humedad inicial de 85 %, 24 h, 8 nodos, semillas 1 a 5. |
+| Robustez de la respuesta | El mismo barrido con cada combinación de flujo de niebla (6.0, 1.83 y 0.49 L/m²/h) y eficacia del pulso (0.80, 0.90 y 1.00); humedad inicial de 85 %, 24 h, 8 nodos, semilla 42. |
 
-Todos los parámetros son los de `backend/config.py`, sin modificar. Varios son supuestos de orden de magnitud; su origen está en [../06_Referencias_y_Trazabilidad_AxiomaH.md](../06_Referencias_y_Trazabilidad_AxiomaH.md), sección 3.
+Salvo el flujo y la eficacia de la robustez, que se aplican sobre copias de los parámetros, todos los parámetros son los de `backend/config.py`, sin modificar. Varios son supuestos de orden de magnitud; su origen está en [../06_Referencias_y_Trazabilidad_AxiomaH.md](../06_Referencias_y_Trazabilidad_AxiomaH.md), sección 3.
 
 ## 3. resultados_escenarios.csv
 
@@ -65,14 +66,35 @@ Una fila por combinación de escenario y tasa (6 filas), ordenadas por carga sal
 | `degradacion_neuro_media`, `degradacion_neuro_desv` | Media y desviación de la degradación acumulada del neuro-simbólico (%). |
 | `degradacion_temporizador_media`, `degradacion_temporizador_desv` | Lo mismo para el temporizador fijo. |
 | `reduccion_desgaste_pct` | `(D_temp - D_neuro) / D_temp * 100`, calculada con las medias. |
+| `rendimiento_neuro_l_m2_dia_media` | Media del rendimiento del neuro-simbólico (L/m² al día). |
+| `incrustacion_diaria_ohm_media` | Media de la carga salina por el rendimiento del neuro-simbólico: aumento de impedancia por sal en un día (Ohm/día). |
+| `ventaja_recuperacion_pts` | Recuperación media del neuro-simbólico menos la del temporizador (puntos); vacía si falta alguna. |
+| `pulsos_neuro_media` | Media de los pulsos del neuro-simbólico en toda la red. |
 | `humedad_inicial_pct` | Humedad relativa a las 18:00 (%). |
 
-## 5. resultados_completos.json
+## 5. robustez_respuesta.csv
+
+Una fila por combinación de flujo y eficacia y por punto del barrido (9 combinaciones por 6 puntos, 54 filas), en orden de flujo, eficacia y carga salina creciente. Los campos desde `escenario` hasta `pulsos_neuro_media` son los de `barrido_salinidad.csv` (sección 4), calculados con el flujo y la eficacia de la fila.
+
+| Campo | Descripción |
+|---|---|
+| `flujo_niebla_maximo_l_m2_h` | Flujo máximo de niebla de la combinación (L/m²/h). |
+| `eficacia_maxima_pulso` | Eficacia máxima del pulso de la combinación. |
+| `cruce_estado` | Cruce de la ventaja en recuperación frente a la incrustación diaria en la combinación: `INTERPOLADO`, `CRUCE_DESCENDENTE`, `SIN_CRUCE_NEURO_SUPERIOR`, `SIN_CRUCE_NEURO_INFERIOR` o `SIN_DATOS`. Se repite en las seis filas de la combinación. |
+| `cruce_incrustacion_diaria_ohm` | Incrustación diaria interpolada donde la ventaja vale 0 (Ohm/día); vacía sin cruce. |
+| `cruce_carga_salina_ohm_l_m2` | Carga salina interpolada en el mismo punto (Ohm por L/m²); vacía sin cruce. |
+| `escenario` a `pulsos_neuro_media` | Campos del punto, como en `barrido_salinidad.csv`. |
+| `humedad_inicial_pct` | Humedad relativa a las 18:00 (%). |
+
+El método y la lectura de estos datos están en [../04_Modelo_de_Control_y_Simulacion_AxiomaH.md](../04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 8.8.
+
+## 6. resultados_completos.json
 
 | Clave | Contenido |
 |---|---|
-| `condiciones` | Versión del servicio y condiciones de ejecución de ambos conjuntos. |
+| `condiciones` | Versión del servicio y condiciones de ejecución de los escenarios, el barrido y la robustez. |
 | `escenarios` | Lista de 10 corridas con `escenario`, `humedad_inicial_pct`, `comparativa` (los tres modos), `conjeturas_validadas`, `detalle_verificacion` (indicadores, informativos y causas) e `impacto_comunitario` (los tres modos: litros por día, rendimiento por m², personas con 15 y 20 L y área de colector por persona con los rendimientos de la literatura), con el mismo formato que la respuesta de `POST /api/v1/simulacion/ejecutar`. |
-| `barrido_salinidad` | Respuesta completa del barrido, con el formato de `POST /api/v1/analisis/barrido-salinidad`. |
+| `barrido_salinidad` | Respuesta completa del barrido, con el formato de `POST /api/v1/analisis/barrido-salinidad`, incluidos el flujo y la eficacia usados y el cruce. |
+| `robustez_respuesta` | Resumen de `POST /api/v1/analisis/robustez-respuesta`: rango de la reducción del desgaste, combinaciones con cruce y rango de la incrustación diaria del cruce. Las combinaciones completas están en `robustez_respuesta.csv`. |
 
 El JSON omite `series_temporales` y `bitacora` para mantener un tamaño manejable (288 puntos y entre 24 y 210 eventos por corrida). Se reproducen con `POST /api/v1/simulacion/ejecutar` y la misma configuración, o importando `backend.simulador.ejecutar_simulacion`.

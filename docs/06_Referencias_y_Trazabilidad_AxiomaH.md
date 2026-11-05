@@ -113,10 +113,10 @@ La tabla recorre todas las constantes de `backend/config.py` en el orden del arc
 | `CONSUMO_ACCESO_BASICO_L_PERSONA_DIA` | 20.0 L/persona/día | Referencia | OMS, Howard et al. (2020), acceso básico. Indicador informativo de impacto comunitario |
 | `RENDIMIENTO_LITERATURA_MIN_L_M2_DIA` | 3.0 L/m²/día | Referencia | Klemm et al. (2012). Indicador informativo de impacto comunitario |
 | `RENDIMIENTO_LITERATURA_MAX_L_M2_DIA` | 10.0 L/m²/día | Referencia | Klemm et al. (2012). Indicador informativo de impacto comunitario |
-| `FLUJO_NIEBLA_CALIBRADO_MIN_L_M2_H` | 0.49 L/m²/h | Calibración | Calibración inversa: rendimiento de 3 L/m²/día de Klemm et al. (2012), DIA_NORMAL, 85 %, semilla 42 (documento 04, sección 8.6). Solo se usa en el análisis de incertidumbre |
-| `FLUJO_NIEBLA_CALIBRADO_MAX_L_M2_H` | 1.83 L/m²/h | Calibración | Calibración inversa: rendimiento de 10 L/m²/día de Klemm et al. (2012), DIA_NORMAL, 85 %, semilla 42 (documento 04, sección 8.6). Solo se usa en el análisis de incertidumbre |
-| `EFICACIA_PULSO_RANGO_MIN` | 0.80 | Supuesto | Rango plausible alrededor de 0.90, pendiente de medición. Solo se usa en el análisis de incertidumbre (documento 04, sección 8.7) |
-| `EFICACIA_PULSO_RANGO_MAX` | 1.00 | Supuesto | Rango plausible alrededor de 0.90, pendiente de medición. Solo se usa en el análisis de incertidumbre (documento 04, sección 8.7) |
+| `FLUJO_NIEBLA_CALIBRADO_MIN_L_M2_H` | 0.49 L/m²/h | Calibración | Calibración inversa: rendimiento de 3 L/m²/día de Klemm et al. (2012), DIA_NORMAL, 85 %, semilla 42 (documento 04, sección 8.6). Solo se usa en la incertidumbre, la robustez de la respuesta, el dimensionamiento y los perfiles de `GET /api/v1/sitios` (documento 04, secciones 7.7, 8.7 y 8.8) |
+| `FLUJO_NIEBLA_CALIBRADO_MAX_L_M2_H` | 1.83 L/m²/h | Calibración | Calibración inversa: rendimiento de 10 L/m²/día de Klemm et al. (2012), DIA_NORMAL, 85 %, semilla 42 (documento 04, sección 8.6). Solo se usa en la incertidumbre, la robustez de la respuesta, el dimensionamiento y los perfiles de `GET /api/v1/sitios` (documento 04, secciones 7.7, 8.7 y 8.8) |
+| `EFICACIA_PULSO_RANGO_MIN` | 0.80 | Supuesto | Rango plausible alrededor de 0.90, pendiente de medición. Solo se usa en la incertidumbre y en la robustez de la respuesta (documento 04, secciones 8.7 y 8.8) |
+| `EFICACIA_PULSO_RANGO_MAX` | 1.00 | Supuesto | Rango plausible alrededor de 0.90, pendiente de medición. Solo se usa en la incertidumbre y en la robustez de la respuesta (documento 04, secciones 8.7 y 8.8) |
 
 `FRACCION_EXTRACCION_TEMPORIZADOR`, `INTERVALO_PULSO_TEMPORIZADOR_MIN` e `INCREMENTO_TERMICO_TEMPORIZADOR_C` se describen en config.py como "Especificación del simulador": definen el control tradicional de comparación y no provienen de una fuente externa.
 

@@ -1,6 +1,6 @@
 {
   "condiciones": {
-    "version_servicio": "0.2.0",
+    "version_servicio": "0.3.0",
     "escenarios": {
       "duracion_horas": 24,
       "tasa_salinizacion": "ALTA",
@@ -21,6 +21,13 @@
         3,
         4,
         5
+      ]
+    },
+    "robustez": {
+      "humedad_inicial_pct": 85.0,
+      "duracion_horas": 24,
+      "semillas": [
+        42
       ]
     },
     "nota": "Las corridas omiten series_temporales y bitacora; se reproducen con POST /api/v1/simulacion/ejecutar y la misma configuración."
@@ -1413,7 +1420,11 @@
         "degradacion_neuro_desv": 0.0,
         "degradacion_temporizador_media": 2.151,
         "degradacion_temporizador_desv": 0.0208,
-        "reduccion_desgaste_pct": 99.0702
+        "reduccion_desgaste_pct": 99.0702,
+        "rendimiento_neuro_l_m2_dia_media": 33.4505,
+        "incrustacion_diaria_ohm_media": 669.0092,
+        "ventaja_recuperacion_pts": -7.0648,
+        "pulsos_neuro_media": 8.0
       },
       {
         "escenario": "DIA_NORMAL",
@@ -1428,7 +1439,11 @@
         "degradacion_neuro_desv": 0.0045,
         "degradacion_temporizador_media": 2.151,
         "degradacion_temporizador_desv": 0.0208,
-        "reduccion_desgaste_pct": 97.5825
+        "reduccion_desgaste_pct": 97.5825,
+        "rendimiento_neuro_l_m2_dia_media": 32.4003,
+        "incrustacion_diaria_ohm_media": 1296.0112,
+        "ventaja_recuperacion_pts": -3.1166,
+        "pulsos_neuro_media": 20.8
       },
       {
         "escenario": "INCRUSTACION_SALINA_RAPIDA",
@@ -1443,7 +1458,11 @@
         "degradacion_neuro_desv": 0.0021,
         "degradacion_temporizador_media": 2.1827,
         "degradacion_temporizador_desv": 0.0159,
-        "reduccion_desgaste_pct": 96.0828
+        "reduccion_desgaste_pct": 96.0828,
+        "rendimiento_neuro_l_m2_dia_media": 32.1146,
+        "incrustacion_diaria_ohm_media": 1926.876,
+        "ventaja_recuperacion_pts": 0.647,
+        "pulsos_neuro_media": 34.2
       },
       {
         "escenario": "DIA_NORMAL",
@@ -1458,7 +1477,11 @@
         "degradacion_neuro_desv": 0.0021,
         "degradacion_temporizador_media": 2.4952,
         "degradacion_temporizador_desv": 0.022,
-        "reduccion_desgaste_pct": 95.311
+        "reduccion_desgaste_pct": 95.311,
+        "rendimiento_neuro_l_m2_dia_media": 31.9331,
+        "incrustacion_diaria_ohm_media": 2554.6496,
+        "ventaja_recuperacion_pts": 4.1826,
+        "pulsos_neuro_media": 46.8
       },
       {
         "escenario": "INCRUSTACION_SALINA_RAPIDA",
@@ -1473,7 +1496,11 @@
         "degradacion_neuro_desv": 0.0211,
         "degradacion_temporizador_media": 3.1589,
         "degradacion_temporizador_desv": 0.024,
-        "reduccion_desgaste_pct": 86.7391
+        "reduccion_desgaste_pct": 86.7391,
+        "rendimiento_neuro_l_m2_dia_media": 29.4186,
+        "incrustacion_diaria_ohm_media": 3530.2368,
+        "ventaja_recuperacion_pts": 9.8777,
+        "pulsos_neuro_media": 65.4
       },
       {
         "escenario": "INCRUSTACION_SALINA_RAPIDA",
@@ -1488,8 +1515,26 @@
         "degradacion_neuro_desv": 0.0125,
         "degradacion_temporizador_media": 4.2095,
         "degradacion_temporizador_desv": 0.0136,
-        "reduccion_desgaste_pct": 74.3057
+        "reduccion_desgaste_pct": 74.3057,
+        "rendimiento_neuro_l_m2_dia_media": 23.2275,
+        "incrustacion_diaria_ohm_media": 5574.5952,
+        "ventaja_recuperacion_pts": 22.652,
+        "pulsos_neuro_media": 98.4
       }
-    ]
+    ],
+    "flujo_niebla_maximo_l_m2_h": 6.0,
+    "eficacia_maxima_pulso": 0.9,
+    "cruce": {
+      "estado": "INTERPOLADO",
+      "incrustacion_diaria_ohm": 1818.4241,
+      "carga_salina_ohm_l_m2": 56.5618
+    }
+  },
+  "robustez_respuesta": {
+    "reduccion_desgaste_min_pct": 73.2567,
+    "reduccion_desgaste_max_pct": 100.0,
+    "combinaciones_con_cruce": 6,
+    "incrustacion_diaria_cruce_min_ohm": 1632.8705,
+    "incrustacion_diaria_cruce_max_ohm": 1839.2066
   }
 }

@@ -50,7 +50,7 @@ Las sub-preguntas, las variables y la hipótesis de trabajo están en [docs/01_P
 Se recomienda recorrer el proyecto en este orden:
 
 1. **Pregunta.** La pregunta de investigación de la sección anterior y su desarrollo en [docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2.
-2. **Respuesta.** El [Barrido de salinidad](#barrido-de-salinidad), que compara ambos modos de control a medida que aumenta la salinidad.
+2. **Respuesta.** El [Barrido de salinidad](#barrido-de-salinidad), que compara ambos modos de control a medida que aumenta la salinidad, y su [Robustez frente a los parámetros supuestos](#robustez-de-la-respuesta), con la hipótesis derivada para el Ciclo 3.
 3. **Conjeturas.** La verificación de las tres conjeturas en [Resultados](#resultados) y su detalle en [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), secciones 5 y 6.
 4. **Lectura crítica.** El conflicto entre los indicadores de la Conjetura 1, el contraste del umbral de la Conjetura 3 con la literatura y las preguntas para el Ciclo 3, en [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 8.
 5. **Limitaciones.** Las [Limitaciones conocidas](#limitaciones-conocidas) y el [Alcance y madurez](#alcance-y-madurez) del artefacto.
@@ -64,7 +64,7 @@ El motor implementado es simbólico: aplica reglas explícitas en orden de prior
 
 El sistema se compone de dos servicios que se ejecutan por separado:
 
-- **Backend (FastAPI, puerto 8000):** contiene el motor de reglas, el modelo físico, el simulador comparativo, la verificación de conjeturas, el impacto comunitario y el análisis de robustez (barrido de salinidad, sensibilidad, calibración e incertidumbre).
+- **Backend (FastAPI, puerto 8000):** contiene el motor de reglas, el modelo físico, el simulador comparativo, la verificación de conjeturas, el impacto comunitario, el análisis de robustez (barrido de salinidad, robustez de la respuesta, sensibilidad, calibración e incertidumbre), el dimensionamiento del captador y el perfil de sitio para transferir el modelo.
 - **Frontend (Streamlit, puerto 8501):** dashboard que consume la API por HTTP. No importa código del backend, de modo que ambos servicios pueden desplegarse en máquinas distintas.
 
 ```
@@ -76,12 +76,13 @@ axioma-h-engine/
 │   ├── modelo_fisico.py    Ecuaciones compartidas: pulso, energía y captación
 │   ├── motor_reglas.py     Motor de control basado en reglas (primera etapa de la arquitectura neuro-simbólica)
 │   ├── simulador.py        Simulación comparativa y verificación de conjeturas
-│   ├── analisis.py         Barrido, sensibilidad, calibración e incertidumbre con parámetros inmutables
-│   ├── impacto.py          Impacto comunitario estimado con estándares de la OMS y Sphere
+│   ├── analisis.py         Barrido, robustez, sensibilidad, calibración, incertidumbre, dimensionamiento y perfiles de sitio
+│   ├── impacto.py          Impacto comunitario estimado y dimensionamiento con estándares de la OMS y Sphere
 │   └── routers/
 │       ├── nodo.py         POST /api/v1/nodo/evaluar
 │       ├── simulacion.py   POST /api/v1/simulacion/ejecutar
-│       └── analisis.py     POST /api/v1/analisis/barrido-salinidad, /sensibilidad e /incertidumbre
+│       ├── analisis.py     POST /api/v1/analisis/barrido-salinidad, /robustez-respuesta, /sensibilidad, /incertidumbre y /dimensionamiento
+│       └── sitios.py       GET /api/v1/sitios
 ├── frontend/
 │   ├── app.py              Dashboard Streamlit
 │   ├── config.py           URL de la API y tiempos de espera
@@ -92,7 +93,7 @@ axioma-h-engine/
 │   ├── test_motor_reglas.py      Reglas, prioridad y supervisión humana
 │   ├── test_modelo_fisico.py     Ecuaciones del modelo físico
 │   ├── test_simulador.py         Simulación, modos de control y verificación de conjeturas
-│   ├── test_analisis.py          Barrido, sensibilidad, calibración e incertidumbre
+│   ├── test_analisis.py          Barrido, cruce, robustez, sensibilidad, calibración, incertidumbre y dimensionamiento
 │   ├── test_impacto.py           Impacto comunitario
 │   ├── test_api.py               Endpoints de la API
 │   ├── test_cliente_api.py       Cliente HTTP con requests simulado
@@ -174,7 +175,7 @@ El detalle de cada vista está en [docs/03_Funcionamiento_General_AxiomaH.md](do
 El proyecto no depende del despliegue en Render. Con las dependencias instaladas, todo funciona en el equipo sin conexión a internet:
 
 - **Aplicación completa:** iniciar el backend y el dashboard como se indica arriba. El dashboard se conecta por defecto a la API local (`http://127.0.0.1:8000`).
-- **Resultados de referencia:** `python scripts/generar_resultados_referencia.py` importa el backend directamente, sin la API, y regenera en [docs/datos/](docs/datos/README.md) los cinco escenarios con 45 % y 85 % de humedad inicial y el barrido de salinidad con semillas 1 a 5. Los archivos ya generados están en el repositorio y se pueden abrir con cualquier hoja de cálculo.
+- **Resultados de referencia:** `python scripts/generar_resultados_referencia.py` importa el backend directamente, sin la API, y regenera en [docs/datos/](docs/datos/README.md) los cinco escenarios con 45 % y 85 % de humedad inicial, el barrido de salinidad con semillas 1 a 5 y la robustez de la respuesta (nueve combinaciones de flujo de niebla y eficacia del pulso). Los archivos ya generados están en el repositorio y se pueden abrir con cualquier hoja de cálculo.
 - **Pruebas:** `pytest` no usa la red; el cliente HTTP del dashboard se prueba con `requests` simulado.
 
 El dashboard guarda durante una hora la respuesta de cada simulación y de cada análisis: repetir la misma configuración no vuelve a llamar a la API.
@@ -201,7 +202,7 @@ La aplicación está desplegada en **Render**, en el plan gratuito, con el Bluep
 
 Cada push a `main` ejecuta el workflow CI (pruebas, cobertura y análisis de SonarQube Cloud), y Render despliega ambos servicios solo cuando todos los checks del commit están en verde (`autoDeployTrigger: checksPass`). El dashboard se conecta a la API publicada mediante la variable `AXIOMA_API_URL`.
 
-La verificación automatizada (`python scripts/verificar_despliegue.py`) ejecuta 22 comprobaciones contra los servicios publicados; la última ejecución registrada está en la sección 4.3 de docs/05. La configuración de cada plataforma, las variables de entorno, la verificación, la operación en el plan gratuito y el procedimiento para recrear el despliegue están en [docs/05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md).
+La verificación automatizada (`python scripts/verificar_despliegue.py`) ejecuta 26 comprobaciones contra los servicios publicados; la última ejecución registrada está en la sección 4.3 de docs/05. La configuración de cada plataforma, las variables de entorno, la verificación, la operación en el plan gratuito y el procedimiento para recrear el despliegue están en [docs/05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md).
 
 ## Endpoints
 
@@ -213,9 +214,12 @@ La verificación automatizada (`python scripts/verificar_despliegue.py`) ejecuta
 | POST | `/api/v1/simulacion/ejecutar` | Ejecuta la simulación comparativa entre ambos modos |
 | POST | `/api/v1/analisis/barrido-salinidad` | Barrido de salinidad en seis niveles de carga, con media y desviación entre 1 y 5 semillas |
 | POST | `/api/v1/analisis/sensibilidad` | Repite la simulación con varios valores de la eficacia del pulso o del flujo de niebla |
-| POST | `/api/v1/analisis/incertidumbre` | Muestrea a la vez la eficacia del pulso y el flujo de niebla (5 a 30 muestras) y estima la probabilidad de validar cada conjetura |
+| POST | `/api/v1/analisis/incertidumbre` | Muestrea a la vez la eficacia del pulso y el flujo de niebla (5 a 30 muestras) y estima la probabilidad de validar cada conjetura y de que el control basado en reglas recupere más que el temporizador |
+| POST | `/api/v1/analisis/robustez-respuesta` | Repite el barrido con 3 flujos de niebla por 3 eficacias del pulso e informa el cruce de la ventaja en recuperación frente a la incrustación diaria |
+| POST | `/api/v1/analisis/dimensionamiento` | Área de colector y nodos necesarios para un número de personas, con los tres flujos de niebla de referencia |
+| GET | `/api/v1/sitios` | Perfiles de sitio de referencia (Cabo de la Vela con el flujo supuesto y con los extremos calibrados) |
 
-Los tres endpoints de análisis no modifican la configuración global del modelo: cada solicitud usa su propia copia inmutable de los parámetros, de modo que solicitudes simultáneas no se afectan entre sí. Los payloads de ejemplo están en [docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md](docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md), sección 3.3.
+Los endpoints de análisis no modifican la configuración global del modelo: cada solicitud usa su propia copia inmutable de los parámetros, de modo que solicitudes simultáneas no se afectan entre sí. Los payloads de ejemplo están en [docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md](docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md), sección 3.3.
 
 Los datos que no cumplen la validación devuelven `422` con el detalle de cada campo, por ejemplo un `nodo_id` fuera de `NODO_01` a `NODO_08` o una humedad mayor que 100.
 
@@ -225,7 +229,7 @@ Los datos que no cumplen la validación devuelven `422` con el detalle de cada c
 {
   "estado": "SALUDABLE",
   "servicio": "Axioma-H Engine",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "timestamp": "2026-10-28T03:01:23.035280+00:00",
   "tiempo_actividad_seg": 0.05
 }
@@ -273,7 +277,7 @@ La solicitud admite además el campo opcional `anulacion_manual` (`NINGUNA` por 
 
 ### POST /api/v1/simulacion/ejecutar
 
-Solicitud: es el payload de ejemplo del PRD. Los campos `numero_nodos` (1 a 8, por defecto 8), `paso_minutos` (1 a 60, por defecto 5) y `semilla` (por defecto 42) son opcionales.
+Solicitud: es el payload de ejemplo del PRD. Los campos `numero_nodos` (1 a 8, por defecto 8), `paso_minutos` (1 a 60, por defecto 5) y `semilla` (por defecto 42) son opcionales, igual que `sitio` (perfil con nombre, flujo máximo de niebla, temperatura media y amplitudes térmica y de humedad) y `eficacia_maxima_pulso`. Sin ellos se usan los valores de Cabo de la Vela y los resultados no cambian. El procedimiento para transferir el modelo a otro sitio está en [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 8.10.
 
 ```json
 {
@@ -351,6 +355,14 @@ Respuesta calculada por el modelo (abreviada). Los valores de la respuesta de ej
       "area_m2_por_persona_basico_literatura_max": 6.6667
     },
     "...": "modo_temporizador_fijo y modo_temporizador_tope_ecologico con la misma estructura"
+  },
+  "parametros_usados": {
+    "nombre_sitio": "CABO_DE_LA_VELA",
+    "flujo_niebla_maximo_l_m2_h": 6.0,
+    "eficacia_maxima_pulso": 0.9,
+    "temperatura_media_c": 30.0,
+    "amplitud_temperatura_c": 4.5,
+    "amplitud_humedad_pct": 10.0
   }
 }
 ```
@@ -382,7 +394,7 @@ La REGLA_06 aplica la supervisión humana mediante el campo opcional `anulacion_
 pytest -v
 ```
 
-La suite cubre el motor de reglas (cada regla, casos límite, prioridad y supervisión humana, incluido que los límites térmico y ecológico prevalecen sobre cualquier anulación), el simulador (reproducibilidad, límites térmico y ecológico, criterio de regeneración, modo de referencia, indicadores informativos y causas de no validación), el impacto comunitario, el análisis de robustez (barrido, sensibilidad, validaciones y ausencia de efectos sobre la configuración global, también con solicitudes simultáneas), la API, el cliente HTTP del dashboard (con `requests` simulado), las transformaciones de datos y el contenido de la vista de investigación. Ninguna prueba usa la red.
+La suite cubre el motor de reglas (cada regla, casos límite, prioridad y supervisión humana, incluido que los límites térmico y ecológico prevalecen sobre cualquier anulación), el simulador (reproducibilidad, límites térmico y ecológico, criterio de regeneración, modo de referencia, indicadores informativos y causas de no validación), el impacto comunitario y el dimensionamiento, el perfil de sitio (incluido que sin sitio ni eficacia los resultados son idénticos), el análisis de robustez (barrido, cruce de la ventaja en recuperación, robustez de la respuesta, sensibilidad, incertidumbre, validaciones y ausencia de efectos sobre la configuración global, también con solicitudes simultáneas), la API, el cliente HTTP del dashboard (con `requests` simulado), las transformaciones de datos y el contenido de la vista de investigación. Ninguna prueba usa la red.
 
 ### Integración continua y calidad
 
@@ -458,6 +470,20 @@ Responde la pregunta de investigación. Usa `DIA_NORMAL` e `INCRUSTACION_SALINA_
 
 El control basado en reglas reduce la degradación acumulada entre 74 % y 99 % en todos los niveles. Su recuperación se mantiene estable, mientras que la del temporizador cae con la salinidad: el temporizador recupera más con salinidad baja, porque limpia membranas casi limpias, y el neuro-simbólico lo supera desde 60 Ohm por L/m². El método y las limitaciones están en [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 7.
 
+### Robustez de la respuesta
+
+Repetido con tres flujos de niebla (6.0 L/m²/h supuesto y 1.83 y 0.49 calibrados contra la literatura) y tres eficacias del pulso (0.80, 0.90 y 1.00), con semilla 42:
+
+- el control basado en reglas reduce el desgaste entre 73.3 % y 100 % en los 54 puntos de las nueve combinaciones;
+- su ventaja en recuperación no depende de la carga salina por litro sino de la incrustación diaria (carga salina por agua captada al día): en las seis combinaciones con cruce aparece desde 1632.9 a 1839.2 Ohm/día, mientras que la carga por litro del cruce va de 50.3 a 190.9; con 0.49 L/m²/h esa incrustación no se alcanza y el temporizador recupera más;
+- con el flujo calibrado, el control basado en reglas recupera más en solo 3 de 62 muestras de la incertidumbre (probabilidad de 0.15 en Incrustación salina rápida y 0.00 en los demás escenarios con pulsos).
+
+La tabla de las nueve combinaciones, su lectura y la hipótesis derivada H1-Ciclo 3 (el cruce ocurre en una incrustación diaria de entre 1633 y 1867 Ohm/día) están en [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), secciones 8.8 y 8.9.
+
+### Dimensionamiento del captador
+
+`POST /api/v1/analisis/dimensionamiento` calcula el área de colector y los nodos de 1 m² necesarios para un número de personas. Para 50 personas con 20 L al día, en Día normal con 85 %, harían falta 32 nodos con el flujo supuesto y 100 o 332 con los flujos calibrados, frente a 100 a 333 m² con los rendimientos de la literatura. El detalle está en [docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 7.7.
+
 ### Tope ecológico frente a lógica de control
 
 Cada simulación ejecuta además un temporizador con tope ecológico: la misma programación del temporizador fijo, con la fracción de 0.33 del neuro-simbólico. Se reporta en `comparativa.modo_temporizador_tope_ecologico` y no interviene en la validación. Permite separar la diferencia de agua entre los dos modos en la parte debida al tope y la parte debida a la lógica de control.
@@ -518,6 +544,8 @@ El análisis completo, las ecuaciones, los parámetros y las tablas de sensibili
 - La eficacia del pulso resistivo (0.90) y los demás parámetros físicos (flujo de niebla, tasas de incrustación, capacidad térmica, consumo y recarga de energía, degradación de la membrana) son supuestos de orden de magnitud pendientes de validación experimental.
 - El estado de las Conjeturas 1 y 2 cambia con la eficacia del pulso, como muestran los análisis de sensibilidad. Medir esa eficacia es la prioridad experimental antes de dar por validada o refutada cualquiera de las dos.
 - El flujo de niebla supuesto es optimista. Calibrado contra la literatura, la Conjetura 3 no se valida en ningún escenario con 85 % de humedad inicial.
+- Los perfiles de sitio disponibles son solo de Cabo de la Vela: el proyecto no tiene datos climáticos con fuente de otros sitios. La calibración del flujo usa el ciclo diurno de Cabo de la Vela, y el dimensionamiento y la robustez varían el flujo de niebla, pero no la temperatura ni las amplitudes del sitio.
+- La robustez, el dimensionamiento y el perfil de sitio se usan desde la API; todavía no tienen controles en el dashboard.
 - El clima de referencia usa ciclos diurnos idealizados con ruido gaussiano, y los escenarios repiten sus ventanas de sequía o tormenta cada día simulado.
 - La configuración CORS admite por defecto solo orígenes locales. Para que una página web consuma la API desde el navegador, sus dominios deben agregarse con `AXIOMA_CORS_ORIGINS`.
 - En el plan gratuito de Render, los servicios se suspenden tras 15 minutos sin tráfico y tardan cerca de un minuto en reactivarse.
@@ -537,6 +565,7 @@ La versión del servicio se publica en `GET /` y `GET /api/v1/health` (`VERSION_
 |---|---|
 | 0.1.0 | Motor de control basado en reglas, simulación comparativa con el temporizador fijo y verificación de las tres conjeturas, dashboard Streamlit y despliegue en Render. |
 | 0.2.0 | Análisis de robustez (barrido de salinidad con varias semillas y sensibilidad), causas de no validación e indicadores informativos, temporizador con tope ecológico, impacto comunitario, supervisión humana conservadora (REGLA_06) y propagación de la incertidumbre con el flujo de niebla calibrado. |
+| 0.3.0 | Robustez de la respuesta frente al flujo de niebla y la eficacia del pulso, incrustación diaria y cruce de la ventaja en recuperación en el barrido, ventaja en recuperación en la incertidumbre, dimensionamiento del captador, perfil de sitio y eficacia del pulso en la simulación, `parametros_usados` y `GET /api/v1/sitios`. |
 
 Las funciones de 0.2.0 se incorporaron de forma incremental mientras el servicio todavía reportaba 0.1.0, como muestra el registro de verificaciones de [docs/05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md), sección 4.3. El número de versión se actualizó al cerrar el conjunto.
 

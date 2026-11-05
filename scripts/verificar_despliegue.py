@@ -12,6 +12,7 @@ Este script depende de la red y no forma parte de la suite de pytest.
 
 import argparse
 import importlib
+import math
 import os
 import sys
 import time
@@ -39,6 +40,9 @@ RUTA_SIMULACION = "/api/v1/simulacion/ejecutar"
 RUTA_BARRIDO = "/api/v1/analisis/barrido-salinidad"
 RUTA_SENSIBILIDAD = "/api/v1/analisis/sensibilidad"
 RUTA_INCERTIDUMBRE = "/api/v1/analisis/incertidumbre"
+RUTA_ROBUSTEZ = "/api/v1/analisis/robustez-respuesta"
+RUTA_DIMENSIONAMIENTO = "/api/v1/analisis/dimensionamiento"
+RUTA_SITIOS = "/api/v1/sitios"
 
 # Una sola semilla mantiene el barrido (12 simulaciones) dentro del tiempo de espera.
 BARRIDO_EJEMPLO = {"humedad_ambiente_inicial_pct": 85.0, "semillas": [42]}
@@ -61,6 +65,17 @@ SENSIBILIDAD_EJEMPLO = {
 MUESTRAS_INCERTIDUMBRE = 5
 INCERTIDUMBRE_EJEMPLO = {**CONDICIONES_ANALISIS, "n_muestras": MUESTRAS_INCERTIDUMBRE}
 
+# Ejemplo del esquema RobustezConfig: una semilla, 9 combinaciones de 6 puntos (108 simulaciones).
+ROBUSTEZ_EJEMPLO = {"humedad_ambiente_inicial_pct": 85.0, "semillas": [42]}
+COMBINACIONES_ROBUSTEZ = 9
+
+# Ejemplo del esquema DimensionamientoConfig; un dimensionamiento por flujo de referencia.
+DIMENSIONAMIENTO_EJEMPLO = {**CONDICIONES_ANALISIS, "personas": 50, "estandar": "OMS_20"}
+ORIGENES_FLUJO = ["SUPUESTO", "CALIBRADO_MAX", "CALIBRADO_MIN"]
+
+# Perfiles de GET /api/v1/sitios (backend/analisis.py, perfiles_sitio).
+SITIOS_ESPERADOS = ["CABO_DE_LA_VELA", "CABO_DE_LA_VELA_CALIBRADO_MAX", "CABO_DE_LA_VELA_CALIBRADO_MIN"]
+
 # Valores de backend/schemas.py (enum Escenario).
 ESCENARIOS = [
     "DIA_NORMAL",
@@ -77,6 +92,17 @@ SIMULACION_EJEMPLO = {
     "humedad_ambiente_inicial_pct": 45.0,
     "tasa_salinizacion": "ALTA",
 }
+
+# Simulación con un perfil de sitio y una eficacia del pulso distintos de los de backend/config.py.
+SITIO_EJEMPLO = {
+    "nombre": "SITIO_VERIFICACION",
+    "flujo_niebla_maximo_l_m2_h": 1.83,
+    "temperatura_media_c": 28.0,
+    "amplitud_temperatura_c": 5.0,
+    "amplitud_humedad_pct": 12.0,
+}
+EFICACIA_EJEMPLO = 0.95
+SIMULACION_SITIO_EJEMPLO = {**SIMULACION_EJEMPLO, "sitio": SITIO_EJEMPLO, "eficacia_maxima_pulso": EFICACIA_EJEMPLO}
 
 # Ejemplo del esquema TelemetryInput en backend/schemas.py.
 TELEMETRIA_BASE = {
@@ -252,7 +278,16 @@ def probar_documentacion_api(cliente: httpx.Client, api: str) -> str:
     rutas = respuesta.json()["paths"]
     faltantes = [
         ruta
-        for ruta in (RUTA_EVALUAR, RUTA_SIMULACION, RUTA_BARRIDO, RUTA_SENSIBILIDAD, RUTA_INCERTIDUMBRE)
+        for ruta in (
+            RUTA_EVALUAR,
+            RUTA_SIMULACION,
+            RUTA_BARRIDO,
+            RUTA_SENSIBILIDAD,
+            RUTA_INCERTIDUMBRE,
+            RUTA_ROBUSTEZ,
+            RUTA_DIMENSIONAMIENTO,
+            RUTA_SITIOS,
+        )
         if ruta not in rutas
     ]
     _verificar(not faltantes, f"Rutas ausentes en openapi.json: {', '.join(faltantes)}")
@@ -399,6 +434,67 @@ def probar_incertidumbre(cliente: httpx.Client, api: str) -> str:
     )
 
 
+@prueba("API: simulación con perfil de sitio y eficacia")
+def probar_simulacion_sitio(cliente: httpx.Client, api: str) -> str:
+    respuesta = cliente.post(f"{api}{RUTA_SIMULACION}", json=SIMULACION_SITIO_EJEMPLO)
+    _verificar_codigo(respuesta)
+    usados = respuesta.json()["parametros_usados"]
+    _verificar(usados["nombre_sitio"] == SITIO_EJEMPLO["nombre"], f"nombre_sitio = {usados['nombre_sitio']!r}")
+    esperado = {
+        "flujo_niebla_maximo_l_m2_h": SITIO_EJEMPLO["flujo_niebla_maximo_l_m2_h"],
+        "eficacia_maxima_pulso": EFICACIA_EJEMPLO,
+        "temperatura_media_c": SITIO_EJEMPLO["temperatura_media_c"],
+    }
+    diferencias = [
+        f"{campo}: {usados[campo]!r} en lugar de {valor!r}"
+        for campo, valor in esperado.items()
+        if not math.isclose(usados[campo], valor)
+    ]
+    _verificar(not diferencias, "; ".join(diferencias))
+    return f"parametros_usados de {usados['nombre_sitio']}: flujo {usados['flujo_niebla_maximo_l_m2_h']} L/m²/h"
+
+
+@prueba("API: robustez de la respuesta")
+def probar_robustez(cliente: httpx.Client, api: str) -> str:
+    respuesta = cliente.post(f"{api}{RUTA_ROBUSTEZ}", json=ROBUSTEZ_EJEMPLO)
+    _verificar_codigo(respuesta)
+    resultado = respuesta.json()
+    combinaciones = resultado["combinaciones"]
+    _verificar(
+        len(combinaciones) == COMBINACIONES_ROBUSTEZ,
+        f"Llegaron {len(combinaciones)} combinaciones de las {COMBINACIONES_ROBUSTEZ} esperadas",
+    )
+    _verificar(
+        all(len(c["barrido"]["puntos"]) == PUNTOS_BARRIDO for c in combinaciones),
+        f"Alguna combinación no tiene {PUNTOS_BARRIDO} puntos",
+    )
+    return (
+        f"{len(combinaciones)} combinaciones; {resultado['combinaciones_con_cruce']} con cruce; reducción del "
+        f"desgaste {resultado['reduccion_desgaste_min_pct']:.2f} % a {resultado['reduccion_desgaste_max_pct']:.2f} %"
+    )
+
+
+@prueba("API: dimensionamiento del captador")
+def probar_dimensionamiento(cliente: httpx.Client, api: str) -> str:
+    respuesta = cliente.post(f"{api}{RUTA_DIMENSIONAMIENTO}", json=DIMENSIONAMIENTO_EJEMPLO)
+    _verificar_codigo(respuesta)
+    dimensiones = respuesta.json()["dimensiones"]
+    origenes = [dimension["origen_flujo"] for dimension in dimensiones]
+    _verificar(origenes == ORIGENES_FLUJO, f"Orígenes del flujo inesperados: {origenes}")
+    return "nodos para 50 personas: " + ", ".join(
+        f"{dimension['origen_flujo']} {dimension['nodos_requeridos']}" for dimension in dimensiones
+    )
+
+
+@prueba("API: perfiles de sitio")
+def probar_sitios(cliente: httpx.Client, api: str) -> str:
+    respuesta = cliente.get(f"{api}{RUTA_SITIOS}")
+    _verificar_codigo(respuesta)
+    nombres = [perfil["nombre"] for perfil in respuesta.json()]
+    _verificar(nombres == SITIOS_ESPERADOS, f"Perfiles inesperados: {nombres}")
+    return f"{len(nombres)} perfiles: {', '.join(nombres)}"
+
+
 # ---------------------------------------------------------------------------
 # Comprobaciones del dashboard
 # ---------------------------------------------------------------------------
@@ -465,6 +561,10 @@ def ejecutar_pruebas(api: str, dashboard: str, timeout: float) -> List[Resultado
         resultados.append(probar_barrido(cliente, api))
         resultados.append(probar_sensibilidad(cliente, api))
         resultados.append(probar_incertidumbre(cliente, api))
+        resultados.append(probar_simulacion_sitio(cliente, api))
+        resultados.append(probar_robustez(cliente, api))
+        resultados.append(probar_dimensionamiento(cliente, api))
+        resultados.append(probar_sitios(cliente, api))
         resultados.append(probar_salud_dashboard(cliente, dashboard))
         resultados.append(probar_inicio_dashboard(cliente, dashboard))
     resultados.append(probar_integracion_cliente(api))

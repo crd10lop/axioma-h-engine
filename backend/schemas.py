@@ -7,11 +7,21 @@ unifican los valores usados en el PRD y en la Matriz de Operacionalización
 
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Annotated, Dict, List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
 
 from backend import config
+
+_EFICACIA_ADMITIDA = "Eficacia máxima del pulso, en (0, 1]."
+_FLUJO_ADMITIDO = "Flujo máximo de niebla en L/m²/h, en (0, 20]."
+_VALOR_POR_DEFECTO = " Nulo para usar el valor de backend/config.py."
+_DESCRIPCION_ESCENARIO = "Escenario ambiental."
+_DESCRIPCION_HUMEDAD_INICIAL = "Humedad relativa al inicio de la simulación (18:00 hora local)."
+_DESCRIPCION_TASA = "Velocidad de incrustación salina."
+_DESCRIPCION_NODOS = "Cantidad de nodos simulados."
+_DESCRIPCION_SEMILLA = "Semilla del generador aleatorio del entorno."
+_DESCRIPCION_FLUJO = "Flujo máximo de niebla en L/m²/h."
 
 
 class ModoOperacion(str, Enum):
@@ -148,6 +158,37 @@ class ControlDecision(BaseModel):
     metricas_conjeturas: MetricasConjeturas = Field(..., description="Indicadores asociados a las conjeturas.")
 
 
+class PerfilSitio(BaseModel):
+    """Perfil climático de un sitio de captación, para transferir el modelo a otro lugar.
+
+    Los valores por defecto son los supuestos de Cabo de la Vela en
+    `backend/config.py`. El ciclo diurno conserva sus horas de máximo (04:00
+    para la humedad y 14:00 para la temperatura). El procedimiento está en
+    docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md, sección 8.10.
+    """
+
+    nombre: str = Field(
+        default="CABO_DE_LA_VELA",
+        pattern=r"^[A-Z0-9_]{1,40}$",
+        description="Identificador del sitio: mayúsculas, dígitos y guion bajo, hasta 40 caracteres.",
+    )
+    flujo_niebla_maximo_l_m2_h: float = Field(
+        default=config.FLUJO_NIEBLA_MAXIMO_L_M2_H, gt=0, le=20, description=_FLUJO_ADMITIDO
+    )
+    temperatura_media_c: float = Field(
+        default=config.TEMPERATURA_MEDIA_C, ge=0, le=45, description="Temperatura ambiente media en °C."
+    )
+    amplitud_temperatura_c: float = Field(
+        default=config.AMPLITUD_TEMPERATURA_C, ge=0, le=15, description="Amplitud del ciclo térmico diurno en °C."
+    )
+    amplitud_humedad_pct: float = Field(
+        default=config.AMPLITUD_HUMEDAD_PCT,
+        ge=0,
+        le=30,
+        description="Amplitud del ciclo diurno de humedad en puntos de HR.",
+    )
+
+
 class SimulationConfig(BaseModel):
     """Parámetros de una simulación comparativa."""
 
@@ -165,14 +206,20 @@ class SimulationConfig(BaseModel):
     )
 
     duracion_horas: int = Field(default=24, ge=1, le=72, description="Horas simuladas.")
-    escenario: Escenario = Field(..., description="Escenario ambiental.")
+    escenario: Escenario = Field(..., description=_DESCRIPCION_ESCENARIO)
     humedad_ambiente_inicial_pct: float = Field(
-        ..., ge=0, le=100, description="Humedad relativa al inicio de la simulación (18:00 hora local)."
+        ..., ge=0, le=100, description=_DESCRIPCION_HUMEDAD_INICIAL
     )
-    tasa_salinizacion: TasaSalinizacion = Field(..., description="Velocidad de incrustación salina.")
-    numero_nodos: int = Field(default=8, ge=1, le=8, description="Cantidad de nodos simulados.")
+    tasa_salinizacion: TasaSalinizacion = Field(..., description=_DESCRIPCION_TASA)
+    numero_nodos: int = Field(default=8, ge=1, le=8, description=_DESCRIPCION_NODOS)
     paso_minutos: int = Field(default=5, ge=1, le=60, description="Resolución temporal en minutos.")
-    semilla: int = Field(default=42, description="Semilla del generador aleatorio del entorno.")
+    semilla: int = Field(default=42, description=_DESCRIPCION_SEMILLA)
+    sitio: PerfilSitio | None = Field(
+        default=None, description="Perfil del sitio; nulo para usar el de Cabo de la Vela de backend/config.py."
+    )
+    eficacia_maxima_pulso: float | None = Field(
+        default=None, gt=0, le=1, description=_EFICACIA_ADMITIDA + _VALOR_POR_DEFECTO
+    )
 
 
 class ResultadoModo(BaseModel):
@@ -323,6 +370,17 @@ class ImpactoComunitario(BaseModel):
     )
 
 
+class ParametrosUsados(BaseModel):
+    """Sitio y parámetros supuestos con los que se ejecutó una simulación."""
+
+    nombre_sitio: str = Field(..., description="Identificador del perfil de sitio usado.")
+    flujo_niebla_maximo_l_m2_h: float = Field(..., description=_DESCRIPCION_FLUJO)
+    eficacia_maxima_pulso: float = Field(..., description="Eficacia máxima del pulso resistivo.")
+    temperatura_media_c: float = Field(..., description="Temperatura ambiente media en °C.")
+    amplitud_temperatura_c: float = Field(..., description="Amplitud del ciclo térmico diurno en °C.")
+    amplitud_humedad_pct: float = Field(..., description="Amplitud del ciclo diurno de humedad en puntos de HR.")
+
+
 class SimulationResult(BaseModel):
     """Resultado completo de una simulación comparativa."""
 
@@ -339,13 +397,30 @@ class SimulationResult(BaseModel):
             "en la validación."
         ),
     )
+    parametros_usados: ParametrosUsados | None = Field(
+        default=None, description="Sitio y parámetros supuestos usados en la corrida; el simulador siempre lo llena."
+    )
 
 
 # ---------------------------------------------------------------------------
 # Análisis de robustez: barrido de salinidad y sensibilidad
 # ---------------------------------------------------------------------------
 MAXIMO_SEMILLAS = 5
+MAXIMO_SEMILLAS_ROBUSTEZ = 3
 MAXIMO_VALORES_SENSIBILIDAD = 11
+_DESCRIPCION_SEMILLAS = "Semillas del entorno, sin repetir; cada combinación se simula una vez por semilla."
+_DESCRIPCION_HUMEDAD_CORRIDAS = "Humedad relativa al inicio de cada corrida (18:00 hora local)."
+
+
+def _semillas_sin_duplicados(semillas: list[int]) -> list[int]:
+    """Rechaza semillas repetidas, que duplicarían corridas idénticas en la estadística."""
+    if len(set(semillas)) != len(semillas):
+        raise ValueError("Las semillas no deben repetirse.")
+    return semillas
+
+
+# Lista de semillas validada sin repetidos; la comparten el barrido y la robustez.
+SemillasUnicas = Annotated[list[int], AfterValidator(_semillas_sin_duplicados)]
 
 
 class BarridoConfig(BaseModel):
@@ -356,24 +431,22 @@ class BarridoConfig(BaseModel):
     )
 
     humedad_ambiente_inicial_pct: float = Field(
-        default=85.0, ge=0, le=100, description="Humedad relativa al inicio de cada corrida (18:00 hora local)."
+        default=85.0, ge=0, le=100, description=_DESCRIPCION_HUMEDAD_CORRIDAS
     )
     duracion_horas: int = Field(default=24, ge=1, le=72, description="Horas simuladas en cada corrida.")
-    numero_nodos: int = Field(default=8, ge=1, le=8, description="Cantidad de nodos simulados.")
-    semillas: List[int] = Field(
+    numero_nodos: int = Field(default=8, ge=1, le=8, description=_DESCRIPCION_NODOS)
+    semillas: SemillasUnicas = Field(
         default_factory=lambda: [42],
         min_length=1,
         max_length=MAXIMO_SEMILLAS,
-        description="Semillas del entorno, sin repetir; cada combinación se simula una vez por semilla.",
+        description=_DESCRIPCION_SEMILLAS,
     )
-
-    @field_validator("semillas")
-    @classmethod
-    def _semillas_sin_duplicados(cls, semillas: List[int]) -> List[int]:
-        """Rechaza semillas repetidas, que duplicarían corridas idénticas en la estadística."""
-        if len(set(semillas)) != len(semillas):
-            raise ValueError("Las semillas no deben repetirse.")
-        return semillas
+    flujo_niebla_maximo_l_m2_h: float | None = Field(
+        default=None, gt=0, le=20, description=_FLUJO_ADMITIDO + _VALOR_POR_DEFECTO
+    )
+    eficacia_maxima_pulso: float | None = Field(
+        default=None, gt=0, le=1, description=_EFICACIA_ADMITIDA + _VALOR_POR_DEFECTO
+    )
 
 
 class PuntoBarrido(BaseModel):
@@ -411,12 +484,180 @@ class PuntoBarrido(BaseModel):
         default=None,
         description="(D_temp - D_neuro) / D_temp * 100 con las medias; nula si el temporizador no se degrada.",
     )
+    rendimiento_neuro_l_m2_dia_media: float | None = Field(
+        default=None, description="Media del rendimiento del neuro-simbólico en L/m²/día."
+    )
+    incrustacion_diaria_ohm_media: float | None = Field(
+        default=None,
+        description="Media de la carga salina por el rendimiento del neuro-simbólico, en Ohm de impedancia por día.",
+    )
+    ventaja_recuperacion_pts: float | None = Field(
+        default=None,
+        description=(
+            "Recuperación media del neuro-simbólico menos la del temporizador, en puntos porcentuales; "
+            "nula si falta alguna."
+        ),
+    )
+    pulsos_neuro_media: float | None = Field(
+        default=None, description="Media de los pulsos ejecutados por el neuro-simbólico en toda la red."
+    )
+
+
+class EstadoCruce(str, Enum):
+    """Resultado de la búsqueda del punto donde la ventaja en recuperación cambia de signo."""
+
+    INTERPOLADO = "INTERPOLADO"
+    CRUCE_DESCENDENTE = "CRUCE_DESCENDENTE"
+    SIN_CRUCE_NEURO_SUPERIOR = "SIN_CRUCE_NEURO_SUPERIOR"
+    SIN_CRUCE_NEURO_INFERIOR = "SIN_CRUCE_NEURO_INFERIOR"
+    SIN_DATOS = "SIN_DATOS"
+
+
+class CruceRecuperacion(BaseModel):
+    """Incrustación diaria y carga salina donde la ventaja en recuperación vale 0, por interpolación lineal."""
+
+    estado: EstadoCruce = Field(
+        ...,
+        description=(
+            "INTERPOLADO: la ventaja pasa de <= 0 a > 0 al crecer la incrustación diaria. CRUCE_DESCENDENTE: "
+            "solo pasa de > 0 a <= 0. SIN_CRUCE_NEURO_SUPERIOR o SIN_CRUCE_NEURO_INFERIOR: no cambia de "
+            "signo. SIN_DATOS: menos de dos puntos con ventaja."
+        ),
+    )
+    incrustacion_diaria_ohm: float | None = Field(
+        default=None, description="Incrustación diaria interpolada en el cruce (Ohm/día); nula sin cruce."
+    )
+    carga_salina_ohm_l_m2: float | None = Field(
+        default=None, description="Carga salina interpolada en el cruce (Ohm por L/m²); nula sin cruce."
+    )
 
 
 class BarridoResultado(BaseModel):
     """Barrido de salinidad ordenado por carga salina creciente."""
 
     puntos: List[PuntoBarrido]
+    flujo_niebla_maximo_l_m2_h: float | None = Field(
+        default=None, description="Flujo máximo de niebla usado en las corridas (L/m²/h)."
+    )
+    eficacia_maxima_pulso: float | None = Field(
+        default=None, description="Eficacia máxima del pulso usada en las corridas."
+    )
+    cruce: CruceRecuperacion | None = Field(
+        default=None, description="Cruce de la ventaja en recuperación frente a la incrustación diaria."
+    )
+
+
+class RobustezConfig(BaseModel):
+    """Parámetros del barrido de salinidad repetido en la grilla de flujos de niebla y eficacias del pulso."""
+
+    model_config = ConfigDict(
+        json_schema_extra={"examples": [{"humedad_ambiente_inicial_pct": 85.0, "semillas": [42]}]}
+    )
+
+    humedad_ambiente_inicial_pct: float = Field(
+        default=85.0, ge=0, le=100, description=_DESCRIPCION_HUMEDAD_CORRIDAS
+    )
+    duracion_horas: int = Field(default=24, ge=24, le=72, description="Horas simuladas en cada corrida, de 24 a 72.")
+    numero_nodos: int = Field(default=8, ge=1, le=8, description=_DESCRIPCION_NODOS)
+    semillas: SemillasUnicas = Field(
+        default_factory=lambda: [42],
+        min_length=1,
+        max_length=MAXIMO_SEMILLAS_ROBUSTEZ,
+        description=_DESCRIPCION_SEMILLAS,
+    )
+
+
+class CombinacionRobustez(BaseModel):
+    """Barrido de salinidad con un par de flujo de niebla y eficacia del pulso."""
+
+    flujo_niebla_maximo_l_m2_h: float = Field(..., description=_DESCRIPCION_FLUJO)
+    eficacia_maxima_pulso: float = Field(..., description="Eficacia máxima del pulso.")
+    barrido: BarridoResultado
+
+
+class RobustezResultado(BaseModel):
+    """Barridos de la grilla de parámetros supuestos y resumen de la respuesta a la pregunta de investigación."""
+
+    combinaciones: list[CombinacionRobustez] = Field(..., description="Combinaciones en orden de flujo y eficacia.")
+    reduccion_desgaste_min_pct: float | None = Field(
+        default=None, description="Menor reducción del desgaste entre los puntos de todas las combinaciones."
+    )
+    reduccion_desgaste_max_pct: float | None = Field(
+        default=None, description="Mayor reducción del desgaste entre los puntos de todas las combinaciones."
+    )
+    combinaciones_con_cruce: int = Field(..., ge=0, description="Combinaciones con cruce INTERPOLADO.")
+    incrustacion_diaria_cruce_min_ohm: float | None = Field(
+        default=None, description="Menor incrustación diaria de cruce entre las combinaciones con cruce INTERPOLADO."
+    )
+    incrustacion_diaria_cruce_max_ohm: float | None = Field(
+        default=None, description="Mayor incrustación diaria de cruce entre las combinaciones con cruce INTERPOLADO."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Dimensionamiento del captador
+# ---------------------------------------------------------------------------
+class EstandarConsumo(str, Enum):
+    """Consumo diario por persona: Sphere (15 L, supervivencia) u OMS (20 L, acceso básico)."""
+
+    SPHERE_15 = "SPHERE_15"
+    OMS_20 = "OMS_20"
+
+
+class DimensionamientoConfig(BaseModel):
+    """Parámetros del dimensionamiento del captador para un número de personas."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "personas": 50,
+                    "estandar": "OMS_20",
+                    "escenario": "DIA_NORMAL",
+                    "humedad_ambiente_inicial_pct": 85.0,
+                }
+            ]
+        }
+    )
+
+    personas: int = Field(..., ge=1, le=1000, description="Personas que se quiere abastecer.")
+    estandar: EstandarConsumo = Field(default=EstandarConsumo.OMS_20, description="Estándar de consumo diario.")
+    escenario: Escenario = Field(..., description=_DESCRIPCION_ESCENARIO)
+    humedad_ambiente_inicial_pct: float = Field(
+        ..., ge=0, le=100, description=_DESCRIPCION_HUMEDAD_INICIAL
+    )
+    tasa_salinizacion: TasaSalinizacion = Field(
+        default=TasaSalinizacion.ALTA, description=_DESCRIPCION_TASA
+    )
+    semilla: int = Field(default=42, description=_DESCRIPCION_SEMILLA)
+
+
+class DimensionPorFlujo(BaseModel):
+    """Área de colector y nodos necesarios con un flujo de niebla."""
+
+    origen_flujo: str = Field(..., description="SUPUESTO, CALIBRADO_MAX o CALIBRADO_MIN.")
+    flujo_niebla_maximo_l_m2_h: float = Field(..., description=_DESCRIPCION_FLUJO)
+    rendimiento_neuro_l_m2_dia: float = Field(..., ge=0, description="Rendimiento del neuro-simbólico en L/m²/día.")
+    area_colector_m2: float | None = Field(
+        default=None, description="Área de colector requerida en m²; nula si el rendimiento es 0."
+    )
+    nodos_requeridos: int | None = Field(
+        default=None,
+        description="Nodos de 1 m² requeridos (área redondeada hacia arriba); nulo si el rendimiento es 0.",
+    )
+
+
+class DimensionamientoResultado(BaseModel):
+    """Dimensionamiento con los tres flujos de referencia y el rango de área de la literatura."""
+
+    consumo_l_persona_dia: float = Field(..., gt=0, description="Consumo diario por persona del estándar elegido.")
+    dimensiones: list[DimensionPorFlujo] = Field(..., description="Una dimensión por flujo de referencia.")
+    area_literatura_min_m2: float = Field(
+        ..., gt=0, description="Área con el rendimiento máximo de la literatura (10 L/m²/día, Klemm et al., 2012)."
+    )
+    area_literatura_max_m2: float = Field(
+        ..., gt=0, description="Área con el rendimiento mínimo de la literatura (3 L/m²/día, Klemm et al., 2012)."
+    )
 
 
 class ParametroSensible(str, Enum):
@@ -450,13 +691,13 @@ class SensibilidadConfig(BaseModel):
         }
     )
 
-    escenario: Escenario = Field(..., description="Escenario ambiental.")
+    escenario: Escenario = Field(..., description=_DESCRIPCION_ESCENARIO)
     humedad_ambiente_inicial_pct: float = Field(
-        ..., ge=0, le=100, description="Humedad relativa al inicio de la simulación (18:00 hora local)."
+        ..., ge=0, le=100, description=_DESCRIPCION_HUMEDAD_INICIAL
     )
-    tasa_salinizacion: TasaSalinizacion = Field(..., description="Velocidad de incrustación salina.")
+    tasa_salinizacion: TasaSalinizacion = Field(..., description=_DESCRIPCION_TASA)
     duracion_horas: int = Field(default=24, ge=1, le=72, description="Horas simuladas.")
-    semilla: int = Field(default=42, description="Semilla del generador aleatorio del entorno.")
+    semilla: int = Field(default=42, description=_DESCRIPCION_SEMILLA)
     parametro: ParametroSensible = Field(..., description="Parámetro supuesto que se varía.")
     valores: List[float] = Field(
         ...,
@@ -506,8 +747,6 @@ class SensibilidadResultado(BaseModel):
 # ---------------------------------------------------------------------------
 MINIMO_MUESTRAS = 5
 MAXIMO_MUESTRAS = 30
-_EFICACIA_ADMITIDA = "Eficacia máxima del pulso, en (0, 1]."
-_FLUJO_ADMITIDO = "Flujo máximo de niebla en L/m²/h, en (0, 20]."
 
 
 class IncertidumbreConfig(BaseModel):
@@ -532,11 +771,11 @@ class IncertidumbreConfig(BaseModel):
         }
     )
 
-    escenario: Escenario = Field(..., description="Escenario ambiental.")
+    escenario: Escenario = Field(..., description=_DESCRIPCION_ESCENARIO)
     humedad_ambiente_inicial_pct: float = Field(
-        ..., ge=0, le=100, description="Humedad relativa al inicio de la simulación (18:00 hora local)."
+        ..., ge=0, le=100, description=_DESCRIPCION_HUMEDAD_INICIAL
     )
-    tasa_salinizacion: TasaSalinizacion = Field(..., description="Velocidad de incrustación salina.")
+    tasa_salinizacion: TasaSalinizacion = Field(..., description=_DESCRIPCION_TASA)
     duracion_horas: int = Field(default=24, ge=1, le=72, description="Horas simuladas en cada corrida.")
     semilla: int = Field(default=42, description="Semilla del entorno; es la misma en todas las muestras.")
     semilla_muestreo: int = Field(default=7, description="Semilla del muestreo de los parámetros.")
@@ -573,6 +812,13 @@ class MuestraIncertidumbre(BaseModel):
     reduccion_degradacion_pct: float | None = Field(
         default=None, description="Reducción de la degradación frente al temporizador (%); informativo."
     )
+    recuperacion_temporizador_pct: float | None = Field(
+        default=None, description="Recuperación media tras pulso del temporizador (%); nula sin pulsos."
+    )
+    ventaja_recuperacion_pts: float | None = Field(
+        default=None,
+        description="Recuperación del neuro-simbólico menos la del temporizador, en puntos; nula si falta alguna.",
+    )
 
 
 class ResumenDistribucion(BaseModel):
@@ -596,3 +842,15 @@ class IncertidumbreResultado(BaseModel):
         ..., description="Reducción de la degradación frente al temporizador (%)."
     )
     muestras: list[MuestraIncertidumbre] = Field(..., description="Muestras en el orden en que se generaron.")
+    ventaja_recuperacion: ResumenDistribucion | None = Field(
+        default=None, description="Ventaja en recuperación del neuro-simbólico frente al temporizador (puntos)."
+    )
+    probabilidad_ventaja_recuperacion: float | None = Field(
+        default=None,
+        ge=0,
+        le=1,
+        description=(
+            "Proporción de las muestras con ambas recuperaciones en que la ventaja es positiva; "
+            "nula si ninguna muestra tiene ambas."
+        ),
+    )

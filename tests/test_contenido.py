@@ -91,6 +91,17 @@ def test_respuesta_preliminar_conserva_las_cifras():
         assert cifra in texto
 
 
+def test_respuesta_preliminar_incluye_la_robustez():
+    texto = " ".join(contenido.RESPUESTA_PRELIMINAR)
+    for cifra in ("73.3 %", "54 puntos", "1633 y 1839 Ohm", "1867 Ohm"):
+        assert cifra in texto
+
+
+@pytest.mark.parametrize("fragmento", ["H1-Ciclo 3", "incrustación diaria", "1633 y 1867 Ohm por día"])
+def test_hipotesis_derivada(fragmento):
+    assert fragmento in contenido.HIPOTESIS_DERIVADA
+
+
 def test_conjeturas_completas():
     assert len(contenido.CONJETURAS) == 3
     for conjetura in contenido.CONJETURAS:

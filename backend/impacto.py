@@ -8,11 +8,34 @@ operativos de captación de niebla. Es un indicador informativo: no interviene
 en la validación de las conjeturas ni en las decisiones del motor.
 """
 
+import math
+
 from backend import config
 from backend.schemas import ImpactoComunitario
 
 HORAS_POR_DIA = 24
 DECIMALES = 4
+
+
+def dimensionar(
+    personas: int, consumo_l_persona_dia: float, rendimiento_l_m2_dia: float
+) -> tuple[float | None, int | None]:
+    """Área de colector y nodos necesarios para abastecer a las personas indicadas.
+
+    Área = personas * consumo / rendimiento, redondeada a 4 decimales; los
+    nodos son el área redondeada hacia arriba, con AREA_COLECTOR_M2 (1 m²) por
+    nodo. Devuelve (None, None) si el rendimiento no es positivo. Lanza
+    ValueError si las personas o el consumo no son positivos.
+    """
+    if personas <= 0:
+        raise ValueError(f"El número de personas debe ser positivo: {personas}")
+    if consumo_l_persona_dia <= 0:
+        raise ValueError(f"El consumo por persona debe ser positivo: {consumo_l_persona_dia}")
+    if rendimiento_l_m2_dia <= 0:
+        return None, None
+    # Se redondea antes de math.ceil para que un error de coma flotante no agregue un nodo.
+    area = round(personas * consumo_l_persona_dia / rendimiento_l_m2_dia, DECIMALES)
+    return area, math.ceil(area / config.AREA_COLECTOR_M2)
 
 
 def impacto_comunitario(litros_totales: float, duracion_horas: int, numero_nodos: int) -> ImpactoComunitario:

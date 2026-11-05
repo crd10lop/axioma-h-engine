@@ -76,3 +76,23 @@ def test_url_base_acepta_https_y_quita_barra_final():
 def test_url_base_rechaza_esquema_o_host_invalido(valor):
     with pytest.raises(argparse.ArgumentTypeError):
         verificador._url_base(valor)
+
+
+def test_filas_robustez_una_fila_por_combinacion_y_punto():
+    cruce = {"estado": "SIN_DATOS", "incrustacion_diaria_ohm": None, "carga_salina_ohm_l_m2": None}
+    robustez = {
+        "combinaciones": [
+            {
+                "flujo_niebla_maximo_l_m2_h": flujo,
+                "eficacia_maxima_pulso": 0.9,
+                "barrido": {"cruce": cruce, "puntos": [{"carga_salina_ohm_l_m2": 20.0}, {"carga_salina_ohm_l_m2": 40.0}]},
+            }
+            for flujo in (6.0, 1.83)
+        ]
+    }
+    filas = generador.filas_robustez(robustez)
+    assert len(filas) == 4
+    assert filas[2]["flujo_niebla_maximo_l_m2_h"] == pytest.approx(1.83)
+    assert filas[1]["carga_salina_ohm_l_m2"] == pytest.approx(40.0)
+    assert filas[0]["cruce_incrustacion_diaria_ohm"] == ""
+    assert filas[0][generador.CAMPO_HUMEDAD] == pytest.approx(generador.HUMEDAD_BARRIDO_PCT)

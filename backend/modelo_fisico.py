@@ -6,7 +6,7 @@ que la evaluación individual de un nodo y la simulación usen el mismo modelo.
 """
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from backend import config
 
@@ -26,6 +26,27 @@ class ParametrosModelo:
 
 
 PARAMETROS_BASE = ParametrosModelo()
+
+
+def parametros_desde(
+    flujo_niebla_maximo_l_m2_h: float | None = None, eficacia_maxima_pulso: float | None = None
+) -> ParametrosModelo:
+    """Parámetros del modelo con los valores indicados y los demás de `backend/config.py`.
+
+    Devuelve PARAMETROS_BASE si ambos valores son None; si no, una copia con
+    `dataclasses.replace`, sin modificar `backend.config`. Lanza ValueError si
+    un valor no es positivo o si la eficacia supera 1.
+    """
+    cambios: dict[str, float] = {}
+    if flujo_niebla_maximo_l_m2_h is not None:
+        if flujo_niebla_maximo_l_m2_h <= 0:
+            raise ValueError(f"El flujo máximo de niebla debe ser positivo: {flujo_niebla_maximo_l_m2_h}")
+        cambios["flujo_niebla_maximo_l_m2_h"] = flujo_niebla_maximo_l_m2_h
+    if eficacia_maxima_pulso is not None:
+        if not 0 < eficacia_maxima_pulso <= 1:
+            raise ValueError(f"La eficacia máxima del pulso debe estar en (0, 1]: {eficacia_maxima_pulso}")
+        cambios["eficacia_maxima_pulso"] = eficacia_maxima_pulso
+    return replace(PARAMETROS_BASE, **cambios) if cambios else PARAMETROS_BASE
 
 
 def conductancia_relativa(impedancia_ohms: float) -> float:

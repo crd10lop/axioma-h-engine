@@ -4,8 +4,11 @@ import pytest
 
 from backend import config
 from backend.modelo_fisico import (
+    PARAMETROS_BASE,
+    ParametrosModelo,
     conductancia_relativa,
     flujo_niebla_disponible_l_m2_h,
+    parametros_desde,
     tiempo_fraccion_remocion,
     tiempo_hasta_impedancia,
 )
@@ -54,3 +57,40 @@ def test_tiempo_fraccion_remocion_crece_con_la_fraccion():
     t95 = tiempo_fraccion_remocion(config.TEMPERATURA_OBJETIVO_PULSO_C)
     assert t50 < t95
     assert t95 < config.DURACION_PULSO_SEG
+
+
+def test_parametros_desde_sin_valores_devuelve_los_parametros_base():
+    assert parametros_desde() is PARAMETROS_BASE
+
+
+@pytest.mark.parametrize(
+    ("flujo", "eficacia", "esperado"),
+    [
+        (1.83, None, ParametrosModelo(flujo_niebla_maximo_l_m2_h=1.83)),
+        (None, 0.8, ParametrosModelo(eficacia_maxima_pulso=0.8)),
+        (0.49, 1.0, ParametrosModelo(eficacia_maxima_pulso=1.0, flujo_niebla_maximo_l_m2_h=0.49)),
+    ],
+)
+def test_parametros_desde_con_valores(flujo, eficacia, esperado):
+    assert parametros_desde(flujo, eficacia) == esperado
+
+
+def test_parametros_desde_no_modifica_los_parametros_base():
+    parametros_desde(0.5, 0.5)
+    assert PARAMETROS_BASE == ParametrosModelo()
+    assert config.FLUJO_NIEBLA_MAXIMO_L_M2_H == pytest.approx(6.0)
+
+
+@pytest.mark.parametrize(
+    ("flujo", "eficacia", "mensaje"),
+    [
+        (0.0, None, "flujo"),
+        (-1.0, None, "flujo"),
+        (None, 0.0, "eficacia"),
+        (None, -0.1, "eficacia"),
+        (None, 1.01, "eficacia"),
+    ],
+)
+def test_parametros_desde_rechaza_valores_invalidos(flujo, eficacia, mensaje):
+    with pytest.raises(ValueError, match=mensaje):
+        parametros_desde(flujo, eficacia)

@@ -42,7 +42,7 @@ REGLA_06 is human supervision, set with the optional `anulacion_manual` field of
 
 Two services run separately:
 
-- **Backend (FastAPI, port 8000):** rule-based control engine (`backend/motor_reglas.py`, first stage of the neuro-symbolic architecture), physical model, comparative simulator, conjecture verification, community impact and robustness analyses (salinity sweep with several seeds, parameter sensitivity, fog flux calibration and uncertainty propagation).
+- **Backend (FastAPI, port 8000):** rule-based control engine (`backend/motor_reglas.py`, first stage of the neuro-symbolic architecture), physical model, comparative simulator, conjecture verification, community impact and robustness analyses (salinity sweep with several seeds, robustness of the answer to the assumed parameters, parameter sensitivity, fog flux calibration and uncertainty propagation), collector sizing and site profiles to transfer the model.
 - **Frontend (Streamlit, port 8501):** dashboard that consumes the API over HTTP. It has four views: research guide, manual node evaluation, comparative simulation, and answer to the research question.
 
 | Method | Path | Description |
@@ -52,7 +52,12 @@ Two services run separately:
 | POST | `/api/v1/simulacion/ejecutar` | Runs the comparative simulation |
 | POST | `/api/v1/analisis/barrido-salinidad` | Salinity sweep with mean and standard deviation over 1 to 5 seeds |
 | POST | `/api/v1/analisis/sensibilidad` | Re-runs the simulation for several values of pulse efficacy or fog flux |
-| POST | `/api/v1/analisis/incertidumbre` | Samples pulse efficacy and fog flux together and estimates the probability of validating each conjecture |
+| POST | `/api/v1/analisis/incertidumbre` | Samples pulse efficacy and fog flux together and estimates the probability of validating each conjecture and of a recovery advantage for the rule-based control |
+| POST | `/api/v1/analisis/robustez-respuesta` | Repeats the sweep with 3 fog fluxes by 3 pulse efficacies and reports where the recovery advantage crosses zero as a function of daily incrustation |
+| POST | `/api/v1/analisis/dimensionamiento` | Collector area and nodes needed for a number of people, with the three reference fog fluxes |
+| GET | `/api/v1/sitios` | Reference site profiles (Cabo de la Vela with the assumed flux and with the calibrated extremes) |
+
+`POST /api/v1/simulacion/ejecutar` also accepts an optional `sitio` profile (name, maximum fog flux, mean temperature and daily temperature and humidity amplitudes) and an optional `eficacia_maxima_pulso`. Without them, the Cabo de la Vela values are used and results do not change. The response reports the values used in `parametros_usados`.
 
 ## Installation and local use
 
@@ -86,7 +91,7 @@ pytest --cov --cov-report=term-missing
 
 ## Deployment
 
-The API and the dashboard are deployed on **Render** (free plan) as two web services defined in `render.yaml` and built from the `main` branch. Each push to `main` runs the CI workflow (tests, coverage and SonarQube Cloud analysis), and Render deploys both services only when all checks pass. The automated verification script (`python scripts/verificar_despliegue.py`) runs 22 checks against the published services; the latest recorded run is in section 4.3 of docs/05. Details are in [docs/05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md) (in Spanish).
+The API and the dashboard are deployed on **Render** (free plan) as two web services defined in `render.yaml` and built from the `main` branch. Each push to `main` runs the CI workflow (tests, coverage and SonarQube Cloud analysis), and Render deploys both services only when all checks pass. The automated verification script (`python scripts/verificar_despliegue.py`) runs 26 checks against the published services; the latest recorded run is in section 4.3 of docs/05. Details are in [docs/05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md) (in Spanish).
 
 ## Results
 
@@ -124,6 +129,16 @@ None of the three conjectures is validated in this run: flow recovery is 88.81 %
 
 The rule-based control reduces accumulated degradation by 74 % to 99 % at every level. Its recovery stays stable, while the timer's falls with salinity: the timer recovers more at low salinity, because it cleans nearly clean membranes, and the neuro-symbolic control overtakes it from 60 Ohm per L/m².
 
+### Robustness of the answer
+
+Repeated with three fog fluxes (6.0 L/m²/h assumed, 1.83 and 0.49 calibrated against the literature) and three pulse efficacies (0.80, 0.90 and 1.00), seed 42:
+
+- the rule-based control reduces membrane wear by 73.3 % to 100 % at all 54 points of the nine combinations;
+- its recovery advantage depends on daily incrustation (salt load times water collected per day), not on the salt load per litre: in the six combinations with a crossing it appears from 1632.9 to 1839.2 Ohm/day, while the salt load per litre at the crossing ranges from 50.3 to 190.9; with 0.49 L/m²/h that incrustation is never reached and the timer recovers more;
+- with the calibrated flux, the rule-based control recovers more in only 3 of 62 uncertainty samples (probability 0.15 in rapid salt incrustation and 0.00 in the other scenarios with pulses).
+
+The derived hypothesis H1-Cycle 3 states that the crossing occurs at a daily incrustation between 1633 and 1867 Ohm/day, whatever combination of fog flux and salt load per litre produces it. Details are in docs/04, sections 8.8 and 8.9. For 50 people at 20 L per day (normal day, 85 %), the sizing endpoint gives 32 nodes with the assumed flux and 100 or 332 with the calibrated fluxes, versus 100 to 333 m² from the literature (docs/04, section 7.7).
+
 ### Ecological cap versus control logic
 
 A reference timer with the same 0.33 cap separates the two causes of the water gap:
@@ -158,6 +173,7 @@ The 33 % cap comes from the team's formulation of Conjecture 3 (narrative of Cyc
 - The status of Conjectures 1 and 2 changes with pulse efficacy; measuring it is the priority before declaring either validated or refuted.
 - The reference climate uses idealized daily cycles with Gaussian noise.
 - The assumed fog flux is optimistic compared with the literature (see references).
+- The available site profiles are only for Cabo de la Vela, because the project has no sourced climate data for other sites. Robustness, sizing and site profiles are available through the API but not yet in the dashboard.
 - This is an analytical proof of concept, roughly TRL 2-3, with no physical prototype. Prior consultation with Wayuu communities (ILO Convention 169, Colombian Law 21 of 1991) is required before any pilot in their territory and has not been carried out.
 
 ## Version history
@@ -166,6 +182,7 @@ The 33 % cap comes from the team's formulation of Conjecture 3 (narrative of Cyc
 |---|---|
 | 0.1.0 | Rule-based control engine, comparative simulation against the fixed timer, verification of the three conjectures, Streamlit dashboard and deployment on Render. |
 | 0.2.0 | Robustness analyses (salinity sweep with several seeds and sensitivity), causes of non-validation, timer with ecological cap, community impact, conservative human supervision (REGLA_06) and uncertainty propagation with the calibrated fog flux. |
+| 0.3.0 | Robustness of the answer to fog flux and pulse efficacy, daily incrustation and recovery crossing in the sweep, recovery advantage in the uncertainty analysis, collector sizing, site profile and pulse efficacy in the simulation, `parametros_usados` and `GET /api/v1/sitios`. |
 
 The 0.2.0 features were added incrementally while the service still reported 0.1.0; the version number was updated when the set was closed.
 

@@ -1,4 +1,4 @@
-"""Pruebas del análisis de robustez: barrido, sensibilidad, calibración e incertidumbre."""
+"""Pruebas del análisis de robustez: barrido, robustez, sensibilidad, calibración, incertidumbre y dimensionamiento."""
 
 import copy
 from concurrent.futures import ThreadPoolExecutor
@@ -10,9 +10,14 @@ from backend import analisis, config
 from backend.modelo_fisico import PARAMETROS_BASE, ParametrosModelo
 from backend.schemas import (
     BarridoConfig,
+    DimensionamientoConfig,
     Escenario,
+    EstadoCruce,
+    EstandarConsumo,
     IncertidumbreConfig,
     ParametroSensible,
+    PuntoBarrido,
+    RobustezConfig,
     SensibilidadConfig,
     SimulationConfig,
     TasaSalinizacion,
@@ -399,3 +404,307 @@ def test_incertidumbre_no_cambia_la_configuracion_global():
 def test_configuracion_de_incertidumbre_invalida(cambios):
     with pytest.raises(ValidationError):
         _incertidumbre(**cambios)
+
+
+# ---------------------------------------------------------------------------
+# Barrido con parámetros, incrustación diaria y cruce de la ventaja
+# ---------------------------------------------------------------------------
+def _punto(incrustacion, ventaja, carga=60.0):
+    """Punto de barrido sintético con la incrustación diaria, la ventaja y la carga salina dadas."""
+    return PuntoBarrido(
+        escenario=Escenario.DIA_NORMAL,
+        tasa_salinizacion=TasaSalinizacion.ALTA,
+        carga_salina_ohm_l_m2=carga,
+        n_semillas=1,
+        incrustacion_diaria_ohm_media=incrustacion,
+        ventaja_recuperacion_pts=ventaja,
+    )
+
+
+def test_barrido_por_defecto_informa_los_parametros_base(barrido):
+    assert barrido.flujo_niebla_maximo_l_m2_h == pytest.approx(config.FLUJO_NIEBLA_MAXIMO_L_M2_H)
+    assert barrido.eficacia_maxima_pulso == pytest.approx(config.EFICACIA_MAXIMA_PULSO)
+
+
+def test_barrido_ventaja_es_la_diferencia_de_recuperaciones(barrido):
+    punto = barrido.puntos[-1]
+    esperado = punto.recuperacion_neuro_media - punto.recuperacion_temporizador_media
+    assert punto.ventaja_recuperacion_pts == pytest.approx(esperado, abs=1e-3)
+
+
+def test_barrido_incrustacion_diaria_es_carga_por_rendimiento(barrido):
+    punto = barrido.puntos[3]
+    esperado = punto.carga_salina_ohm_l_m2 * punto.rendimiento_neuro_l_m2_dia_media
+    assert punto.incrustacion_diaria_ohm_media == pytest.approx(esperado, abs=1e-2)
+
+
+def test_barrido_carga_alta_reporta_pulsos_y_rendimiento(barrido):
+    punto = barrido.puntos[-1]
+    assert punto.pulsos_neuro_media == pytest.approx(97.0)
+    assert punto.rendimiento_neuro_l_m2_dia_media == pytest.approx(23.17, abs=0.01)
+
+
+def test_barrido_por_defecto_cruza_entre_40_y_60_ohm_por_litro(barrido):
+    cruce = barrido.cruce
+    assert cruce.estado == EstadoCruce.INTERPOLADO
+    assert 40.0 < cruce.carga_salina_ohm_l_m2 < 60.0
+
+
+def test_barrido_sin_pulsos_no_tiene_ventaja():
+    resultado = analisis.ejecutar_barrido(BarridoConfig(humedad_ambiente_inicial_pct=0.0, duracion_horas=1, numero_nodos=1))
+    punto = resultado.puntos[0]
+    assert punto.ventaja_recuperacion_pts is None
+    assert resultado.cruce.estado == EstadoCruce.SIN_DATOS
+
+
+def test_barrido_con_flujo_no_modifica_la_configuracion():
+    antes = _configuracion_global()
+    resultado = analisis.ejecutar_barrido(
+        BarridoConfig(duracion_horas=2, numero_nodos=1, flujo_niebla_maximo_l_m2_h=1.83, eficacia_maxima_pulso=0.8)
+    )
+    despues = _configuracion_global()
+    assert despues == antes
+    assert PARAMETROS_BASE == ParametrosModelo()
+    assert resultado.flujo_niebla_maximo_l_m2_h == pytest.approx(1.83)
+    assert resultado.eficacia_maxima_pulso == pytest.approx(0.8)
+
+
+def test_barrido_con_flujo_menor_reduce_el_rendimiento(barrido):
+    calibrado = analisis.ejecutar_barrido(BarridoConfig(flujo_niebla_maximo_l_m2_h=1.83))
+    assert calibrado.puntos[0].rendimiento_neuro_l_m2_dia_media < barrido.puntos[0].rendimiento_neuro_l_m2_dia_media
+
+
+@pytest.mark.parametrize(
+    "puntos",
+    [[], [_punto(100.0, 1.0)], [_punto(100.0, 1.0), _punto(None, 2.0), _punto(300.0, None)]],
+)
+def test_cruce_sin_datos(puntos):
+    cruce = analisis._cruce(puntos)
+    assert cruce.estado == EstadoCruce.SIN_DATOS
+    assert cruce.incrustacion_diaria_ohm is None
+
+
+def test_cruce_sin_cambio_de_signo_neuro_superior():
+    cruce = analisis._cruce([_punto(300.0, 2.0), _punto(100.0, 0.5)])
+    assert cruce.estado == EstadoCruce.SIN_CRUCE_NEURO_SUPERIOR
+    assert cruce.carga_salina_ohm_l_m2 is None
+
+
+@pytest.mark.parametrize("ventajas", [(-3.0, -1.0), (0.0, 0.0), (-2.0, 0.0)])
+def test_cruce_sin_cambio_de_signo_neuro_inferior(ventajas):
+    cruce = analisis._cruce([_punto(100.0, ventajas[0]), _punto(300.0, ventajas[1])])
+    assert cruce.estado == EstadoCruce.SIN_CRUCE_NEURO_INFERIOR
+
+
+def test_cruce_interpolacion_exacta():
+    # La ventaja pasa de -1 a 3: vale 0 a un cuarto del intervalo.
+    puntos = [_punto(2000.0, 3.0, carga=100.0), _punto(1000.0, -1.0, carga=50.0)]
+    cruce = analisis._cruce(puntos)
+    assert cruce.estado == EstadoCruce.INTERPOLADO
+    assert cruce.incrustacion_diaria_ohm == pytest.approx(1250.0)
+    assert cruce.carga_salina_ohm_l_m2 == pytest.approx(62.5)
+
+
+def test_cruce_con_ventaja_nula_en_el_extremo_inferior():
+    cruce = analisis._cruce([_punto(100.0, 0.0, carga=20.0), _punto(200.0, 4.0, carga=40.0)])
+    assert cruce.incrustacion_diaria_ohm == pytest.approx(100.0)
+    assert cruce.carga_salina_ohm_l_m2 == pytest.approx(20.0)
+
+
+def test_cruce_toma_el_primer_paso_ascendente():
+    puntos = [_punto(100.0, -1.0), _punto(200.0, 1.0), _punto(300.0, -1.0), _punto(400.0, 1.0)]
+    cruce = analisis._cruce(puntos)
+    assert cruce.estado == EstadoCruce.INTERPOLADO
+    assert cruce.incrustacion_diaria_ohm == pytest.approx(150.0)
+
+
+def test_cruce_descendente():
+    cruce = analisis._cruce([_punto(100.0, 2.0, carga=20.0), _punto(300.0, -2.0, carga=60.0)])
+    assert cruce.estado == EstadoCruce.CRUCE_DESCENDENTE
+    assert cruce.incrustacion_diaria_ohm == pytest.approx(200.0)
+    assert cruce.carga_salina_ohm_l_m2 == pytest.approx(40.0)
+
+
+# ---------------------------------------------------------------------------
+# Robustez de la respuesta
+# ---------------------------------------------------------------------------
+@pytest.fixture(scope="module")
+def robustez():
+    """Robustez con semilla 42 y humedad inicial de 85 %, como en el documento 04, sección 8.8."""
+    return analisis.ejecutar_robustez(RobustezConfig())
+
+
+def test_robustez_tiene_nueve_combinaciones(robustez):
+    pares = [(c.flujo_niebla_maximo_l_m2_h, c.eficacia_maxima_pulso) for c in robustez.combinaciones]
+    assert len(pares) == 9
+    assert len(set(pares)) == 9
+
+
+def test_robustez_combinaciones_en_orden_de_flujo_y_eficacia(robustez):
+    primera, ultima = robustez.combinaciones[0], robustez.combinaciones[-1]
+    assert primera.flujo_niebla_maximo_l_m2_h == pytest.approx(config.FLUJO_NIEBLA_MAXIMO_L_M2_H)
+    assert primera.eficacia_maxima_pulso == pytest.approx(config.EFICACIA_PULSO_RANGO_MIN)
+    assert ultima.flujo_niebla_maximo_l_m2_h == pytest.approx(config.FLUJO_NIEBLA_CALIBRADO_MIN_L_M2_H)
+    assert ultima.eficacia_maxima_pulso == pytest.approx(config.EFICACIA_PULSO_RANGO_MAX)
+
+
+def test_robustez_cada_barrido_usa_sus_parametros(robustez):
+    for combinacion in robustez.combinaciones:
+        assert combinacion.barrido.flujo_niebla_maximo_l_m2_h == pytest.approx(combinacion.flujo_niebla_maximo_l_m2_h)
+        assert combinacion.barrido.eficacia_maxima_pulso == pytest.approx(combinacion.eficacia_maxima_pulso)
+
+
+def test_robustez_combinacion_base_coincide_con_el_barrido(robustez, barrido):
+    base = robustez.combinaciones[1].barrido
+    assert base.puntos == barrido.puntos
+
+
+def test_robustez_rango_de_reduccion_coherente_con_los_barridos(robustez):
+    reducciones = [p.reduccion_desgaste_pct for c in robustez.combinaciones for p in c.barrido.puntos]
+    assert robustez.reduccion_desgaste_min_pct == pytest.approx(min(reducciones))
+    assert robustez.reduccion_desgaste_max_pct == pytest.approx(max(reducciones))
+
+
+def test_robustez_cuenta_las_combinaciones_con_cruce(robustez):
+    cruces = [
+        c.barrido.cruce.incrustacion_diaria_ohm
+        for c in robustez.combinaciones
+        if c.barrido.cruce.estado == EstadoCruce.INTERPOLADO
+    ]
+    assert robustez.combinaciones_con_cruce == len(cruces)
+    assert robustez.incrustacion_diaria_cruce_min_ohm == pytest.approx(min(cruces))
+    assert robustez.incrustacion_diaria_cruce_max_ohm == pytest.approx(max(cruces))
+
+
+def test_robustez_reproduce_el_documento_04(robustez):
+    assert robustez.combinaciones_con_cruce == 6
+    assert robustez.incrustacion_diaria_cruce_min_ohm == pytest.approx(1632.87, abs=0.01)
+    assert robustez.incrustacion_diaria_cruce_max_ohm == pytest.approx(1839.21, abs=0.01)
+    assert robustez.reduccion_desgaste_min_pct == pytest.approx(73.26, abs=0.01)
+
+
+def test_robustez_no_modifica_la_configuracion():
+    antes = _configuracion_global()
+    analisis.ejecutar_robustez(RobustezConfig(numero_nodos=1))
+    despues = _configuracion_global()
+    assert despues == antes
+    assert PARAMETROS_BASE == ParametrosModelo()
+
+
+def test_extremos_sin_valores():
+    assert analisis._extremos([]) == (None, None)
+
+
+@pytest.mark.parametrize(
+    "cambios",
+    [{"duracion_horas": 23}, {"duracion_horas": 73}, {"semillas": [1, 2, 3, 4]}, {"semillas": [5, 5]}, {"semillas": []}],
+)
+def test_configuracion_de_robustez_invalida(cambios):
+    with pytest.raises(ValidationError):
+        RobustezConfig(**cambios)
+
+
+# ---------------------------------------------------------------------------
+# Perfiles de sitio y dimensionamiento
+# ---------------------------------------------------------------------------
+def test_perfiles_de_sitio_de_referencia():
+    perfiles = analisis.perfiles_sitio()
+    assert [perfil.nombre for perfil in perfiles] == [
+        "CABO_DE_LA_VELA",
+        "CABO_DE_LA_VELA_CALIBRADO_MAX",
+        "CABO_DE_LA_VELA_CALIBRADO_MIN",
+    ]
+    assert [perfil.flujo_niebla_maximo_l_m2_h for perfil in perfiles] == pytest.approx([6.0, 1.83, 0.49])
+
+
+def test_perfiles_de_sitio_conservan_el_clima_de_config():
+    for perfil in analisis.perfiles_sitio():
+        assert perfil.temperatura_media_c == pytest.approx(config.TEMPERATURA_MEDIA_C)
+        assert perfil.amplitud_humedad_pct == pytest.approx(config.AMPLITUD_HUMEDAD_PCT)
+
+
+def _dimensionamiento(**cambios) -> DimensionamientoConfig:
+    """Dimensionamiento para 50 personas en DIA_NORMAL con humedad inicial de 85 %."""
+    datos = {"personas": 50, "escenario": Escenario.DIA_NORMAL, "humedad_ambiente_inicial_pct": 85.0}
+    datos.update(cambios)
+    return DimensionamientoConfig(**datos)
+
+
+@pytest.fixture(scope="module")
+def dimensionamiento():
+    """Dimensionamiento para 50 personas con el estándar OMS de 20 L por persona al día."""
+    return analisis.ejecutar_dimensionamiento(_dimensionamiento())
+
+
+def test_dimensionamiento_usa_los_tres_flujos(dimensionamiento):
+    origenes = [dimension.origen_flujo for dimension in dimensionamiento.dimensiones]
+    assert origenes == ["SUPUESTO", "CALIBRADO_MAX", "CALIBRADO_MIN"]
+
+
+def test_dimensionamiento_con_flujo_supuesto_reproduce_el_impacto(dimensionamiento):
+    supuesto = dimensionamiento.dimensiones[0]
+    assert supuesto.rendimiento_neuro_l_m2_dia == pytest.approx(31.83, abs=0.01)
+    assert supuesto.area_colector_m2 == pytest.approx(50 * 20.0 / supuesto.rendimiento_neuro_l_m2_dia, abs=1e-3)
+    assert supuesto.nodos_requeridos == 32
+
+
+def test_dimensionamiento_con_flujo_calibrado_requiere_mas_area(dimensionamiento):
+    areas = [dimension.area_colector_m2 for dimension in dimensionamiento.dimensiones]
+    assert areas[0] < areas[1]
+    assert areas[1] < areas[2]
+
+
+def test_dimensionamiento_rango_de_la_literatura(dimensionamiento):
+    assert dimensionamiento.consumo_l_persona_dia == pytest.approx(config.CONSUMO_ACCESO_BASICO_L_PERSONA_DIA)
+    assert dimensionamiento.area_literatura_min_m2 == pytest.approx(100.0)
+    assert dimensionamiento.area_literatura_max_m2 == pytest.approx(1000.0 / 3.0, abs=1e-3)
+
+
+def test_dimensionamiento_con_estandar_sphere():
+    resultado = analisis.ejecutar_dimensionamiento(_dimensionamiento(estandar=EstandarConsumo.SPHERE_15))
+    assert resultado.consumo_l_persona_dia == pytest.approx(config.CONSUMO_SUPERVIVENCIA_L_PERSONA_DIA)
+    assert resultado.area_literatura_min_m2 == pytest.approx(75.0)
+
+
+def test_dimensionamiento_sin_rendimiento():
+    resultado = analisis.ejecutar_dimensionamiento(_dimensionamiento(humedad_ambiente_inicial_pct=0.0))
+    for dimension in resultado.dimensiones:
+        assert dimension.area_colector_m2 is None
+        assert dimension.nodos_requeridos is None
+
+
+@pytest.mark.parametrize("cambios", [{"personas": 0}, {"personas": 1001}, {"estandar": "OMS_50"}])
+def test_configuracion_de_dimensionamiento_invalida(cambios):
+    with pytest.raises(ValidationError):
+        _dimensionamiento(**cambios)
+
+
+# ---------------------------------------------------------------------------
+# Ventaja en recuperación en la propagación de la incertidumbre
+# ---------------------------------------------------------------------------
+def test_incertidumbre_ventaja_por_muestra(incertidumbre_salina):
+    for muestra in incertidumbre_salina.muestras:
+        esperado = muestra.recuperacion_caudal_promedio_pct - muestra.recuperacion_temporizador_pct
+        assert muestra.ventaja_recuperacion_pts == pytest.approx(esperado, abs=1e-3)
+
+
+def test_incertidumbre_probabilidad_de_ventaja(incertidumbre_salina):
+    ventajas = [m.ventaja_recuperacion_pts for m in incertidumbre_salina.muestras]
+    positivas = sum(ventaja > 0 for ventaja in ventajas)
+    assert incertidumbre_salina.probabilidad_ventaja_recuperacion == pytest.approx(positivas / len(ventajas))
+    assert incertidumbre_salina.ventaja_recuperacion.n_validos == len(ventajas)
+
+
+def test_incertidumbre_reproduce_el_documento_04(incertidumbre_salina):
+    assert incertidumbre_salina.probabilidad_ventaja_recuperacion == pytest.approx(0.15)
+
+
+def test_incertidumbre_sin_pulsos_no_tiene_ventaja():
+    resultado = analisis.ejecutar_incertidumbre(_incertidumbre(escenario=Escenario.SEQUIA, n_muestras=5))
+    assert resultado.probabilidad_ventaja_recuperacion is None
+    assert resultado.ventaja_recuperacion.n_validos == 0
+    assert resultado.muestras[0].ventaja_recuperacion_pts is None
+
+
+def test_probabilidad_de_ventaja_ignora_nulos_y_ventaja_cero():
+    assert analisis._probabilidad_ventaja([None, 0.0, 2.0, -1.0, 3.0]) == pytest.approx(0.5)

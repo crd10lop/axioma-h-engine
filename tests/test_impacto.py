@@ -3,7 +3,7 @@
 import pytest
 
 from backend import config
-from backend.impacto import impacto_comunitario
+from backend.impacto import dimensionar, impacto_comunitario
 from backend.schemas import Escenario, SimulationConfig, TasaSalinizacion
 from backend.simulador import ejecutar_simulacion
 
@@ -110,3 +110,26 @@ def test_tope_ecologico_reduce_las_personas_abastecidas(dia_normal_85):
     neuro = impacto[MODO_NEURO].personas_acceso_basico
     temporizador = impacto["modo_temporizador_fijo"].personas_acceso_basico
     assert neuro < temporizador
+
+
+def test_dimensionar_area_y_nodos():
+    area, nodos = dimensionar(50, 20.0, 31.83)
+    assert area == pytest.approx(31.4169, abs=1e-4)
+    assert nodos == 32
+
+
+def test_dimensionar_area_exacta_no_agrega_nodo():
+    area, nodos = dimensionar(10, 15.0, 7.5)
+    assert area == pytest.approx(20.0)
+    assert nodos == 20
+
+
+@pytest.mark.parametrize("rendimiento", [0.0, -1.0])
+def test_dimensionar_sin_rendimiento(rendimiento):
+    assert dimensionar(10, 20.0, rendimiento) == (None, None)
+
+
+@pytest.mark.parametrize(("personas", "consumo"), [(0, 20.0), (-5, 20.0), (10, 0.0), (10, -15.0)])
+def test_dimensionar_rechaza_personas_o_consumo_no_positivos(personas, consumo):
+    with pytest.raises(ValueError):
+        dimensionar(personas, consumo, 10.0)

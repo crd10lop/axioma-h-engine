@@ -1,6 +1,6 @@
 # Modelo de control y simulación del motor Axioma-H
 
-Este documento describe el motor de reglas neuro-simbólico, el simulador comparativo y la forma en que se verifican las conjeturas del Ciclo 2. Los valores de todos los parámetros están en `backend/config.py`. Las ecuaciones compartidas por el motor y el simulador están en `backend/modelo_fisico.py`. Los dos parámetros que admiten análisis de sensibilidad, la eficacia máxima del pulso y el flujo máximo de niebla, se agrupan además en `ParametrosModelo` (`backend/modelo_fisico.py`), que toma por defecto los valores de `backend/config.py`. El barrido de salinidad con varias semillas y la sensibilidad están en `backend/analisis.py` (secciones 6.4 y 7.5). El impacto comunitario estimado está en `backend/impacto.py` (sección 7.6).
+Este documento describe el motor de reglas neuro-simbólico, el simulador comparativo y la forma en que se verifican las conjeturas del Ciclo 2. Los valores de todos los parámetros están en `backend/config.py`. Las ecuaciones compartidas por el motor y el simulador están en `backend/modelo_fisico.py`. Los dos parámetros que admiten análisis de sensibilidad, la eficacia máxima del pulso y el flujo máximo de niebla, se agrupan además en `ParametrosModelo` (`backend/modelo_fisico.py`), que toma por defecto los valores de `backend/config.py`. El barrido de salinidad con varias semillas y la sensibilidad están en `backend/analisis.py` (secciones 6.4 y 7.5), junto con la robustez de la respuesta frente a los parámetros supuestos (sección 8.8) y el dimensionamiento del captador (sección 7.7). El impacto comunitario estimado está en `backend/impacto.py` (sección 7.6). La transferencia del modelo a otro sitio se describe en la sección 8.10.
 
 Los documentos de referencia son el PRD de la API ([02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md](02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md)) y la Matriz de Operacionalización ([01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md)). Las decisiones de la sección 1 resuelven las diferencias entre ambos.
 
@@ -47,8 +47,10 @@ La simulación arranca a las 18:00 hora local y avanza en pasos de `paso_minutos
 
 - **Radiación relativa:** `S(h) = sen(pi * (h - 6) / 12)` entre 06:00 y 18:00, y 0 fuera de ese intervalo.
 - **Humedad relativa:** `HR(h) = HR_0 + A_HR * [cos(2 pi (h - 4) / 24) - cos(2 pi (18 - 4) / 24)] + d_n + e`, acotada entre 0 y 100. HR_0 es la humedad a las 18:00, d_n el desfase fijo del nodo y e el ruido gaussiano por paso.
-- **Temperatura ambiente:** `T_a(h) = 30 + 4.5 * cos(2 pi (h - 14) / 24)`.
+- **Temperatura ambiente:** `T_a(h) = T_med + A_T * cos(2 pi (h - 14) / 24)`, con `T_med = 30` y `A_T = 4.5` en el perfil por defecto.
 - **Temperatura de la matriz:** `T_m = T_a + 7 * S(h) * f_rad + d_n + e`.
+
+`A_HR`, `T_med` y `A_T` provienen del perfil del sitio (campo opcional `sitio` de `SimulationConfig`, modelo `PerfilSitio`), junto con el flujo máximo de niebla. Sin `sitio`, se usan los valores de Cabo de la Vela de `backend/config.py` (`A_HR = 10`) y los resultados son idénticos a los de una solicitud sin ese campo. La sección 8.10 describe cómo usar el perfil para otro sitio.
 
 | Escenario | Modificación |
 |---|---|
@@ -433,6 +435,33 @@ Resultados con 24 h, tasa ALTA, 8 nodos (8 m² de colector) y semilla 42. Cada c
 - **Costo social del tope ecológico.** El tope reduce las personas abastecidas frente al temporizador. El neuro-simbólico abastece entre 2.8 y 4.3 personas menos que el temporizador fijo con 85 %, y entre 1.1 y 2.2 menos con 45 %. Comparando los dos temporizadores, que solo difieren en la fracción de extracción (0.45 frente a 0.33), el tope por sí solo resta entre 2.1 y 3.7 personas con 85 % y entre 0.8 y 1.6 con 45 %. Es la otra cara del costo hídrico de la sección 5.5: preservar la humedad para la vegetación tiene un costo en personas abastecidas que debe discutirse con las comunidades ([01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2.7).
 - **Alcance.** El cálculo supone que toda el agua captada se destina al consumo, sin pérdidas de almacenamiento ni de distribución, y no considera la variación estacional de la niebla. Los estándares de 15 y 20 L por persona al día son mínimos para bebida e higiene doméstica básica; no incluyen usos productivos.
 
+### 7.7 Dimensionamiento
+
+La sección 7.6 responde cuántas personas abastece una red de 8 m². El dimensionamiento responde la pregunta inversa: cuánta área de colector, y cuántos nodos, hacen falta para un número de personas. Lo calcula `POST /api/v1/analisis/dimensionamiento` (`ejecutar_dimensionamiento` en `backend/analisis.py` y `dimensionar` en `backend/impacto.py`).
+
+**Método.**
+
+- La solicitud indica las personas (1 a 1000), el estándar de consumo (`SPHERE_15`, 15 L por persona al día, o `OMS_20`, 20 L, por defecto), el escenario, la humedad inicial, la tasa de salinización (ALTA por defecto) y la semilla (42 por defecto).
+- Para cada uno de los tres flujos de niebla de referencia (6.0 L/m²/h supuesto, 1.83 y 0.49 L/m²/h calibrados, sección 8.6) se simulan 24 h con 8 nodos, con una copia de `ParametrosModelo` en la que solo cambia el flujo.
+- `area_colector_m2 = personas * consumo / rendimiento_neuro_l_m2_dia`, con el rendimiento del control basado en reglas, que respeta el tope ecológico. `nodos_requeridos` es el área redondeada hacia arriba, con 1 m² por nodo. Si el rendimiento es 0, ambos valores son nulos.
+- `area_literatura_min_m2` y `area_literatura_max_m2` son el área con los rendimientos de 10 y 3 L/m² al día de Klemm et al. (2012). No dependen de la simulación.
+
+**Resultados** para 50 personas en DIA_NORMAL, tasa ALTA y semilla 42. Cada celda muestra el rendimiento del control basado en reglas (L/m² al día), el área (m²) y los nodos.
+
+| Humedad inicial | Estándar | Flujo 6.0 (supuesto) | Flujo 1.83 (calibrado, máximo) | Flujo 0.49 (calibrado, mínimo) | Literatura (m²) |
+|---|---|---|---|---|---|
+| 85 % | OMS, 20 L | 31.83; 31.42 m²; 32 nodos | 10.02; 99.83 m²; 100 nodos | 3.02; 331.44 m²; 332 nodos | 100.0 a 333.3 |
+| 85 % | Sphere, 15 L | 31.83; 23.57 m²; 24 nodos | 10.02; 74.87 m²; 75 nodos | 3.02; 248.58 m²; 249 nodos | 75.0 a 250.0 |
+| 45 % | OMS, 20 L | 10.34; 96.75 m²; 97 nodos | 3.50; 285.87 m²; 286 nodos | 1.02; 975.90 m²; 976 nodos | 100.0 a 333.3 |
+| 45 % | Sphere, 15 L | 10.34; 72.56 m²; 73 nodos | 3.50; 214.40 m²; 215 nodos | 1.02; 731.92 m²; 732 nodos | 75.0 a 250.0 |
+
+**Interpretación.**
+
+- **Con el flujo supuesto el área queda subestimada.** Con 85 %, 32 nodos bastarían para 50 personas al nivel de acceso básico: entre 3.2 y 10.6 veces menos área que con los rendimientos de la literatura.
+- **Con el flujo calibrado el área coincide con la literatura por construcción.** La calibración de la sección 8.6 se hizo en DIA_NORMAL con 85 %, de modo que los extremos calibrados reproducen 10 y 3 L/m² al día y el área cae en el rango de 100 a 333 m². No es una validación independiente: confirma que el dimensionamiento usa el mismo rendimiento que la calibración.
+- **Con 45 % el área crece de forma marcada.** Con el flujo calibrado mínimo harían falta 976 m² para 50 personas, unas 122 redes de 8 nodos. Una red de 8 m² con los flujos calibrados abastecería entre 1.2 y 4.0 personas con 85 %.
+- **Alcance.** Hereda las limitaciones de la sección 7.6. Además, los flujos de referencia son los de Cabo de la Vela: para otro sitio, el rendimiento se obtiene con una simulación con su perfil (sección 8.10) y se aplica la misma fórmula.
+
 ## 8. Lectura crítica de las conjeturas
 
 ### 8.1 Conflicto entre los indicadores de la Conjetura 1
@@ -491,6 +520,8 @@ c) ¿Un estimador sub-simbólico puede distinguir la impedancia causada por sal 
 d) ¿Cuál es el rendimiento real de niebla en Cabo de la Vela? De él dependen el flujo supuesto y la pertinencia del umbral de la Conjetura 3 (sección 8.2).
 
 e) Reoperacionalizar la Conjetura 2 en dos indicadores declarados antes de ejecutar las simulaciones: la cinética de desprendimiento (< 120 s) y la extensión de la limpieza (Z <= 1100 Ohm). Hoy ambos aspectos se miden en un solo indicador, el tiempo hasta 1100 Ohm, y el criterio se endureció después de observar los primeros resultados (sección 6.4).
+
+f) ¿La ventaja en recuperación del control basado en reglas depende de la incrustación diaria y no de la carga salina por litro? Es la hipótesis H1-Ciclo 3 de la sección 8.9, que surge de la robustez de la sección 8.8.
 
 ### 8.4 Control de confusión: tope ecológico frente a lógica de control
 
@@ -586,6 +617,7 @@ Las secciones 5.6 y 5.7 varían un parámetro a la vez. Para ver el efecto conju
 - El muestreo usa un generador con semilla (`semilla_muestreo`, 7 por defecto), creado con la misma función que genera el entorno de la simulación. La misma configuración produce siempre las mismas muestras.
 - Cada muestra se simula una vez, con el mismo entorno (semilla 42), y se verifican las conjeturas con la regla de validación sin cambios.
 - La probabilidad de una conjetura es la proporción de muestras que la validan. Para la recuperación tras pulso, el rendimiento en L/m²/día y la reducción de la degradación se reportan los percentiles 5, 50 y 95 de las muestras con datos.
+- Cada muestra informa también la recuperación del temporizador y la ventaja en recuperación (`ventaja_recuperacion_pts`, recuperación del control basado en reglas menos la del temporizador). El resultado agrega sus percentiles (`ventaja_recuperacion`) y la proporción de las muestras con ambas recuperaciones en que la ventaja es positiva (`probabilidad_ventaja_recuperacion`). Sus valores se discuten en la sección 8.8.
 
 **Resultados.** 24 h, humedad inicial de 85 %, tasa ALTA, 8 nodos, semilla 42, 20 muestras y rangos por defecto. Los percentiles se indican como p5 / p50 / p95.
 
@@ -607,3 +639,118 @@ Las secciones 5.6 y 5.7 varían un parámetro a la vez. Para ver el efecto conju
   En TORMENTA_DE_ARENA la recuperación no supera 84.32 % en el percentil 95, porque el pulso no remueve el polvo (sección 8.5), y ninguna muestra valida C1.
 - **Desgaste.** Entre los percentiles 5 y 95, la reducción de la degradación frente al temporizador se mantiene entre 95.7 % y 100 % en los cinco escenarios. Vale 100 % cuando el neuro-simbólico no aplica pulsos y su membrana no se degrada. Es el resultado más robusto del análisis, y es coherente con el barrido de la sección 7.
 - **Alcance.** Las probabilidades son proporciones del espacio de parámetros supuesto, no probabilidades de lo que ocurrirá en campo: cambian si cambian los rangos o la distribución. Con 20 muestras, la resolución es de 0.05, de modo que valores como 0.05 o 0.10 corresponden a una o dos muestras. La incertidumbre del clima (semillas) y la de los demás parámetros supuestos no está incluida.
+
+### 8.8 Robustez de la respuesta
+
+El barrido de la sección 7 usa el flujo de niebla supuesto (6.0 L/m²/h) y la eficacia del pulso supuesta (0.90). Para saber si la respuesta a la pregunta de investigación depende de esos dos valores, `POST /api/v1/analisis/robustez-respuesta` (`ejecutar_robustez` en `backend/analisis.py`) repite el barrido con cada combinación de tres flujos y tres eficacias.
+
+**Método.**
+
+- Flujos: 6.0 L/m²/h (supuesto) y 1.83 y 0.49 L/m²/h (extremos de la calibración contra la literatura, sección 8.6). Eficacias: 0.80, 0.90 y 1.00 (`EFICACIA_PULSO_RANGO_MIN`, `EFICACIA_MAXIMA_PULSO` y `EFICACIA_PULSO_RANGO_MAX`).
+- Cada combinación es un barrido completo, con las condiciones de la sección 7.2 (24 h, 8 nodos, humedad inicial de 85 %, semilla 42) y una copia de `ParametrosModelo`. `backend/config.py` no cambia.
+- Además de los campos de la sección 7, cada punto informa el rendimiento del control basado en reglas, la **incrustación diaria** (`incrustacion_diaria_ohm_media`, carga salina por ese rendimiento: el aumento de impedancia por sal que la membrana recibiría en un día), la ventaja en recuperación y los pulsos del control basado en reglas.
+- **Cruce.** Cada barrido informa dónde la ventaja en recuperación pasa de <= 0 a > 0 (`cruce`). Se ordenan los puntos con ventaja por incrustación diaria y se interpola linealmente la incrustación diaria y la carga salina en que la ventaja vale 0 (estado `INTERPOLADO`). Si la ventaja es positiva en todos los puntos, el estado es `SIN_CRUCE_NEURO_SUPERIOR`; si no lo es en ninguno, `SIN_CRUCE_NEURO_INFERIOR`; con menos de dos puntos con ventaja, `SIN_DATOS`. Si la ventaja solo pasa de > 0 a <= 0, el estado es `CRUCE_DESCENDENTE`, que contradiría la dirección de la hipótesis; no se presentó en ninguna combinación.
+
+**Resultados.** Los datos completos, con una fila por combinación y punto, están en `docs/datos/robustez_respuesta.csv`.
+
+| Flujo (L/m²/h) | Eficacia | Cruce | Incrustación diaria del cruce (Ohm/día) | Carga salina del cruce (Ohm por L/m²) | Incrustación diaria máxima del barrido (Ohm/día) | Reducción del desgaste |
+|---|---|---|---|---|---|---|
+| 6.0 | 0.80 | `INTERPOLADO` | 1819.82 | 57.58 | 5367.9 | 73.3 % a 99.0 % |
+| 6.0 | 0.90 | `INTERPOLADO` | 1789.12 | 55.89 | 5561.1 | 73.9 % a 99.0 % |
+| 6.0 | 1.00 | `INTERPOLADO` | 1632.87 | 50.25 | 5748.2 | 74.4 % a 99.0 % |
+| 1.83 | 0.80 | `INTERPOLADO` | 1839.21 | 190.94 | 2301.4 | 95.3 % a 100 % |
+| 1.83 | 0.90 | `INTERPOLADO` | 1804.68 | 184.87 | 2332.0 | 95.3 % a 100 % |
+| 1.83 | 1.00 | `INTERPOLADO` | 1639.61 | 165.22 | 2365.3 | 95.7 % a 100 % |
+| 0.49 | 0.80 | `SIN_DATOS` | | | 649.1 | 99.0 % a 100 % |
+| 0.49 | 0.90 | `SIN_DATOS` | | | 653.8 | 99.0 % a 100 % |
+| 0.49 | 1.00 | `SIN_DATOS` | | | 658.7 | 99.0 % a 100 % |
+
+La fila de 6.0 y 0.90 es el barrido de la sección 7.3. La reducción del desgaste vale 100 % en los puntos en que el control basado en reglas no aplica pulsos y su membrana no se degrada.
+
+**Lectura.**
+
+- **Desgaste.** El control basado en reglas degrada menos la membrana en los 54 puntos, con una reducción de 73.3 % a 100 %. Es la parte de la respuesta que no depende de los parámetros supuestos en los rangos evaluados.
+- **Recuperación con el flujo calibrado máximo.** Con 1.83 L/m²/h el control basado en reglas supera al temporizador solo con la carga más alta, 240 Ohm por L/m², por 3.1 a 3.5 puntos según la eficacia. Con 20 y 40 Ohm por L/m² no llega a aplicar pulsos, y entre 60 y 120 el temporizador recupera más.
+- **Recuperación con el flujo calibrado mínimo.** Con 0.49 L/m²/h solo la carga de 240 Ohm por L/m² produce pulsos, y en ese punto el temporizador recupera más (ventaja de -8.9, -7.1 y -4.7 puntos con eficacias de 0.80, 0.90 y 1.00). Con un solo punto con ventaja no hay cruce que interpolar (`SIN_DATOS`), pero el control basado en reglas no supera al temporizador en ningún nivel.
+- **El cruce depende de la incrustación diaria, no de la carga por litro.** En las seis combinaciones con cruce, la carga salina del cruce va de 50.3 a 190.9 Ohm por L/m², un factor de 3.8, mientras que la incrustación diaria del cruce va de 1632.9 a 1839.2 Ohm/día, una variación de 13 %. Con una eficacia fija, cambiar el flujo de 6.0 a 1.83 L/m²/h mueve el cruce como mucho 19.4 Ohm/día. La eficacia lo mueve más: alrededor de 1633 a 1640 Ohm/día con 1.00 y de 1820 a 1839 con 0.80. Con 0.49 L/m²/h la incrustación diaria no pasa de 659 Ohm/día en ningún punto, por debajo de todos los cruces, lo que explica que el control basado en reglas no supere al temporizador. Es coherente con el mecanismo de la sección 7.4: la recuperación del temporizador depende de la sal acumulada entre dos pulsos programados, que crece con la incrustación por unidad de tiempo, mientras que el control basado en reglas pulsa siempre con una carga parecida.
+- **Otras semillas.** Repetida con las semillas 1, 2 y 3 (media de las tres), la robustez da los mismos estados de cruce y una incrustación diaria del cruce de 1682.1 a 1866.6 Ohm/día; la reducción del desgaste va de 73.6 % a 100 %. El barrido base con las semillas 1 a 5 de `docs/datos/` cruza en 1818.4 Ohm/día.
+
+**Contraste con la propagación de la incertidumbre.** La sección 8.7 muestrea la eficacia y el flujo calibrado de forma continua. La ventaja en recuperación de esas muestras (20 muestras, humedad inicial de 85 %, tasa ALTA, semilla 42) es:
+
+| Escenario | Muestras con ambas recuperaciones | Ventaja en recuperación, p5 / p50 / p95 (puntos) | P(ventaja > 0) |
+|---|---|---|---|
+| DIA_NORMAL | 8 de 20 | -10.03 / -7.94 / -6.21 | 0.00 |
+| INCRUSTACION_SALINA_RAPIDA | 20 de 20 | -6.98 / -2.95 / 1.51 | 0.15 |
+| SEQUIA | 0 de 20 | Sin datos | Sin datos |
+| TORMENTA_DE_ARENA | 20 de 20 | -18.86 / -14.67 / -9.88 | 0.00 |
+| TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 14 de 20 | -9.60 / -6.54 / -4.37 | 0.00 |
+
+Con los flujos calibrados, el control basado en reglas supera al temporizador en recuperación solo en 3 de las 62 muestras con ambas recuperaciones, todas en INCRUSTACION_SALINA_RAPIDA. Multiplicando la carga salina de cada escenario (240, 120 y 80 Ohm por L/m²) por el rendimiento de cada muestra, en DIA_NORMAL, INCRUSTACION_SALINA_RAPIDA y TORMENTA_DE_SAL_Y_CALOR_EXTREMO las 42 muestras con ambas recuperaciones se separan por la incrustación diaria: la ventaja es negativa en todas las que tienen 1628.9 Ohm/día o menos y positiva en las tres que tienen 2014.9 Ohm/día o más. Es una comprobación independiente de la grilla, porque usa valores de eficacia y flujo distintos, y es coherente con el rango de cruce. En TORMENTA_DE_ARENA la ventaja es negativa en todas las muestras, porque el pulso no remueve el polvo (sección 8.5).
+
+**Respuesta robusta a la pregunta.** En el modelo, y en los rangos evaluados de flujo de niebla y eficacia del pulso:
+
+1. el control basado en reglas reduce el desgaste de la membrana frente al temporizador en todos los niveles de salinidad, con una reducción de 73.3 % a 100 %;
+2. su ventaja en recuperación no depende de la carga salina por litro, sino de la incrustación diaria, y aparece solo por encima de unos 1633 a 1867 Ohm/día;
+3. con rendimientos como los de la literatura (flujo calibrado), esa incrustación diaria solo se alcanza con la carga salina más alta, por lo que en la mayoría de las condiciones el temporizador recupera igual o más. Esa recuperación mayor no indica una membrana mejor mantenida (sección 7.5): el temporizador pulsa con la membrana casi limpia, a costa de más desgaste.
+
+### 8.9 Hipótesis derivada H1-Ciclo 3
+
+La sección 8.8 sugiere una hipótesis más precisa que la hipótesis de trabajo ([01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2.5), que se propone para ponerla a prueba en el Ciclo 3.
+
+**Enunciado.** Con el control basado en reglas (pulso cuando la impedancia supera 1500 Ohm) y un temporizador con pulsos cada 2 h, la recuperación tras pulso del control basado en reglas supera a la del temporizador cuando la incrustación diaria de la membrana, el aumento de impedancia por sal en un día de operación, supera un umbral situado en el modelo entre 1633 y 1867 Ohm/día, y no lo supera por debajo de ese umbral, cualquiera sea la combinación de flujo de niebla y carga salina por litro que produzca esa incrustación.
+
+El rango sale de las 6 combinaciones con cruce de la semilla 42 (1632.9 a 1839.2 Ohm/día) y de las mismas combinaciones con las semillas 1 a 3 (1682.1 a 1866.6 Ohm/día). Dentro del rango, el umbral depende sobre todo de la eficacia del pulso.
+
+**Cómo refutarla.**
+
+- **Medición.** Dos grupos de membranas, uno con cada modo de control, expuestos a niebla salina con al menos dos combinaciones que den la misma incrustación diaria con cargas por litro distintas (más agua con menos sal por litro, y menos agua con más sal por litro), y a incrustaciones diarias por debajo y por encima del rango. La incrustación diaria se mide como la pendiente de la impedancia entre pulsos, con el mismo sensor de impedancia que usa el nodo, y la recuperación como `Z_nominal / Z_tras_pulso`, el cálculo del indicador de la Conjetura 1.
+- **Resultado que la contradiría.** (a) Que, con la misma incrustación diaria, el signo de la ventaja cambie entre las combinaciones de distinta carga por litro, lo que indicaría que el cruce depende de la carga por litro. (b) Que el control basado en reglas supere al temporizador con incrustaciones claramente menores que 1633 Ohm/día, o no lo supere con incrustaciones claramente mayores que 1867 Ohm/día, una vez descontada la incertidumbre de la medición. (c) Que la ventaja pase de positiva a negativa al aumentar la incrustación diaria, lo que la API informaría como `CRUCE_DESCENDENTE`.
+
+**Relación con el experimento de la sección 6.3.** El experimento de 6.3 mide qué fracción de la costra remueve un pulso de 90 s a 44 °C, es decir, la eficacia del pulso. Ese valor es el que más mueve el umbral: con la semilla 42, el cruce está cerca de 1633 a 1640 Ohm/día con una eficacia de 1.00 y de 1820 a 1839 Ohm/día con 0.80. Por eso conviene hacer primero el experimento de 6.3, repetir la robustez con la eficacia medida para estrechar el rango y, después, contrastar H1-Ciclo 3 con ese rango más estrecho. Ambas mediciones comparten la muestra de membrana y el sensor de impedancia.
+
+### 8.10 Transferencia a otro sitio
+
+El modelo se calibró para Cabo de la Vela, pero el clima de referencia ya no está fijo en el código: `POST /api/v1/simulacion/ejecutar` acepta un perfil de sitio y una eficacia del pulso, y la respuesta informa en `parametros_usados` los valores con que se ejecutó la corrida. `GET /api/v1/sitios` devuelve los tres perfiles disponibles, todos de Cabo de la Vela: `CABO_DE_LA_VELA` (flujo supuesto de 6.0 L/m²/h), `CABO_DE_LA_VELA_CALIBRADO_MAX` (1.83) y `CABO_DE_LA_VELA_CALIBRADO_MIN` (0.49). No se incluyen otros sitios porque el proyecto no tiene datos climáticos con fuente para ellos.
+
+**Procedimiento.**
+
+1. **Medir cinco parámetros en el sitio.**
+   - el rendimiento de niebla en L/m² al día, con un colector de niebla, para calibrar el flujo máximo (paso 2);
+   - la temperatura ambiente media, en °C;
+   - la amplitud del ciclo térmico diurno, en °C (la mitad de la diferencia entre la máxima y la mínima diarias);
+   - la amplitud del ciclo diurno de humedad relativa, en puntos de HR;
+   - la humedad relativa a las 18:00, que es `humedad_ambiente_inicial_pct`.
+2. **Calibrar el flujo de niebla.** `calibrar_flujo_niebla(rendimiento_medido, escenario=..., humedad_pct=..., semilla=...)` en `backend/analisis.py` busca por bisección el flujo con el que el control basado en reglas alcanza el rendimiento medido (sección 8.6). Se ejecuta desde Python, porque no tiene endpoint, y no modifica `backend/config.py`.
+3. **Pasar el perfil en la simulación.** El campo `sitio` lleva el nombre (mayúsculas, dígitos y guion bajo, hasta 40 caracteres), el flujo calibrado, la temperatura media, la amplitud térmica y la amplitud de humedad. Los valores fuera de rango (flujo en (0, 20] L/m²/h, temperatura media de 0 a 45 °C, amplitud térmica de 0 a 15 °C y amplitud de humedad de 0 a 30 puntos) devuelven `422`. Por ejemplo:
+
+   ```json
+   {
+     "duracion_horas": 24,
+     "escenario": "DIA_NORMAL",
+     "humedad_ambiente_inicial_pct": 80.0,
+     "tasa_salinizacion": "ALTA",
+     "sitio": {
+       "nombre": "SITIO_EJEMPLO",
+       "flujo_niebla_maximo_l_m2_h": 1.2,
+       "temperatura_media_c": 24.0,
+       "amplitud_temperatura_c": 6.0,
+       "amplitud_humedad_pct": 15.0
+     },
+     "eficacia_maxima_pulso": 0.9
+   }
+   ```
+
+   Los valores del ejemplo son ilustrativos, no de un sitio real.
+4. **Leer el resultado.** `parametros_usados` confirma el perfil aplicado. `impacto_comunitario.modo_neuro_simbolico.rendimiento_l_m2_dia` da el rendimiento del sitio, con el que se dimensiona el captador con la fórmula de la sección 7.7. Multiplicando la carga salina por ese rendimiento se obtiene la incrustación diaria, que, comparada con el umbral de H1-Ciclo 3, anticipa si cabe esperar una ventaja en recuperación del control basado en reglas.
+
+**Preguntas que abre.**
+
+a) `calibrar_flujo_niebla` simula con el ciclo de temperatura y humedad de Cabo de la Vela. Como la amplitud de humedad cambia la disponibilidad de niebla, la calibración para otro sitio es aproximada. ¿Cuánto cambia el flujo calibrado si la calibración usa el perfil del sitio?
+
+b) ¿Cómo se mide la carga salina por litro en un sitio nuevo? El modelo la expresa en Ohm por L/m², y para transferirla hace falta relacionar la sal depositada en la membrana con el aumento de impedancia.
+
+c) El perfil conserva las horas de máximo de Cabo de la Vela (04:00 para la humedad y 14:00 para la temperatura) y no representa la estacionalidad de la niebla. ¿Son adecuadas para otros climas costeros?
+
+d) El dimensionamiento (sección 7.7), la robustez (sección 8.8) y el barrido aceptan el flujo de niebla, pero no la temperatura ni las amplitudes del sitio. ¿Cambia la respuesta de la sección 8.8 con otro ciclo térmico, que modifica el calentamiento de la matriz y la energía de cada pulso?
+
+e) La consulta previa y el protocolo de co-creación ([01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md](01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), sección 2.7) se aplican a cualquier sitio con comunidades, no solo a Cabo de la Vela.

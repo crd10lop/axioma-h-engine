@@ -3,12 +3,13 @@
 import pytest
 
 from backend import config
-from backend.modelo_fisico import ParametrosModelo, energia_pulso_wh, tiempo_hasta_impedancia
+from backend.modelo_fisico import PARAMETROS_BASE, ParametrosModelo, energia_pulso_wh, tiempo_hasta_impedancia
 from backend.schemas import (
     CausaNoValidacion,
     Escenario,
     IndicadorVerificacion,
     ModoOperacion,
+    PerfilSitio,
     SimulationConfig,
     TasaSalinizacion,
 )
@@ -17,9 +18,11 @@ from backend.simulador import (
     Entorno,
     _causas_no_validacion,
     _indicador,
+    _sitio,
     ejecutar_simulacion,
     ejecutar_simulacion_detallada,
     generar_entorno,
+    parametros_de_configuracion,
     rendimiento_nocturno_l_m2,
     simular_modo,
     verificar_conjeturas,
@@ -401,3 +404,101 @@ def test_pulso_sin_efecto_termico_no_registra_desprendimiento():
     assert diag.pulsos > 0
     assert diag.tiempos_desprendimiento_seg == []
     assert len(diag.impedancias_tras_pulso_ohms) == diag.pulsos
+
+
+# ---------------------------------------------------------------------------
+# Perfil del sitio y parámetros de la configuración
+# ---------------------------------------------------------------------------
+SITIO_CALIDO = PerfilSitio(
+    nombre="SITIO_PRUEBA",
+    flujo_niebla_maximo_l_m2_h=1.83,
+    temperatura_media_c=33.0,
+    amplitud_temperatura_c=2.0,
+    amplitud_humedad_pct=5.0,
+)
+
+
+@pytest.fixture(scope="module")
+def corrida_base():
+    """DIA_NORMAL con 85 %, sin sitio ni eficacia."""
+    return ejecutar_simulacion(configuracion())
+
+
+def test_sin_sitio_usa_el_perfil_por_defecto():
+    sitio = _sitio(configuracion())
+    assert sitio == PerfilSitio()
+    assert sitio.temperatura_media_c == pytest.approx(config.TEMPERATURA_MEDIA_C)
+
+
+def test_sin_sitio_ni_eficacia_usa_los_parametros_base():
+    assert parametros_de_configuracion(configuracion()) is PARAMETROS_BASE
+
+
+def test_parametros_de_configuracion_con_sitio_y_eficacia():
+    parametros = parametros_de_configuracion(configuracion(sitio=SITIO_CALIDO, eficacia_maxima_pulso=0.95))
+    assert parametros == ParametrosModelo(eficacia_maxima_pulso=0.95, flujo_niebla_maximo_l_m2_h=1.83)
+
+
+def test_resultados_identicos_sin_sitio_ni_eficacia(corrida_base):
+    explicitos = ejecutar_simulacion(configuracion(), parametros=PARAMETROS_BASE)
+    perfil_por_defecto = ejecutar_simulacion(configuracion(sitio=PerfilSitio()))
+    assert explicitos == corrida_base
+    assert perfil_por_defecto == corrida_base
+
+
+def test_resultados_base_reproducen_el_documento_04(corrida_base):
+    assert corrida_base.comparativa.modo_neuro_simbolico.litros_totales_agua == pytest.approx(254.603)
+
+
+def test_parametros_usados_por_defecto(corrida_base):
+    usados = corrida_base.parametros_usados
+    assert usados.nombre_sitio == "CABO_DE_LA_VELA"
+    assert usados.flujo_niebla_maximo_l_m2_h == pytest.approx(config.FLUJO_NIEBLA_MAXIMO_L_M2_H)
+    assert usados.eficacia_maxima_pulso == pytest.approx(config.EFICACIA_MAXIMA_PULSO)
+    assert usados.amplitud_humedad_pct == pytest.approx(config.AMPLITUD_HUMEDAD_PCT)
+
+
+def test_parametros_usados_reflejan_el_sitio_y_la_eficacia():
+    resultado = ejecutar_simulacion(configuracion(duracion_horas=2, sitio=SITIO_CALIDO, eficacia_maxima_pulso=0.95))
+    usados = resultado.parametros_usados
+    assert usados.nombre_sitio == "SITIO_PRUEBA"
+    assert usados.flujo_niebla_maximo_l_m2_h == pytest.approx(1.83)
+    assert usados.eficacia_maxima_pulso == pytest.approx(0.95)
+    assert usados.temperatura_media_c == pytest.approx(33.0)
+    assert usados.amplitud_temperatura_c == pytest.approx(2.0)
+
+
+def test_temperatura_del_sitio_define_el_ciclo_termico():
+    entorno = generar_entorno(configuracion(sitio=SITIO_CALIDO))
+    assert min(entorno.temperatura_ambiente) == pytest.approx(31.0, abs=0.01)
+    assert max(entorno.temperatura_ambiente) == pytest.approx(35.0, abs=0.01)
+
+
+def test_sin_amplitud_de_humedad_la_humedad_base_es_constante():
+    # Sin ruido ni desfase por nodo, la humedad del entorno sería el valor inicial en todos los pasos.
+    plano = generar_entorno(configuracion(sitio=PerfilSitio(amplitud_humedad_pct=0.0)))
+    base = generar_entorno(configuracion())
+    rango_plano = max(sum(paso) for paso in plano.humedad) - min(sum(paso) for paso in plano.humedad)
+    rango_base = max(sum(paso) for paso in base.humedad) - min(sum(paso) for paso in base.humedad)
+    assert rango_plano < rango_base
+
+
+def test_flujo_del_sitio_cambia_el_agua_captada(corrida_base):
+    calibrado = ejecutar_simulacion(configuracion(sitio=PerfilSitio(flujo_niebla_maximo_l_m2_h=1.83)))
+    assert calibrado.comparativa.modo_neuro_simbolico.litros_totales_agua < (
+        corrida_base.comparativa.modo_neuro_simbolico.litros_totales_agua
+    )
+
+
+def test_eficacia_de_la_configuracion_cambia_la_recuperacion(corrida_base):
+    eficaz = ejecutar_simulacion(configuracion(eficacia_maxima_pulso=1.0))
+    assert eficaz.comparativa.modo_neuro_simbolico.recuperacion_caudal_promedio_pct > (
+        corrida_base.comparativa.modo_neuro_simbolico.recuperacion_caudal_promedio_pct
+    )
+
+
+def test_detallada_sin_parametros_usa_los_de_la_configuracion():
+    cfg = configuracion(duracion_horas=6, eficacia_maxima_pulso=1.0)
+    _, implicita, _ = ejecutar_simulacion_detallada(cfg)
+    _, explicita, _ = ejecutar_simulacion_detallada(cfg, parametros=ParametrosModelo(eficacia_maxima_pulso=1.0))
+    assert implicita.recuperaciones_pct == explicita.recuperaciones_pct

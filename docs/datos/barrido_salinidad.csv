@@ -1,7 +1,7 @@
-escenario,tasa_salinizacion,carga_salina_ohm_l_m2,n_semillas,recuperacion_neuro_media,recuperacion_neuro_desv,recuperacion_temporizador_media,recuperacion_temporizador_desv,degradacion_neuro_media,degradacion_neuro_desv,degradacion_temporizador_media,degradacion_temporizador_desv,reduccion_desgaste_pct,humedad_inicial_pct
-DIA_NORMAL,BAJA,20.0,5,88.8579,0.0053,95.9227,0.1352,0.02,0.0,2.151,0.0208,99.0702,85.0
-DIA_NORMAL,MEDIA,40.0,5,88.8318,0.0096,91.9484,0.2406,0.052,0.0045,2.151,0.0208,97.5825,85.0
-INCRUSTACION_SALINA_RAPIDA,BAJA,60.0,5,88.8012,0.0118,88.1542,0.3227,0.0855,0.0021,2.1827,0.0159,96.0828,85.0
-DIA_NORMAL,ALTA,80.0,5,88.7682,0.0053,84.5856,0.3861,0.117,0.0021,2.4952,0.022,95.311,85.0
-INCRUSTACION_SALINA_RAPIDA,MEDIA,120.0,5,88.0053,0.0778,78.1276,0.4762,0.4189,0.0211,3.1589,0.024,86.7391,85.0
-INCRUSTACION_SALINA_RAPIDA,ALTA,240.0,5,85.8943,0.0721,63.2423,0.5848,1.0816,0.0125,4.2095,0.0136,74.3057,85.0
+escenario,tasa_salinizacion,carga_salina_ohm_l_m2,n_semillas,recuperacion_neuro_media,recuperacion_neuro_desv,recuperacion_temporizador_media,recuperacion_temporizador_desv,degradacion_neuro_media,degradacion_neuro_desv,degradacion_temporizador_media,degradacion_temporizador_desv,reduccion_desgaste_pct,rendimiento_neuro_l_m2_dia_media,incrustacion_diaria_ohm_media,ventaja_recuperacion_pts,pulsos_neuro_media,humedad_inicial_pct
+DIA_NORMAL,BAJA,20.0,5,88.8579,0.0053,95.9227,0.1352,0.02,0.0,2.151,0.0208,99.0702,33.4505,669.0092,-7.0648,8.0,85.0
+DIA_NORMAL,MEDIA,40.0,5,88.8318,0.0096,91.9484,0.2406,0.052,0.0045,2.151,0.0208,97.5825,32.4003,1296.0112,-3.1166,20.8,85.0
+INCRUSTACION_SALINA_RAPIDA,BAJA,60.0,5,88.8012,0.0118,88.1542,0.3227,0.0855,0.0021,2.1827,0.0159,96.0828,32.1146,1926.876,0.647,34.2,85.0
+DIA_NORMAL,ALTA,80.0,5,88.7682,0.0053,84.5856,0.3861,0.117,0.0021,2.4952,0.022,95.311,31.9331,2554.6496,4.1826,46.8,85.0
+INCRUSTACION_SALINA_RAPIDA,MEDIA,120.0,5,88.0053,0.0778,78.1276,0.4762,0.4189,0.0211,3.1589,0.024,86.7391,29.4186,3530.2368,9.8777,65.4,85.0
+INCRUSTACION_SALINA_RAPIDA,ALTA,240.0,5,85.8943,0.0721,63.2423,0.5848,1.0816,0.0125,4.2095,0.0136,74.3057,23.2275,5574.5952,22.652,98.4,85.0

@@ -17,7 +17,7 @@ from typing import List, Optional, Tuple
 
 from backend import config, modelo_fisico
 from backend.impacto import impacto_comunitario
-from backend.modelo_fisico import PARAMETROS_BASE, ParametrosModelo
+from backend.modelo_fisico import PARAMETROS_BASE, ParametrosModelo, parametros_desde
 from backend.motor_reglas import evaluar_telemetria, temperatura_alcanzada_pulso
 from backend.schemas import (
     CausaNoValidacion,
@@ -28,6 +28,8 @@ from backend.schemas import (
     EventoBitacora,
     IndicadorVerificacion,
     ModoOperacion,
+    ParametrosUsados,
+    PerfilSitio,
     PuntoSerieTemporal,
     ResultadoModo,
     SimulationConfig,
@@ -40,6 +42,8 @@ from backend.schemas import (
 # Instante de referencia para las decisiones internas; no se expone en la respuesta.
 _INSTANTE_REFERENCIA = datetime(2026, 1, 1, 18, 0, tzinfo=timezone.utc)
 _TOLERANCIA = 1e-9
+# Perfil de Cabo de la Vela con los valores de backend/config.py; no se modifica.
+_SITIO_POR_DEFECTO = PerfilSitio()
 
 
 # ---------------------------------------------------------------------------
@@ -105,9 +109,24 @@ def _tasa_incrustacion_base(escenario: Escenario, tasa: TasaSalinizacion) -> flo
     return tasa_incrustacion_base(escenario, tasa)
 
 
+def _sitio(cfg: SimulationConfig) -> PerfilSitio:
+    """Perfil del sitio de la configuración, o el de Cabo de la Vela si no se indicó ninguno."""
+    return cfg.sitio if cfg.sitio is not None else _SITIO_POR_DEFECTO
+
+
+def parametros_de_configuracion(cfg: SimulationConfig) -> ParametrosModelo:
+    """Parámetros del modelo con el flujo de niebla del sitio y la eficacia del pulso de la configuración.
+
+    Sin sitio ni eficacia devuelve PARAMETROS_BASE, de modo que los resultados
+    son idénticos a los de una simulación sin estos campos.
+    """
+    flujo = cfg.sitio.flujo_niebla_maximo_l_m2_h if cfg.sitio is not None else None
+    return parametros_desde(flujo, cfg.eficacia_maxima_pulso)
+
+
 def _humedad_base(cfg: SimulationConfig, hora: float, referencia_humedad: float) -> float:
     """Humedad del ciclo diurno a la hora dada, con la reducción del escenario de sequía."""
-    humedad_base = cfg.humedad_ambiente_inicial_pct + config.AMPLITUD_HUMEDAD_PCT * (
+    humedad_base = cfg.humedad_ambiente_inicial_pct + _sitio(cfg).amplitud_humedad_pct * (
         _ciclo_humedad(hora) - referencia_humedad
     )
     if cfg.escenario == Escenario.SEQUIA:
@@ -115,12 +134,13 @@ def _humedad_base(cfg: SimulationConfig, hora: float, referencia_humedad: float)
     return humedad_base
 
 
-def _temperatura_ambiente(escenario: Escenario, hora: float, sol: float) -> float:
-    """Temperatura ambiente a la hora dada, con el calor adicional del escenario extremo."""
-    temperatura = config.TEMPERATURA_MEDIA_C + config.AMPLITUD_TEMPERATURA_C * math.cos(
+def _temperatura_ambiente(cfg: SimulationConfig, hora: float, sol: float) -> float:
+    """Temperatura ambiente del sitio a la hora dada, con el calor adicional del escenario extremo."""
+    sitio = _sitio(cfg)
+    temperatura = sitio.temperatura_media_c + sitio.amplitud_temperatura_c * math.cos(
         2.0 * math.pi * (hora - config.HORA_MAXIMA_TEMPERATURA) / 24.0
     )
-    if escenario == Escenario.TORMENTA_DE_SAL_Y_CALOR_EXTREMO:
+    if cfg.escenario == Escenario.TORMENTA_DE_SAL_Y_CALOR_EXTREMO:
         temperatura += config.CALOR_EXTREMO_INCREMENTO_C * sol
     return temperatura
 
@@ -164,8 +184,9 @@ def generar_entorno(cfg: SimulationConfig) -> Entorno:
     """Genera las condiciones ambientales de la simulación.
 
     La humedad sigue un ciclo cosenoidal anclado al valor inicial a las 18:00;
-    la temperatura ambiente oscila entre 25.5 y 34.5 °C con máximo a las 14:00
-    y la matriz se calienta con la radiación solar. Cada nodo recibe un
+    la temperatura ambiente oscila alrededor de la media del sitio (25.5 a
+    34.5 °C con el perfil por defecto) con máximo a las 14:00 y la matriz se
+    calienta con la radiación solar. Cada nodo recibe un
     desfase fijo y ruido gaussiano por paso.
     """
     rng = crear_generador(cfg.semilla)
@@ -199,7 +220,7 @@ def generar_entorno(cfg: SimulationConfig) -> Entorno:
         )
 
         humedad_base = _humedad_base(cfg, hora, referencia_humedad)
-        temperatura = _temperatura_ambiente(escenario, hora, sol)
+        temperatura = _temperatura_ambiente(cfg, hora, sol)
 
         sol_efectivo = sol * (config.TORMENTA_ARENA_FACTOR_RADIACION if tormenta_arena else 1.0)
 
@@ -843,17 +864,30 @@ def _resultado_modo(diag: DiagnosticoModo) -> ResultadoModo:
 
 
 def ejecutar_simulacion_detallada(
-    cfg: SimulationConfig, *, parametros: ParametrosModelo = PARAMETROS_BASE
+    cfg: SimulationConfig, *, parametros: ParametrosModelo | None = None
 ) -> Tuple[Entorno, DiagnosticoModo, DiagnosticoModo]:
-    """Ejecuta ambos modos sobre el mismo entorno y devuelve los diagnósticos completos."""
+    """Ejecuta ambos modos sobre el mismo entorno y devuelve los diagnósticos completos.
+
+    Sin `parametros` explícitos se usan los de la configuración (ver
+    `parametros_de_configuracion`).
+    """
+    if parametros is None:
+        parametros = parametros_de_configuracion(cfg)
     entorno = generar_entorno(cfg)
     neuro = simular_modo(entorno, ModoOperacion.NEURO_SIMBOLICO, parametros=parametros)
     temporizador = simular_modo(entorno, ModoOperacion.TEMPORIZADOR_FIJO, parametros=parametros)
     return entorno, neuro, temporizador
 
 
-def ejecutar_simulacion(cfg: SimulationConfig, *, parametros: ParametrosModelo = PARAMETROS_BASE) -> SimulationResult:
-    """Ejecuta la simulación comparativa y arma la respuesta de la API."""
+def ejecutar_simulacion(cfg: SimulationConfig, *, parametros: ParametrosModelo | None = None) -> SimulationResult:
+    """Ejecuta la simulación comparativa y arma la respuesta de la API.
+
+    Sin `parametros` explícitos se usan los de la configuración (ver
+    `parametros_de_configuracion`). La respuesta informa el sitio y los
+    parámetros usados.
+    """
+    if parametros is None:
+        parametros = parametros_de_configuracion(cfg)
     entorno, neuro, temporizador = ejecutar_simulacion_detallada(cfg, parametros=parametros)
     detalle = verificar_conjeturas(neuro, temporizador, entorno.numero_nodos)
     # Referencia: el temporizador con el tope ecológico del modo neuro-simbólico separa el
@@ -908,4 +942,18 @@ def ejecutar_simulacion(cfg: SimulationConfig, *, parametros: ParametrosModelo =
         series_temporales=series,
         bitacora=neuro.bitacora,
         impacto_comunitario=impacto,
+        parametros_usados=_parametros_usados(cfg, parametros),
+    )
+
+
+def _parametros_usados(cfg: SimulationConfig, parametros: ParametrosModelo) -> ParametrosUsados:
+    """Sitio y parámetros supuestos efectivamente usados en la corrida."""
+    sitio = _sitio(cfg)
+    return ParametrosUsados(
+        nombre_sitio=sitio.nombre,
+        flujo_niebla_maximo_l_m2_h=parametros.flujo_niebla_maximo_l_m2_h,
+        eficacia_maxima_pulso=parametros.eficacia_maxima_pulso,
+        temperatura_media_c=sitio.temperatura_media_c,
+        amplitud_temperatura_c=sitio.amplitud_temperatura_c,
+        amplitud_humedad_pct=sitio.amplitud_humedad_pct,
     )

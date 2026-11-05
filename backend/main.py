@@ -1,8 +1,8 @@
 """Punto de entrada de la API del motor Axioma-H.
 
 Expone el servidor FastAPI con los endpoints de estado general y de salud,
-y registra los routers de evaluación de nodos, de simulación comparativa y de
-análisis de robustez.
+y registra los routers de evaluación de nodos, de simulación comparativa, de
+análisis de robustez y de perfiles de sitio.
 """
 
 import logging
@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from backend.routers import analisis, nodo, simulacion
+from backend.routers import analisis, nodo, simulacion, sitios
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,7 +21,7 @@ logging.basicConfig(
 )
 
 NOMBRE_SERVICIO = "Axioma-H Engine"
-VERSION_SERVICIO = "0.2.0"
+VERSION_SERVICIO = "0.3.0"
 DESCRIPCION_SERVICIO = (
     "Motor de control neuro-simbólico para la captación pasiva de agua "
     "atmosférica."
@@ -61,6 +61,7 @@ app.add_middleware(
 app.include_router(nodo.router)
 app.include_router(simulacion.router)
 app.include_router(analisis.router)
+app.include_router(sitios.router)
 
 
 class EstadoMotor(BaseModel):
