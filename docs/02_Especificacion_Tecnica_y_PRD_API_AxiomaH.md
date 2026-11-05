@@ -237,7 +237,7 @@ Respuesta calculada por el modelo (abreviada). Los valores de la respuesta de ej
     },
     "...": "conjetura_1_eficiencia y conjetura_3_saber_territorial con la misma estructura"
   },
-  "series_temporales": [ { "minuto": 0, "humedad_relativa_pct": 84.85, "...": "..." } ],
+  "series_temporales": [ { "minuto": 0, "humedad_relativa_pct": 44.85, "...": "..." } ],
   "bitacora": [ { "minuto": 0, "nodo_id": "NODO_01", "regla_activada": "REGLA_05_OPERACION_NOMINAL", "motivo": "..." } ],
   "impacto_comunitario": {
     "modo_neuro_simbolico": {

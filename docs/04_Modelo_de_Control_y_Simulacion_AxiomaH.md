@@ -170,7 +170,7 @@ Todas las corridas comparten estas condiciones:
 
 Solo cambia la humedad inicial, que se indica en el título de cada tabla.
 
-Los resultados de las secciones 5.1 a 5.4, junto con el modo de referencia de la sección 8.4 y el barrido con semillas 1 a 5 de la sección 7.5, están también como datos abiertos en [datos/](datos/README.md) (CSV y JSON). Se regeneran sin la API con `python scripts/generar_resultados_referencia.py`.
+Los resultados de las secciones 5.1 a 5.4, junto con el modo de referencia de la sección 8.4, el barrido con semillas 1 a 5 de la sección 7.5 y la robustez de la sección 8.8, están también como datos abiertos en [datos/](datos/README.md) (CSV, JSON y descriptor Data Package). Se regeneran sin la API con `python scripts/generar_resultados_referencia.py`.
 
 ### 5.1 Corrida de referencia del PRD (TORMENTA_DE_SAL_Y_CALOR_EXTREMO, humedad inicial 45 %)
 

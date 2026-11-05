@@ -140,7 +140,7 @@ The documents in `docs/` are numbered in reading order (all in Spanish):
 3. [03_Funcionamiento_General_AxiomaH.md](docs/03_Funcionamiento_General_AxiomaH.md): plain-language explanation of the application and the dashboard.
 4. [04_Modelo_de_Control_y_Simulacion_AxiomaH.md](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md): rules, equations, results and critical reading of the conjectures.
 5. [05_Despliegue_y_Operacion_AxiomaH.md](docs/05_Despliegue_y_Operacion_AxiomaH.md): deployment on Render, CI, verification and integration with other systems (curl, pandas, Data Package validation and real sensors, section 7).
-6. [06_Referencias_y_Trazabilidad_AxiomaH.md](docs/06_Referencias_y_Trazabilidad_AxiomaH.md): third-party software, scientific source and parameter traceability.
+6. [06_Referencias_y_Trazabilidad_AxiomaH.md](docs/06_Referencias_y_Trazabilidad_AxiomaH.md): third-party software, scientific sources and parameter traceability.
 
 The reference data and its field dictionary are in [docs/datos/](docs/datos/README.md).
 

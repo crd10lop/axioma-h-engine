@@ -162,7 +162,7 @@ Todos los resultados provienen de una simulación, no de mediciones de campo. Va
 | [04_Modelo_de_Control_y_Simulacion_AxiomaH.md](04_Modelo_de_Control_y_Simulacion_AxiomaH.md) | Reglas, ecuaciones, parámetros, resultados detallados, análisis y lectura crítica de las conjeturas. |
 | [05_Despliegue_y_Operacion_AxiomaH.md](05_Despliegue_y_Operacion_AxiomaH.md) | Despliegue en Render, integración continua, verificación y operación. |
 | [06_Referencias_y_Trazabilidad_AxiomaH.md](06_Referencias_y_Trazabilidad_AxiomaH.md) | Software de terceros con su licencia, fuente científica y origen de cada parámetro del modelo. |
-| [datos/README.md](datos/README.md) | Resultados de referencia en CSV y JSON y su diccionario de campos. |
+| [datos/README.md](datos/README.md) | Resultados de referencia en CSV, JSON y Data Package, y su diccionario de campos. |
 | [README_EN.md](../README_EN.md) | Resumen del proyecto en inglés. |
 
 ## 10. Calidad del código y cobertura
@@ -179,7 +179,7 @@ El código se analiza en SonarQube Cloud: [tablero del proyecto](https://sonarcl
 
 **Exclusión de `frontend/app.py`.** Es la capa de presentación de Streamlit y no tiene lógica de negocio propia. Toda la lógica que usa, la transformación de datos y las llamadas a la API, está separada en `transformaciones.py` y `cliente_api.py`, que sí tienen pruebas. Su comportamiento se valida al ejecutar el dashboard y con `scripts/verificar_despliegue.py`. Probarla en CI exigiría simular la interfaz completa sin aportar verificación adicional de las reglas del motor.
 
-**Exclusión de `scripts/`.** Contiene dos herramientas operativas, no código de la aplicación: `verificar_despliegue.py`, que se ejecuta contra el despliegue real, y `generar_resultados_referencia.py`, que regenera los datos de `docs/datos/` importando el backend.
+**Exclusión de `scripts/`.** Contiene dos herramientas operativas, no código de la aplicación: `verificar_despliegue.py`, que se ejecuta contra el despliegue real, y `generar_resultados_referencia.py`, que regenera los datos de `docs/datos/` y el contrato `docs/api/openapi.json` importando el backend.
 
 **Trabajo futuro.** Si se quiere cubrir la interfaz, se puede usar `streamlit.testing.v1.AppTest` con `cliente_api` simulado mediante `monkeypatch`.
 

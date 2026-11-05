@@ -55,6 +55,7 @@ La tabla recorre todas las constantes de `backend/config.py` en el orden del arc
 | `AHORRO_ENERGIA_MINIMO_PCT` | 35.0 % | Matriz | Matriz, Conjetura 1 |
 | `TIEMPO_REGENERACION_MAX_SEG` | 120 s | Matriz | Matriz, Conjetura 2 |
 | `FACTOR_IMPEDANCIA_REGENERADA` | 1.10 (1100 Ohm) | Criterio del equipo | Documento 04, sección 6.4 |
+| `FRACCION_TIEMPO_DESPRENDIMIENTO` | 0.95 | Criterio del equipo | Documento 04, secciones 4 y 8.5. Indicador informativo `t95` de la Conjetura 2 |
 | `PERDIDA_TERMICA_MAXIMA_PCT` | 0.0 % | Matriz | Matriz, Conjetura 2 |
 | `VIOLACIONES_ECOLOGICAS_MAXIMAS` | 0 | Matriz | Matriz, Conjetura 3 |
 | `RENDIMIENTO_MINIMO_L_M2_NOCHE` | 12.0 L/m²/noche | Matriz | Matriz, Conjetura 3. Contrastado con Klemm et al. (2012) en la sección 4 |
