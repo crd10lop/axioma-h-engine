@@ -331,12 +331,15 @@ def _decidir_accion(
     fraccion_temporizador: float,
     *,
     parametros: ParametrosModelo = PARAMETROS_BASE,
+    salvaguardas_temporizador: bool = False,
 ) -> Tuple[float, bool, float]:
     """Decide la fracción de extracción, si se ordena un pulso y su temperatura objetivo.
 
     En modo neuro-simbólico consulta el motor de reglas y registra en la
     bitácora cada cambio de regla; en modo temporizador aplica la
-    programación fija con la fracción de extracción indicada.
+    programación fija con la fracción de extracción indicada y, si
+    `salvaguardas_temporizador` es verdadero, el corte térmico, la pausa
+    ecológica y el límite de temperatura del pulso (ver `_accion_temporizador`).
     """
     if neuro:
         telemetria = TelemetryInput(
@@ -365,12 +368,47 @@ def _decidir_accion(
         ordena_pulso = decision.pulso_termico_activo
         t_pulso = temperatura_alcanzada_pulso(t_matriz) if ordena_pulso else t_matriz
     else:
-        fraccion = fraccion_temporizador
-        ordena_pulso = minuto - estado.ultimo_pulso_min >= config.INTERVALO_PULSO_TEMPORIZADOR_MIN
-        if ordena_pulso:
-            estado.ultimo_pulso_min = minuto
-        t_pulso = t_matriz + config.INCREMENTO_TERMICO_TEMPORIZADOR_C
+        fraccion, ordena_pulso, t_pulso = _accion_temporizador(
+            estado,
+            minuto,
+            humedad,
+            t_matriz,
+            fraccion_temporizador,
+            salvaguardas=salvaguardas_temporizador,
+        )
     return fraccion, ordena_pulso, t_pulso
+
+
+def _accion_temporizador(
+    estado: _EstadoNodo,
+    minuto: int,
+    humedad: float,
+    t_matriz: float,
+    fraccion_temporizador: float,
+    *,
+    salvaguardas: bool = False,
+) -> Tuple[float, bool, float]:
+    """Aplica la programación fija del temporizador, con o sin salvaguardas.
+
+    Sin salvaguardas, el temporizador ordena un pulso cada intervalo fijo hacia
+    la temperatura de la matriz más el incremento del temporizador, sin corte
+    térmico ni pausa ecológica. Con salvaguardas, suspende la extracción y
+    cancela el pulso si la humedad está bajo el umbral ecológico (equivale a
+    la REGLA_02) o si la matriz alcanza el corte térmico (equivale a la
+    REGLA_01); en otro caso, el pulso se limita a la temperatura objetivo de
+    las reglas, como un termostato, sin enfriar una matriz que ya la supera.
+    En ambos casos el reloj avanza aunque el pulso se cancele: el ciclo
+    perdido no se reprograma.
+    """
+    ordena_pulso = minuto - estado.ultimo_pulso_min >= config.INTERVALO_PULSO_TEMPORIZADOR_MIN
+    if ordena_pulso:
+        estado.ultimo_pulso_min = minuto
+    t_pulso = t_matriz + config.INCREMENTO_TERMICO_TEMPORIZADOR_C
+    if not salvaguardas:
+        return fraccion_temporizador, ordena_pulso, t_pulso
+    if humedad < config.UMBRAL_HUMEDAD_ECOLOGICA_PCT or t_matriz >= config.UMBRAL_TEMPERATURA_CORTE_C:
+        return 0.0, False, t_matriz
+    return fraccion_temporizador, ordena_pulso, max(t_matriz, min(t_pulso, config.TEMPERATURA_OBJETIVO_PULSO_C))
 
 
 def _registrar_regeneracion(
@@ -519,6 +557,7 @@ def simular_modo(
     fraccion_temporizador: float | None = None,
     *,
     parametros: ParametrosModelo = PARAMETROS_BASE,
+    salvaguardas_temporizador: bool = False,
 ) -> DiagnosticoModo:
     """Simula la red completa bajo una estrategia de control.
 
@@ -528,6 +567,13 @@ def simular_modo(
     térmico ni pausa ecológica) con cualquier fracción. `parametros` define la
     eficacia del pulso, el flujo de niebla, la fatiga por pulso y la
     degradación térmica sin modificar `backend.config`.
+
+    Con `salvaguardas_temporizador` verdadero, el temporizador incorpora las
+    mismas salvaguardas que las reglas: con HR bajo el umbral ecológico o con
+    la matriz en el corte térmico no extrae ni pulsa, y sus pulsos se limitan a
+    la temperatura objetivo de las reglas. El reloj avanza aunque el pulso se
+    cancele. Es un parámetro interno para análisis exploratorios; su valor por
+    defecto no cambia ningún resultado y no se usa en el modo neuro-simbólico.
 
     En cada paso y para cada nodo: se decide la acción (motor de reglas o
     programación fija), se ejecuta el pulso si corresponde, se calcula el
@@ -578,6 +624,7 @@ def simular_modo(
                 impedancia_inicial,
                 fraccion_fija,
                 parametros=parametros,
+                salvaguardas_temporizador=salvaguardas_temporizador,
             )
 
             # Ejecución del pulso resistivo.

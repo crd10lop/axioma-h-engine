@@ -16,7 +16,9 @@ from backend.schemas import (
 from backend.simulador import (
     DiagnosticoModo,
     Entorno,
+    _accion_temporizador,
     _causas_no_validacion,
+    _EstadoNodo,
     _indicador,
     _sitio,
     ejecutar_simulacion,
@@ -522,3 +524,90 @@ def test_detallada_sin_parametros_usa_los_de_la_configuracion():
     _, implicita, _ = ejecutar_simulacion_detallada(cfg)
     _, explicita, _ = ejecutar_simulacion_detallada(cfg, parametros=ParametrosModelo(eficacia_maxima_pulso=1.0))
     assert implicita.recuperaciones_pct == explicita.recuperaciones_pct
+
+
+# ---------------------------------------------------------------------------
+# Temporizador con salvaguardas (análisis exploratorio de la hipótesis H2)
+# ---------------------------------------------------------------------------
+MINUTO_PULSO = config.INTERVALO_PULSO_TEMPORIZADOR_MIN
+HUMEDAD_NORMAL = 80.0
+FRACCION_TOPE = config.FRACCION_MAXIMA_EXTRACCION
+
+
+@pytest.mark.parametrize(
+    ("humedad", "t_matriz"),
+    [
+        (config.UMBRAL_HUMEDAD_ECOLOGICA_PCT - 1.0, 30.0),
+        (HUMEDAD_NORMAL, config.UMBRAL_TEMPERATURA_CORTE_C),
+        (HUMEDAD_NORMAL, config.UMBRAL_TEMPERATURA_CORTE_C + 3.0),
+    ],
+)
+def test_salvaguardas_cancelan_pulso_y_extraccion(humedad, t_matriz):
+    estado = _EstadoNodo()
+    fraccion, ordena_pulso, t_pulso = _accion_temporizador(
+        estado, MINUTO_PULSO, humedad, t_matriz, FRACCION_TOPE, salvaguardas=True
+    )
+    assert fraccion == pytest.approx(0.0, abs=1e-12)
+    assert ordena_pulso is False
+    assert t_pulso == pytest.approx(t_matriz)
+
+
+def test_pulso_cancelado_avanza_el_reloj_del_temporizador():
+    estado = _EstadoNodo()
+    _accion_temporizador(
+        estado, MINUTO_PULSO, config.UMBRAL_HUMEDAD_ECOLOGICA_PCT - 1.0, 30.0, FRACCION_TOPE, salvaguardas=True
+    )
+    assert estado.ultimo_pulso_min == MINUTO_PULSO
+    # El siguiente paso ya no ordena pulso: el ciclo perdido no se reprograma.
+    _, ordena_pulso, _ = _accion_temporizador(
+        estado, MINUTO_PULSO + 5, HUMEDAD_NORMAL, 30.0, FRACCION_TOPE, salvaguardas=True
+    )
+    assert ordena_pulso is False
+
+
+@pytest.mark.parametrize(
+    ("t_matriz", "t_esperada"),
+    [
+        (20.0, 20.0 + config.INCREMENTO_TERMICO_TEMPORIZADOR_C),
+        (35.0, config.TEMPERATURA_OBJETIVO_PULSO_C),
+        (44.5, 44.5),
+    ],
+)
+def test_salvaguardas_limitan_el_pulso_a_la_temperatura_objetivo(t_matriz, t_esperada):
+    estado = _EstadoNodo()
+    fraccion, ordena_pulso, t_pulso = _accion_temporizador(
+        estado, MINUTO_PULSO, HUMEDAD_NORMAL, t_matriz, FRACCION_TOPE, salvaguardas=True
+    )
+    assert fraccion == pytest.approx(FRACCION_TOPE)
+    assert ordena_pulso is True
+    assert t_pulso == pytest.approx(t_esperada)
+
+
+def test_sin_salvaguardas_el_temporizador_conserva_su_programacion():
+    estado = _EstadoNodo()
+    fraccion, ordena_pulso, t_pulso = _accion_temporizador(
+        estado, MINUTO_PULSO, config.UMBRAL_HUMEDAD_ECOLOGICA_PCT - 1.0, 40.0, FRACCION_TOPE
+    )
+    assert fraccion == pytest.approx(FRACCION_TOPE)
+    assert ordena_pulso is True
+    assert t_pulso == pytest.approx(40.0 + config.INCREMENTO_TERMICO_TEMPORIZADOR_C)
+
+
+@pytest.mark.parametrize("escenario", [Escenario.DIA_NORMAL, Escenario.TORMENTA_DE_SAL_Y_CALOR_EXTREMO])
+def test_temporizador_con_salvaguardas_no_degrada_por_calor(escenario):
+    entorno = generar_entorno(configuracion(escenario))
+    sin = simular_modo(entorno, ModoOperacion.TEMPORIZADOR_FIJO, FRACCION_TOPE)
+    con = simular_modo(entorno, ModoOperacion.TEMPORIZADOR_FIJO, FRACCION_TOPE, salvaguardas_temporizador=True)
+    assert sin.perdida_termica_pct > 0.0
+    assert con.perdida_termica_pct == pytest.approx(0.0, abs=1e-12)
+    assert max(con.temperaturas_pulso_c) < config.UMBRAL_TEMPERATURA_CORTE_C
+    assert con.violaciones_ecologicas == 0
+
+
+def test_temporizador_con_salvaguardas_respeta_la_pausa_ecologica_en_sequia():
+    entorno = generar_entorno(configuracion(Escenario.SEQUIA))
+    con = simular_modo(entorno, ModoOperacion.TEMPORIZADOR_FIJO, FRACCION_TOPE, salvaguardas_temporizador=True)
+    sin = simular_modo(entorno, ModoOperacion.TEMPORIZADOR_FIJO, FRACCION_TOPE)
+    assert sin.violaciones_ecologicas > 0
+    assert con.violaciones_ecologicas == 0
+    assert con.pulsos < sin.pulsos
