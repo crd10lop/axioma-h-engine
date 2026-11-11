@@ -90,6 +90,7 @@ La impedancia total es `Z = Z_nom + Z_sal + Z_polvo`.
 - **Temporizador fijo:** aplica un pulso cada 120 min sin leer sensores, a `T_m + 12 °C` y sin corte térmico. La fracción de extracción es fija en 0.45 y no hay pausa ecológica.
 - **Temporizador con tope ecológico (referencia):** es el mismo temporizador fijo, con la misma programación de pulsos y sin corte térmico ni pausa ecológica, pero con la fracción de 0.33 del modo neuro-simbólico. Se ejecuta sobre el mismo entorno y se reporta en `comparativa.modo_temporizador_tope_ecologico`. No interviene en la validación de las conjeturas ni en las series temporales. Su función es separar el efecto del tope ecológico del de la lógica de control (sección 8.4).
 - **Temporizador con salvaguardas (análisis exploratorio):** el parámetro interno `salvaguardas_temporizador` de `simular_modo`, falso por defecto, agrega al temporizador el corte a 45 °C, la pausa con HR < 30 % y un pulso limitado a 44 °C. No se expone en la API ni cambia los resultados de las secciones 5 a 8.12; se usa en la sección 8.13 para contrastar si la ventaja en desgaste se debe a la lógica de control o a las salvaguardas.
+- **Intervalo del temporizador (análisis exploratorio):** el parámetro interno `intervalo_temporizador_min` de `simular_modo`, nulo por defecto, fija los minutos entre pulsos programados; con el valor nulo se usan los 120 min de `INTERVALO_PULSO_TEMPORIZADOR_MIN` y los resultados no cambian. Debe ser positivo. Tampoco se expone en la API; se usa en la sección 8.14 para variar el intervalo del temporizador con salvaguardas.
 
 ### 3.4 Parámetros
 
@@ -1033,3 +1034,111 @@ e3 = {escenario: corrida(escenario, horas=72) for escenario in Escenario}  # E3 
 flujo_atacama = calibrar_flujo_niebla(7.0)  # E4
 e4 = ejecutar_barrido(BarridoConfig(semillas=[42], flujo_niebla_maximo_l_m2_h=flujo_atacama))
 ```
+
+### 8.14 Métrica homogénea de recuperación y sensibilidad al intervalo del temporizador
+
+La sección 8.13 deja dos amenazas acotadas, pero no resueltas. La recuperación tras pulso se mide en momentos distintos en cada modo (sección 7.5), de modo que la ventaja en recuperación compara políticas de limpieza y no el estado de la membrana. Y el temporizador con salvaguardas usa un único intervalo, 120 min, elegido por el equipo. Esta sección reúne dos análisis exploratorios, E5 y E6, ejecutados con un script temporal fuera del repositorio y con las funciones del backend. No modifican `backend/config.py`, los datos abiertos ni la API. El intervalo se varía con el parámetro interno `intervalo_temporizador_min` de `simular_modo` (sección 3.3); con 120 min, el temporizador con salvaguardas reproduce exactamente las cifras de E1 en los cinco escenarios y en el barrido.
+
+**Métrica homogénea.** Para cada modo, la conductancia relativa media en el tiempo es `G = media_t min(1, Z_nom / Z_t)`, donde `Z_t` es `impedancia_promedio[t]`, la impedancia media de la red al final de cada paso. La métrica se mide igual en todos los modos y en todos los pasos, haya o no pulso, y se expresa en porcentaje. La ventaja en `G` es `G_R - G_alternativa`, en puntos; las diferencias se calculan con los valores sin redondear.
+
+**E5. Métrica homogénea de recuperación.** Cinco escenarios, humedad inicial de 85 %, 24 h, 8 nodos, tasa ALTA y semilla 42. La última columna es la ventaja en recuperación tras pulso de la sección 5.3.
+
+| Escenario | G R / T / TS (%) | Ventaja en G frente a T (puntos) | Ventaja en G frente a TS (puntos) | Ventaja en recuperación tras pulso frente a T (puntos) |
+|---|---|---|---|---|
+| DIA_NORMAL | 76.65 / 76.14 / 80.93 | +0.51 | -4.28 | +4.33 |
+| INCRUSTACION_SALINA_RAPIDA | 67.12 / 54.39 / 60.96 | +12.73 | +6.16 | +22.70 |
+| SEQUIA | 76.99 / 83.71 / 81.98 | -6.71 | -4.99 | +0.17 |
+| TORMENTA_DE_ARENA | 76.00 / 74.61 / 78.98 | +1.39 | -2.98 | +3.35 |
+| TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 74.56 / 68.83 / 74.46 | +5.73 | +0.10 | +9.99 |
+
+R: control basado en reglas (modo neuro-simbólico); T: temporizador fijo; TS: temporizador con salvaguardas, fracción de 0.33 e intervalo de 120 min.
+
+Barrido de salinidad de la sección 7.2 con las semillas 1 a 5 (media +/- desviación). La incrustación diaria, la zona y la ventaja en recuperación tras pulso son las de `ejecutar_barrido` con las mismas semillas.
+
+| Carga salina (Ohm por L/m²) | Incrustación diaria (Ohm/día) | Zona | G R (%) | G T (%) | G TS (%) | Ventaja en G frente a T (puntos) | Ventaja en G frente a TS (puntos) | Ventaja en recuperación tras pulso frente a T (puntos) |
+|---|---|---|---|---|---|---|---|---|
+| 20 | 669.0 | `BAJO_TRANSICION` | 80.77 +/- 0.07 | 92.26 +/- 0.17 | 94.15 +/- 0.13 | -11.50 +/- 0.13 | -13.39 +/- 0.10 | -7.06 |
+| 40 | 1296.0 | `TRANSICION` | 77.94 +/- 0.07 | 85.94 +/- 0.27 | 89.14 +/- 0.22 | -8.00 +/- 0.33 | -11.20 +/- 0.28 | -3.12 |
+| 60 | 1926.9 | `TRANSICION` | 77.14 +/- 0.13 | 80.63 +/- 0.33 | 84.77 +/- 0.28 | -3.49 +/- 0.22 | -7.64 +/- 0.18 | +0.65 |
+| 80 | 2554.6 | `SOBRE_TRANSICION` | 76.62 +/- 0.08 | 76.11 +/- 0.37 | 80.92 +/- 0.33 | +0.51 +/- 0.38 | -4.30 +/- 0.34 | +4.18 |
+| 120 | 3530.2 | `SOBRE_TRANSICION` | 74.50 +/- 0.21 | 68.74 +/- 0.42 | 74.42 +/- 0.39 | +5.76 +/- 0.22 | +0.08 +/- 0.18 | +9.88 |
+| 240 | 5574.6 | `SOBRE_TRANSICION` | 67.02 +/- 0.22 | 54.30 +/- 0.46 | 60.88 +/- 0.45 | +12.72 +/- 0.24 | +6.13 +/- 0.23 | +22.65 |
+
+Cruces interpolados linealmente sobre las medias, con el mismo criterio de `_interpolar_cruce`:
+
+| Métrica y alternativa | Niveles vecinos (Ohm/día) | Cruce interpolado (Ohm/día) | Carga salina del cruce (Ohm por L/m²) | Posición frente a la banda `[1171.06, 2365.34)` |
+|---|---|---|---|---|
+| Recuperación tras pulso, frente a T | 1296.0 a 1926.9 | 1818.4 | 56.6 | Dentro |
+| G, frente a T | 1926.9 a 2554.6 | 2474.5 | 77.4 | Por encima (los niveles vecinos abarcan el límite superior) |
+| G, frente a TS | 2554.6 a 3530.2 | 3513.0 | 119.3 | Por encima |
+
+Lectura de E5:
+
+- **La estructura del veredicto b) se conserva.** Con la métrica homogénea, la ventaja de las reglas es negativa con incrustación baja y positiva con incrustación alta, cambia de signo una sola vez y crece con la incrustación diaria, frente a T y frente a TS. La dispersión entre semillas es pequeña: la desviación de la ventaja no supera 0.38 puntos.
+- **El cruce se desplaza hacia arriba y sale de la banda.** Frente a T, el cruce de `G` queda entre 1926.9 y 2554.6 Ohm/día, con estimación interpolada de 2474.5 Ohm/día, por encima del límite superior de la banda; la recuperación tras pulso lo sitúa en 1818.4 Ohm/día, dentro de ella. Con 2554.6 Ohm/día la ventaja en `G` es +0.51 +/- 0.38 puntos: positiva en las cinco semillas, pero pequeña. Frente a TS, el cruce sube a 3513.0 Ohm/día; con 3530.2 Ohm/día la ventaja (+0.08 +/- 0.18) es indistinguible de cero, positiva en tres de las cinco semillas, y solo con 5574.6 Ohm/día es clara (+6.13 puntos).
+- **La recuperación tras pulso sobrestima la ventaja y adelanta el cruce.** Las reglas esperan a que la impedancia supere 1500 Ohm antes de limpiar, y su `G` baja de 80.77 % a 67.02 % a lo largo del barrido, mientras que su recuperación tras pulso se mantiene entre 85.9 % y 88.9 % (sección 7.5). La métrica tras pulso solo ve el instante posterior a la limpieza; `G` incluye el tiempo que la membrana pasa incrustada entre pulsos. Con incrustación alta, las ventajas en `G` son cerca de la mitad de las ventajas tras pulso (+12.72 frente a +22.65 puntos con 240 Ohm por L/m²).
+- **Coincidencia con el veredicto b).** Coinciden en que la ventaja en recuperación es condicional a la incrustación diaria y solo aparece con incrustación alta. No coinciden en la ubicación del cruce: la banda `[1171.06, 2365.34)` describe el cruce de la recuperación tras pulso, no el de la conductancia media. Con la métrica homogénea, las reglas mantienen la membrana más conductora que el temporizador fijo por encima de unos 2500 Ohm/día y que el temporizador con salvaguardas por encima de unos 3500 Ohm/día.
+- **Escenarios.** El signo de la ventaja en `G` frente a T coincide con el de la ventaja tras pulso en cuatro de los cinco escenarios. En SEQUIA la ventaja tras pulso es +0.17 puntos (indistinguible de cero según E3) y la ventaja en `G` es -6.71 puntos: la pausa ecológica deja la membrana incrustada mientras la humedad está bajo 30 %, el mismo mecanismo que explica la excepción de desgaste de E1.
+- **Limitación.** `G` usa la impedancia media de la red, no la de cada nodo. Como `1/Z` es convexa, `Z_nom / media(Z_i)` no supera la media de `Z_nom / Z_i`: `G` subestima la conductancia media de los nodos, y la subestima más cuanto más dispersas estén sus impedancias. La dispersión entre nodos no se registra por modo, de modo que no se puede descartar que el sesgo sea distinto en cada uno; las reglas limpian cada nodo cuando cruza el umbral y el temporizador limpia todos a la vez. `G` pondera además cada paso por igual, no por el agua captada en él.
+
+**E6. Sensibilidad al intervalo del temporizador con salvaguardas.** Temporizador con salvaguardas, fracción de 0.33 e intervalos de 60, 120, 180 y 240 min. Cinco escenarios con humedad inicial de 85 %, 24 h, 8 nodos, tasa ALTA y semilla 42. Los valores de cada temporizador se dan en el orden 60 / 120 / 180 / 240 min.
+
+| Escenario | Pulsos R | Pulsos TS | Energía R (Wh) | Energía TS (Wh) | Degradación R (%) | Degradación TS (%) | Reducción frente a TS | Ventaja en G frente a TS (puntos) |
+|---|---|---|---|---|---|---|---|---|
+| DIA_NORMAL | 46 | 144 / 88 / 56 / 40 | 664.5 | 1248.1 / 834.7 / 539.5 / 392.3 | 0.115 | 0.662 / 0.253 / 0.550 / 0.967 | 82.6 / 54.6 / 79.1 / 88.1 % | -7.35 / -4.28 / +1.58 / +6.08 |
+| INCRUSTACION_SALINA_RAPIDA | 97 | 144 / 88 / 56 / 40 | 1013.7 | 1248.1 / 834.7 / 539.5 / 392.3 | 1.073 | 1.267 / 1.887 / 2.264 / 2.320 | 15.4 / 43.1 / 52.6 / 53.8 % | -0.48 / +6.16 / +13.84 / +18.66 |
+| SEQUIA | 24 | 80 / 56 / 32 / 24 | 491.9 | 940.3 / 682.1 / 411.7 / 318.4 | 0.160 | 0.439 / 0.140 / 1.156 / 1.331 | 63.5 / -14.3 / 86.2 / 88.0 % | -3.34 / -4.99 / +5.28 / +7.56 |
+| TORMENTA_DE_ARENA | 53 | 144 / 88 / 56 / 40 | 752.1 | 1365.1 / 899.1 / 585.9 / 415.9 | 0.132 | 0.662 / 0.253 / 0.601 / 1.146 | 80.0 / 47.7 / 78.0 / 88.4 % | -5.32 / -2.98 / +2.37 / +6.66 |
+| TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 64 | 144 / 88 / 56 / 40 | 780.8 | 1077.9 / 747.6 / 483.1 / 351.9 | 0.408 | 0.829 / 0.714 / 1.304 / 1.761 | 50.8 / 42.8 / 68.7 / 76.8 % | -4.26 / +0.10 / +6.95 / +11.88 |
+
+Con cualquier intervalo, el temporizador con salvaguardas no tiene pérdida térmica ni violaciones ecológicas.
+
+Repetido en el barrido de salinidad con las semillas 1 a 5 (media +/- desviación; la reducción se calcula con las medias). En todos los niveles y semillas el temporizador con salvaguardas aplica 144, 88, 56 y 40 pulsos y consume, en promedio, 1236.8, 826.1, 534.5 y 389.2 Wh con 60, 120, 180 y 240 min (desviación de 1.0 a 4.4 Wh).
+
+| Carga salina (Ohm por L/m²) | Degradación R (%) | Degradación TS (%) | Reducción frente a TS | G R (%) | G TS (%) | Pulsos R | Energía R (Wh) |
+|---|---|---|---|---|---|---|---|
+| 20 | 0.020 +/- 0.000 | 0.360 +/- 0.000 / 0.220 +/- 0.000 / 0.140 +/- 0.000 / 0.100 +/- 0.000 | 94.4 / 90.9 / 85.7 / 80.0 % | 80.77 | 94.73 / 94.15 / 91.81 / 89.73 | 8.0 | 149.7 |
+| 40 | 0.052 +/- 0.004 | 0.360 +/- 0.000 / 0.220 +/- 0.000 / 0.140 +/- 0.000 / 0.100 +/- 0.000 | 85.6 / 76.4 / 62.9 / 48.0 % | 77.94 | 90.54 / 89.14 / 85.18 / 81.86 | 20.8 | 347.9 |
+| 60 | 0.085 +/- 0.002 | 0.527 +/- 0.016 / 0.220 +/- 0.000 / 0.196 +/- 0.017 / 0.430 +/- 0.036 | 83.8 / 61.1 / 56.3 / 80.1 % | 77.14 | 87.01 / 84.77 / 79.66 / 75.60 | 34.2 | 513.2 |
+| 80 | 0.117 +/- 0.002 | 0.660 +/- 0.013 / 0.242 +/- 0.013 / 0.547 +/- 0.031 / 0.972 +/- 0.056 | 82.3 / 51.6 / 78.6 / 88.0 % | 76.62 | 83.93 / 80.92 / 75.01 / 70.49 | 46.8 | 666.8 |
+| 120 | 0.419 +/- 0.021 | 0.835 +/- 0.017 / 0.705 +/- 0.043 / 1.317 +/- 0.042 / 1.774 +/- 0.029 | 49.8 / 40.6 / 68.2 / 76.4 % | 74.50 | 78.72 / 74.42 / 67.53 / 62.58 | 65.4 | 856.1 |
+| 240 | 1.082 +/- 0.012 | 1.269 +/- 0.024 / 1.901 +/- 0.032 / 2.274 +/- 0.012 / 2.323 +/- 0.003 | 14.8 / 43.1 / 52.4 / 53.4 % | 67.02 | 67.46 / 60.88 / 53.16 / 48.34 | 98.4 | 1011.0 |
+
+Lectura de E6:
+
+- **Ningún intervalo iguala a las reglas en desgaste en el barrido.** Con intervalos de 60 a 240 min, la reducción del desgaste de las reglas frente al temporizador con salvaguardas va de 14.8 % a 94.4 % en los seis niveles. En los escenarios, el único caso en que el temporizador se degrada menos es SEQUIA con 120 min (-14.3 %, la excepción de E1); con 60, 180 y 240 min la excepción desaparece (63.5 %, 86.2 % y 88.0 %). La excepción de la sequía depende, por tanto, del intervalo de 120 min.
+- **El mejor intervalo para el temporizador cambia con la salinidad.** La menor reducción de cada nivel se obtiene con 240 min en 20 y 40 Ohm por L/m² (80.0 % y 48.0 %), con 180 min en 60 (56.3 %), con 120 min en 80 y 120 (51.6 % y 40.6 %) y con 60 min en 240 (14.8 %). Con poca sal conviene pulsar poco, para evitar fatiga; con mucha sal, pulsar seguido, para evitar cristalización. Un calendario fijo puede ajustarse a una carga salina, pero no a todas; las reglas ajustan la frecuencia de limpieza a la incrustación sin conocerla de antemano.
+- **Costo de acercarse a las reglas.** El temporizador que más se acerca, con 60 min y 240 Ohm por L/m², reduce la ventaja de las reglas a 14.8 % y mantiene una `G` algo mayor (67.46 % frente a 67.02 %), a costa de 144 pulsos frente a 98.4 y de 1236.8 frente a 1011.0 Wh. En INCRUSTACION_SALINA_RAPIDA ocurre lo mismo: 15.4 %, `G` de 67.60 % frente a 67.12 % y 1248.1 frente a 1013.7 Wh. Con 60 min, el temporizador con salvaguardas tiene mayor `G` que las reglas en todos los niveles del barrido y en los cinco escenarios.
+- **Intervalos largos.** Con 180 y 240 min el temporizador consume menos energía que las reglas en los cinco escenarios, pero se degrada más y, desde 60 Ohm por L/m² (240 min) o desde 80 Ohm por L/m² (180 min), mantiene una `G` menor. Ningún intervalo ofrece a la vez menor desgaste y mayor `G` que las reglas con menos energía.
+- **Relación con E5.** El cruce de la ventaja en `G` frente al temporizador con salvaguardas depende del intervalo: no hay cruce con 60 min (la ventaja va de -13.96 a -0.44 puntos), está en 3513.0 Ohm/día con 120 min, en 2310.9 Ohm/día con 180 min y en 1748.8 Ohm/día con 240 min. La posición del cruce en recuperación depende, por tanto, de la frecuencia de limpieza de la alternativa, además de la incrustación diaria del sitio.
+- **Alcance.** Los intervalos explorados son múltiplos del paso de 5 min entre 60 y 240 min; el temporizador conserva el reloj que avanza aunque el pulso se cancele, la temperatura de pulso limitada a 44 °C y la fracción de 0.33. Otro diseño de temporizador (por ejemplo, con reprogramación del ciclo perdido) no está representado.
+
+Reproducción (desde la raíz del repositorio):
+
+```python
+import statistics
+from backend import config
+from backend.analisis import ESCENARIOS_BARRIDO, TASAS_BARRIDO, ejecutar_barrido
+from backend.schemas import BarridoConfig, Escenario, ModoOperacion, SimulationConfig, TasaSalinizacion
+from backend.simulador import generar_entorno, simular_modo
+
+def conductancia_media(diag):  # G en %, con la impedancia media de la red en cada paso
+    return 100 * statistics.fmean(min(1.0, config.IMPEDANCIA_NOMINAL_OHMS / z) for z in diag.impedancia_promedio)
+
+def corrida(escenario, semilla=42, tasa=TasaSalinizacion.ALTA, intervalos=(60, 120, 180, 240)):
+    entorno = generar_entorno(SimulationConfig(duracion_horas=24, escenario=escenario, humedad_ambiente_inicial_pct=85.0,
+                                               tasa_salinizacion=tasa, semilla=semilla))
+    modos = {"R": simular_modo(entorno, ModoOperacion.NEURO_SIMBOLICO),
+             "T": simular_modo(entorno, ModoOperacion.TEMPORIZADOR_FIJO)}
+    for intervalo in intervalos:
+        modos[f"TS{intervalo}"] = simular_modo(entorno, ModoOperacion.TEMPORIZADOR_FIJO, config.FRACCION_MAXIMA_EXTRACCION,
+                                               salvaguardas_temporizador=True, intervalo_temporizador_min=intervalo)
+    return modos
+
+e5_e6_escenarios = {escenario: corrida(escenario) for escenario in Escenario}  # E5 (a) y E6 (a)
+e5_e6_barrido = {(escenario, tasa): [corrida(escenario, semilla, tasa) for semilla in (1, 2, 3, 4, 5)]
+                 for escenario in ESCENARIOS_BARRIDO for tasa in TASAS_BARRIDO}  # E5 (b) y E6 (b)
+referencia = ejecutar_barrido(BarridoConfig(semillas=[1, 2, 3, 4, 5]))  # incrustación diaria, zona y cruce tras pulso
+```
+
+La degradación de cada modo es `100 - integridad_final_promedio`; la energía, `energia_total_wh`; los pulsos, `pulsos`. Los cruces de `G` se interpolan linealmente entre los dos niveles consecutivos del barrido en que la ventaja media pasa de `<= 0` a `> 0`.

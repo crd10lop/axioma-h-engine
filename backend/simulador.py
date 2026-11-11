@@ -312,6 +312,14 @@ class DiagnosticoModo:
         return self.perdida_termica_pulso_pct + self.perdida_termica_ambiental_pct
 
 
+@dataclass(frozen=True)
+class _OpcionesTemporizador:
+    """Opciones internas del temporizador para análisis exploratorios."""
+
+    salvaguardas: bool = False
+    intervalo_min: float = config.INTERVALO_PULSO_TEMPORIZADOR_MIN
+
+
 def _descontar_integridad(estado: _EstadoNodo, perdida: float) -> float:
     """Aplica una pérdida de integridad acotada en cero y devuelve la pérdida efectiva."""
     efectiva = min(estado.integridad, max(0.0, perdida))
@@ -331,15 +339,16 @@ def _decidir_accion(
     fraccion_temporizador: float,
     *,
     parametros: ParametrosModelo = PARAMETROS_BASE,
-    salvaguardas_temporizador: bool = False,
+    opciones: _OpcionesTemporizador = _OpcionesTemporizador(),
 ) -> Tuple[float, bool, float]:
     """Decide la fracción de extracción, si se ordena un pulso y su temperatura objetivo.
 
     En modo neuro-simbólico consulta el motor de reglas y registra en la
     bitácora cada cambio de regla; en modo temporizador aplica la
-    programación fija con la fracción de extracción indicada y, si
-    `salvaguardas_temporizador` es verdadero, el corte térmico, la pausa
-    ecológica y el límite de temperatura del pulso (ver `_accion_temporizador`).
+    programación fija con la fracción de extracción indicada, cada
+    `opciones.intervalo_min` minutos y, si `opciones.salvaguardas` es
+    verdadero, con el corte térmico, la pausa ecológica y el límite de
+    temperatura del pulso (ver `_accion_temporizador`).
     """
     if neuro:
         telemetria = TelemetryInput(
@@ -374,7 +383,8 @@ def _decidir_accion(
             humedad,
             t_matriz,
             fraccion_temporizador,
-            salvaguardas=salvaguardas_temporizador,
+            salvaguardas=opciones.salvaguardas,
+            intervalo_min=opciones.intervalo_min,
         )
     return fraccion, ordena_pulso, t_pulso
 
@@ -387,6 +397,7 @@ def _accion_temporizador(
     fraccion_temporizador: float,
     *,
     salvaguardas: bool = False,
+    intervalo_min: float = config.INTERVALO_PULSO_TEMPORIZADOR_MIN,
 ) -> Tuple[float, bool, float]:
     """Aplica la programación fija del temporizador, con o sin salvaguardas.
 
@@ -398,9 +409,10 @@ def _accion_temporizador(
     REGLA_01); en otro caso, el pulso se limita a la temperatura objetivo de
     las reglas, como un termostato, sin enfriar una matriz que ya la supera.
     En ambos casos el reloj avanza aunque el pulso se cancele: el ciclo
-    perdido no se reprograma.
+    perdido no se reprograma. El intervalo es `intervalo_min` (por defecto,
+    INTERVALO_PULSO_TEMPORIZADOR_MIN).
     """
-    ordena_pulso = minuto - estado.ultimo_pulso_min >= config.INTERVALO_PULSO_TEMPORIZADOR_MIN
+    ordena_pulso = minuto - estado.ultimo_pulso_min >= intervalo_min
     if ordena_pulso:
         estado.ultimo_pulso_min = minuto
     t_pulso = t_matriz + config.INCREMENTO_TERMICO_TEMPORIZADOR_C
@@ -551,6 +563,17 @@ def _cerrar_regeneraciones_pendientes(nodos: List[_EstadoNodo], diag: Diagnostic
             )
 
 
+def _opciones_temporizador(salvaguardas: bool, intervalo_min: int | None) -> _OpcionesTemporizador:
+    """Construye las opciones del temporizador y valida que el intervalo sea positivo.
+
+    Con `intervalo_min` nulo se usa INTERVALO_PULSO_TEMPORIZADOR_MIN.
+    """
+    intervalo = config.INTERVALO_PULSO_TEMPORIZADOR_MIN if intervalo_min is None else intervalo_min
+    if intervalo <= 0:
+        raise ValueError("El intervalo del temporizador debe ser un número positivo de minutos.")
+    return _OpcionesTemporizador(salvaguardas=salvaguardas, intervalo_min=intervalo)
+
+
 def simular_modo(
     entorno: Entorno,
     modo: ModoOperacion,
@@ -558,6 +581,7 @@ def simular_modo(
     *,
     parametros: ParametrosModelo = PARAMETROS_BASE,
     salvaguardas_temporizador: bool = False,
+    intervalo_temporizador_min: int | None = None,
 ) -> DiagnosticoModo:
     """Simula la red completa bajo una estrategia de control.
 
@@ -575,6 +599,11 @@ def simular_modo(
     cancele. Es un parámetro interno para análisis exploratorios; su valor por
     defecto no cambia ningún resultado y no se usa en el modo neuro-simbólico.
 
+    `intervalo_temporizador_min` fija los minutos entre pulsos programados del
+    temporizador; con None se usa INTERVALO_PULSO_TEMPORIZADOR_MIN. También es
+    un parámetro interno para análisis exploratorios, no se expone en la API
+    y debe ser positivo; si no lo es, se lanza ValueError.
+
     En cada paso y para cada nodo: se decide la acción (motor de reglas o
     programación fija), se ejecuta el pulso si corresponde, se calcula el
     agua captada, se actualizan impedancia, integridad y reserva, y se
@@ -589,6 +618,7 @@ def simular_modo(
     simulación, con un mínimo de la duración del pulso.
     """
     neuro = modo == ModoOperacion.NEURO_SIMBOLICO
+    opciones = _opciones_temporizador(salvaguardas_temporizador, intervalo_temporizador_min)
     fraccion_fija = config.FRACCION_EXTRACCION_TEMPORIZADOR if fraccion_temporizador is None else fraccion_temporizador
     nodos = [_EstadoNodo() for _ in range(entorno.numero_nodos)]
     diag = DiagnosticoModo(modo=modo)
@@ -624,7 +654,7 @@ def simular_modo(
                 impedancia_inicial,
                 fraccion_fija,
                 parametros=parametros,
-                salvaguardas_temporizador=salvaguardas_temporizador,
+                opciones=opciones,
             )
 
             # Ejecución del pulso resistivo.

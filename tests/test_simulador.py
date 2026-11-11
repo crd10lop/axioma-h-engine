@@ -611,3 +611,43 @@ def test_temporizador_con_salvaguardas_respeta_la_pausa_ecologica_en_sequia():
     assert sin.violaciones_ecologicas > 0
     assert con.violaciones_ecologicas == 0
     assert con.pulsos < sin.pulsos
+
+
+# ---------------------------------------------------------------------------
+# Intervalo del temporizador (análisis exploratorio de sensibilidad)
+# ---------------------------------------------------------------------------
+PASOS_INTERVALO = 8 * 12  # 8 h con pasos de 5 min
+
+
+@pytest.mark.parametrize(("intervalo", "pulsos_esperados"), [(60, 7), (120, 3), (240, 1)])
+def test_intervalo_del_temporizador_fija_el_numero_de_pulsos(intervalo, pulsos_esperados):
+    entorno = entorno_constante(pasos=PASOS_INTERVALO)
+    diag = simular_modo(entorno, ModoOperacion.TEMPORIZADOR_FIJO, intervalo_temporizador_min=intervalo)
+    # El primer pulso llega al cumplirse el primer intervalo; ninguno se omite por energía.
+    assert diag.pulsos_omitidos_por_energia == 0
+    assert diag.pulsos == pulsos_esperados
+
+
+@pytest.mark.parametrize("intervalo", [0, -30])
+def test_intervalo_del_temporizador_no_positivo_lanza_error(intervalo):
+    entorno = entorno_constante(pasos=1)
+    with pytest.raises(ValueError, match="intervalo del temporizador"):
+        simular_modo(entorno, ModoOperacion.TEMPORIZADOR_FIJO, intervalo_temporizador_min=intervalo)
+
+
+@pytest.mark.parametrize("intervalo", [None, config.INTERVALO_PULSO_TEMPORIZADOR_MIN])
+@pytest.mark.parametrize("salvaguardas", [False, True])
+def test_intervalo_nulo_reproduce_el_resultado_por_defecto(salvaguardas, intervalo):
+    entorno = generar_entorno(configuracion(Escenario.TORMENTA_DE_SAL_Y_CALOR_EXTREMO, duracion_horas=12))
+    por_defecto = simular_modo(
+        entorno, ModoOperacion.TEMPORIZADOR_FIJO, FRACCION_TOPE, salvaguardas_temporizador=salvaguardas
+    )
+    explicito = simular_modo(
+        entorno,
+        ModoOperacion.TEMPORIZADOR_FIJO,
+        FRACCION_TOPE,
+        salvaguardas_temporizador=salvaguardas,
+        intervalo_temporizador_min=intervalo,
+    )
+    assert por_defecto.pulsos > 0
+    assert explicito == por_defecto
