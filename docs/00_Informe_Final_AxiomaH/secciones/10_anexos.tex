@@ -1,8 +1,8 @@
 \appendix
 \chapter{Trazabilidad de par\'ametros de modelado}
-\label{anexo:trazabilidad}
+\label[appendix]{anexo:trazabilidad}
 
-La \cref{tab:anexo_trazabilidad} recopila las constantes f\'isicas y de control parametrizadas en \texttt{backend/config.py}, se\~nalando su valor num\'erico, origen metodol\'ogico y fuente seg\'un el documento 06 del repositorio (\S 3) \parencite{axioma2026engine}. La \cref{tab:equivalencia_reglas} da antes la equivalencia entre la numeraci\'on de las reglas usada en el informe y los identificadores del c\'odigo.
+La \cref{tab:anexo_trazabilidad} recopila las constantes f\'isicas y de control parametrizadas en \texttt{backend/config.py}, se\~nalando su valor num\'erico, origen metodol\'ogico y fuente seg\'un el documento 06 del repositorio \parencite[doc.~06, \S~3]{axioma2026engine}. La \cref{tab:equivalencia_reglas} da antes la equivalencia entre la numeraci\'on de las reglas usada en el informe y los identificadores del c\'odigo.
 
 \begin{table}[htbp]
 \centering
@@ -79,8 +79,10 @@ La supervisi\'on humana conserva en el c\'odigo el n\'umero 06 del PRD aunque se
 \texttt{INCRUSTACION\_TRANSICION\_MAX\_OHM\_DIA} & $2365.34\;\Omega\text{/d\'ia}$ & Modelo & L\'imite superior de la banda de cruce (semilla 42). \\
 \end{longtable}
 
+La tabla permite leer la procedencia de los 39 par\'ametros que lista. Doce son supuestos de orden de magnitud sin fuente experimental, entre ellos los que fijan la cuant\'ia de los resultados: la eficacia del pulso, la fatiga por pulso, la degradaci\'on t\'ermica, la degradaci\'on por cristalizaci\'on y el flujo de niebla por defecto. Diecisiete provienen del PRD o de la Matriz de operacionalizaci\'on del proyecto, es decir, son decisiones de dise\~no y umbrales de \'exito, no mediciones. Cinco proceden de referencias externas, dos de la calibraci\'on contra la literatura, dos del propio modelo y uno es un criterio del equipo. A ellos se suman los par\'ametros del clima sint\'etico descritos en el \cref{sec:metodo}, que tambi\'en son supuestos. La implicaci\'on para la confiabilidad es directa: los umbrales de control son verificables en el c\'odigo y la direcci\'on de los resultados resiste las variaciones exploradas en los an\'alisis de robustez, pero sus magnitudes dependen de supuestos que solo la medici\'on del siguiente ciclo puede reemplazar.
+
 \chapter{Diccionario de datos abiertos de investigaci\'on}
-\label{anexo:datos_abiertos}
+\label[appendix]{anexo:datos_abiertos}
 
 El repositorio publica los datos de referencia en formato abierto bajo el est\'andar Frictionless Data Package (\texttt{docs/datos/datapackage.json}). El conjunto comprende cinco archivos tabulares:
 \begin{enumerate}[leftmargin=*]
@@ -93,8 +95,10 @@ El repositorio publica los datos de referencia en formato abierto bajo el est\'a
 
 Todas las corridas usan 24 horas, paso de 5 minutos y 8 nodos; las condiciones completas est\'an en el campo \texttt{condiciones} de \texttt{resultados\_completos.json}.
 
+El diccionario muestra el alcance de los datos abiertos. Cuatro de los cinco archivos se calcularon con una sola semilla, la 42, y solo el barrido de salinidad promedia cinco; por eso la validez de la banda de transici\'on y de los veredictos frente a otras semillas y a corridas m\'as largas se examin\'o con los an\'alisis exploratorios E2 y E3. Esos an\'alisis, como E1 y E4, no forman parte de los datos abiertos: se documentan con sus tablas y su c\'odigo de reproducci\'on en el documento 04 del repositorio \parencite[doc.~04, \S~8.13]{axioma2026engine}, de modo que cualquier lector puede regenerarlos con las mismas funciones del modelo.
+
 \chapter{Documentaci\'on del artefacto}
-\label{anexo:documentacion}
+\label[appendix]{anexo:documentacion}
 
 Este anexo re\'une la documentaci\'on t\'ecnica del artefacto que sustenta la reproducibilidad del estudio: el cat\'alogo de rutas de la API, la estructura del tablero y las pr\'acticas de verificaci\'on del software.
 
@@ -138,7 +142,7 @@ La suite de 828 pruebas automatizadas, escrita con pytest \parencite{pytest} y h
 Cada cambio en la rama principal activa un flujo de GitHub Actions que ejecuta las pruebas, mide la cobertura y env\'ia el an\'alisis a SonarQube Cloud, cuya Quality Gate exige cero incidencias nuevas. El servicio de despliegue publica la API y el tablero solo cuando todas esas comprobaciones est\'an en verde. Sobre las instancias p\'ublicas, el script \texttt{scripts/verificar\_despliegue.py} ejecuta 31 comprobaciones de conectividad, c\'alculo y contrato, que resultaron exitosas en la versi\'on 0.5.0 (commit \texttt{5ea4015}).
 
 \chapter{Gu\'ias de lectura del artefacto por p\'ublico y disciplina}
-\label{anexo:guias_lectura}
+\label[appendix]{anexo:guias_lectura}
 
 Para facilitar la navegaci\'on del software y de la documentaci\'on t\'ecnica seg\'un el perfil del usuario, el proyecto define trayectorias de lectura diferenciadas en el tablero y en los documentos.
 
@@ -180,4 +184,32 @@ La \cref{tab:disciplinas} detalla c\'omo abordar el artefacto desde cuatro campo
 \bottomrule
 \end{tabularx}
 \end{table}
+
+Las dos tablas conectan los p\'ublicos y las disciplinas con el programa de investigaci\'on del \cref{sec:trabajo_futuro}. La lectura breve sirve a la comunidad y a los evaluadores de pol\'itica, pero las decisiones que les ata\~nen, como el tope de extracci\'on o el n\'umero de nodos, dependen de mediciones que todav\'ia no existen. Cada pregunta disciplinar se corresponde con una l\'inea del programa: la de hidrolog\'ia, con la ubicaci\'on del sitio frente a la banda de transici\'on; la de salud p\'ublica, con el dimensionamiento; la de ecolog\'ia, con el costo de la pausa ecol\'ogica; y la de ciencias sociales, con la consulta previa. Las gu\'ias son, por tanto, puertas de entrada a preguntas abiertas y no a respuestas cerradas.
+
+\chapter{Protocolo de b\'usqueda bibliogr\'afica}
+\label[appendix]{anexo:busqueda}
+
+Este ap\'endice documenta la b\'usqueda con la que se delimit\'o el vac\'io del \cref{sec:vacio}. Se hizo el 11 de noviembre de 2026 con un motor de b\'usqueda web general, no con bases bibliogr\'aficas indexadas como Scopus o Web of Science, lo que limita su exhaustividad. Se usaron cinco cadenas, se revisaron los diez primeros resultados de cada una, 50 en total, y se aplicaron tres criterios de inclusi\'on: que la fuente tratara colectores o mallas de niebla, que abordara la sal, el ensuciamiento, la obstrucci\'on, la limpieza o el control, y que estuviera revisada por pares y pudiera verificarse por DOI o por una URL oficial.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Cadenas de b\'usqueda y resultado de la revisi\'on (11 de noviembre de 2026).}
+\label{tab:busqueda}
+\begin{tabularx}{\textwidth}{@{}Y L{1.8cm}L{5.2cm}@{}}
+\toprule
+\textbf{Cadena exacta} & \textbf{Revisados} & \textbf{Fuentes que cumplen los criterios} \\
+\midrule
+\texttt{"fog collector" salt OR fouling OR scaling OR cleaning mesh} & 10 & Ninguna sobre sal o control; resultados sobre obstrucci\'on y recubrimientos de mallas. \\
+\texttt{fog harvesting mesh salt deposition coastal clogging performance degradation} & 10 & \textcite{park2021clogged}, sobre obstrucci\'on por puentes de agua; ninguna sobre deposici\'on de sal. \\
+\texttt{fog collector control strategy timer OR automatic cleaning regeneration heating} & 10 & Ninguna; los resultados tratan de filtros de part\'iculas y colectores de polvo. \\
+\texttt{atrapanieblas mantenimiento malla sal costa rendimiento deterioro} & 10 & Ninguna revisada por pares; literatura t\'ecnica general sobre mantenimiento de atrapanieblas. \\
+\texttt{"fog net" OR "fog collector" "sea salt" OR "salt crystals" mesh durability field} & 10 & Ninguna revisada por pares; reportes period\'isticos sobre da\~nos por sal en un captador electrost\'atico, excluidos. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+La b\'usqueda arroj\'o un solo estudio que cumple los criterios: el de \textcite{park2021clogged} sobre la obstrucci\'on de los poros de la malla por puentes de agua, cuyos metadatos se verificaron en el registro DOI. Ninguna fuente compara un control reactivo con un temporizador para la regeneraci\'on de captadores ni estudia la deposici\'on de sal en sus mallas. Las fuentes de dominios cercanos citadas en el \cref{cap:marco_teorico}, sobre mantenimiento basado en condici\'on, control de limpieza de membranas e impedancia como sensor, se identificaron por separado y no proceden de estas cadenas. Una b\'usqueda sistem\'atica en bases indexadas, con las mismas cadenas, es una tarea pendiente que podr\'ia modificar la delimitaci\'on del vac\'io.
+
 

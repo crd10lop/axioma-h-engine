@@ -89,6 +89,7 @@ La impedancia total es `Z = Z_nom + Z_sal + Z_polvo`.
 - **Neuro-simbólico:** en cada paso y nodo se construye un `TelemetryInput` y se llama a `evaluar_telemetria`. El simulador reutiliza el mismo motor de reglas del endpoint.
 - **Temporizador fijo:** aplica un pulso cada 120 min sin leer sensores, a `T_m + 12 °C` y sin corte térmico. La fracción de extracción es fija en 0.45 y no hay pausa ecológica.
 - **Temporizador con tope ecológico (referencia):** es el mismo temporizador fijo, con la misma programación de pulsos y sin corte térmico ni pausa ecológica, pero con la fracción de 0.33 del modo neuro-simbólico. Se ejecuta sobre el mismo entorno y se reporta en `comparativa.modo_temporizador_tope_ecologico`. No interviene en la validación de las conjeturas ni en las series temporales. Su función es separar el efecto del tope ecológico del de la lógica de control (sección 8.4).
+- **Temporizador con salvaguardas (análisis exploratorio):** el parámetro interno `salvaguardas_temporizador` de `simular_modo`, falso por defecto, agrega al temporizador el corte a 45 °C, la pausa con HR < 30 % y un pulso limitado a 44 °C. No se expone en la API ni cambia los resultados de las secciones 5 a 8.12; se usa en la sección 8.13 para contrastar si la ventaja en desgaste se debe a la lógica de control o a las salvaguardas.
 
 ### 3.4 Parámetros
 
@@ -921,3 +922,114 @@ En todos los casos el rendimiento obtenido con el flujo calibrado difiere del ob
 - **La amplitud de humedad es la que cuenta.** El ciclo diurno se ancla en la humedad de las 18:00 y la sube hasta su máximo a las 04:00, de modo que con más amplitud hay más niebla disponible y basta un flujo menor. Sin ciclo de humedad el flujo calibrado es 19.6 % mayor para 10 L/m²/día (18.9 % para 3), y con 30 puntos de amplitud es 4.7 % menor. Calibrar con el ciclo de Cabo de la Vela un sitio sin ciclo de humedad subestimaría su flujo en 16.4 %.
 - **La temperatura no cambia el flujo calibrado** en los perfiles evaluados: con 24 °C y 6 °C de amplitud, los flujos coinciden con los de Cabo de la Vela. Sí cambia el rendimiento alcanzable con el flujo máximo de 6.0 L/m²/h (31.26 frente a 31.83 L/m²/día), lejos de los rendimientos de la literatura.
 - **Alcance.** La calibración usa un escenario, una semilla y una humedad inicial, y conserva las horas de máximo de Cabo de la Vela (pregunta c de la sección 8.10). El rendimiento medido debe corresponder a las mismas condiciones: un promedio anual no equivale a un día de niebla con 85 % de humedad a las 18:00.
+
+### 8.13 Temporizador con salvaguardas, validación fuera de muestra y robustez temporal
+
+Las secciones 8.8 y 8.11 dejan abiertas tres amenazas a la validez de la comparación. El temporizador fijo no tiene corte térmico ni pausa ecológica, de modo que una parte de su desgaste se debe a la falta de salvaguardas y no a la programación fija (hipótesis H2 del informe final). La banda de transición `[1171.06, 2365.34)` Ohm/día se derivó y se verificó con la misma semilla (hipótesis H3). Y todas las corridas cubren 24 h con una semilla. Esta sección reúne cuatro análisis exploratorios, E1 a E4, ejecutados con un script temporal fuera del repositorio y con las funciones del backend. No modifican `backend/config.py`, los datos abiertos ni la API.
+
+**Temporizador con salvaguardas.** `simular_modo` acepta el parámetro interno `salvaguardas_temporizador` (falso por defecto). Con valor verdadero, en modo temporizador y en cada paso: si la humedad es menor que 30 %, el nodo no extrae ni pulsa (equivale a la REGLA_02); si la matriz está a 45 °C o más, tampoco (equivale a la REGLA_01); en otro caso, el pulso programado apunta a `max(T_m, min(T_m + 12, 44))` °C, un termostato a la temperatura objetivo de las reglas que no enfría una matriz que ya la supera. El reloj del temporizador avanza aunque el pulso se cancele: el ciclo perdido no se reprograma. En E1 se usa con la fracción de extracción de 0.33, de modo que el temporizador con salvaguardas solo difiere de las reglas en la lógica de disparo. Con el valor por defecto, la respuesta de `ejecutar_simulacion` para los cinco escenarios con humedad inicial de 45 % y 85 % es idéntica a la de la versión 0.5.0, y los datos abiertos no cambian.
+
+**E1. Contraste de H2.** Cinco escenarios, humedad inicial de 85 %, 24 h, 8 nodos, tasa ALTA y semilla 42. Degradación en puntos porcentuales de integridad; la fatiga es pulsos por nodo por 0.02 %, la pérdida térmica la registra el simulador y la cristalización es el resto.
+
+| Escenario | Pulsos R / T / TS | Energía (Wh) R / T / TS | Agua (L) R / T / TS | Violaciones R / T / TS | Degradación (%) R / T / TS | Reducción frente a T | Reducción frente a TS |
+|---|---|---|---|---|---|---|---|
+| DIA_NORMAL | 46 / 88 / 88 | 664.5 / 1065.1 / 834.7 | 254.6 / 340.4 / 266.9 | 0 / 8 / 0 | 0.115 / 2.427 / 0.253 | 95.3 % | 54.6 % |
+| INCRUSTACION_SALINA_RAPIDA | 97 / 88 / 88 | 1013.7 / 1065.1 / 834.7 | 185.4 / 240.9 / 199.2 | 0 / 8 / 0 | 1.073 / 4.117 / 1.887 | 73.9 % | 43.1 % |
+| SEQUIA | 24 / 88 / 56 | 491.9 / 1065.1 / 682.1 | 149.4 / 204.4 / 155.6 | 0 / 8 / 0 | 0.160 / 2.224 / 0.140 | 92.8 % | -14.3 % |
+| TORMENTA_DE_ARENA | 53 / 88 / 88 | 752.1 / 1065.1 / 899.1 | 232.4 / 306.4 / 239.7 | 0 / 8 / 0 | 0.132 / 1.817 / 0.253 | 92.7 % | 47.7 % |
+| TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 64 / 88 / 88 | 780.8 / 1065.1 / 747.6 | 235.0 / 305.8 / 244.9 | 0 / 8 / 0 | 0.408 / 3.903 / 0.714 | 89.5 % | 42.8 % |
+
+R: control basado en reglas (modo neuro-simbólico); T: temporizador fijo; TS: temporizador con salvaguardas y fracción de 0.33.
+
+| Escenario | Modo | Fatiga | Térmica | Cristalización |
+|---|---|---|---|---|
+| DIA_NORMAL | R | 0.115 | 0.000 | 0.000 |
+| DIA_NORMAL | TS | 0.220 | 0.000 | 0.033 |
+| INCRUSTACION_SALINA_RAPIDA | R | 0.242 | 0.000 | 0.830 |
+| INCRUSTACION_SALINA_RAPIDA | TS | 0.220 | 0.000 | 1.667 |
+| SEQUIA | R | 0.060 | 0.000 | 0.100 |
+| SEQUIA | TS | 0.140 | 0.000 | 0.000 |
+
+Repetido en el barrido de salinidad de la sección 7.2 con las semillas 1 a 5 (media +/- desviación):
+
+| Carga salina (Ohm por L/m²) | Degradación R (%) | Degradación T (%) | Degradación TS (%) | Reducción frente a T | Reducción frente a TS | Pulsos R / TS |
+|---|---|---|---|---|---|---|
+| 20 | 0.020 +/- 0.000 | 2.151 +/- 0.021 | 0.220 +/- 0.000 | 99.1 % | 90.9 % | 8.0 / 88.0 |
+| 40 | 0.052 +/- 0.004 | 2.151 +/- 0.021 | 0.220 +/- 0.000 | 97.6 % | 76.4 % | 20.8 / 88.0 |
+| 60 | 0.085 +/- 0.002 | 2.183 +/- 0.016 | 0.220 +/- 0.000 | 96.1 % | 61.1 % | 34.2 / 88.0 |
+| 80 | 0.117 +/- 0.002 | 2.495 +/- 0.022 | 0.242 +/- 0.013 | 95.3 % | 51.6 % | 46.8 / 88.0 |
+| 120 | 0.419 +/- 0.021 | 3.159 +/- 0.024 | 0.705 +/- 0.043 | 86.7 % | 40.6 % | 65.4 / 88.0 |
+| 240 | 1.082 +/- 0.012 | 4.210 +/- 0.014 | 1.901 +/- 0.032 | 74.3 % | 43.1 % | 98.4 / 88.0 |
+
+Lectura de E1:
+
+- **H2 se sostiene con una excepción.** Frente a un temporizador con las mismas salvaguardas y el mismo tope, las reglas se degradan menos en los seis niveles de salinidad y en cuatro de los cinco escenarios, con una reducción de 40.6 % a 90.9 % en el barrido y de 42.8 % a 54.6 % en esos escenarios. La excepción es SEQUIA, donde el temporizador con salvaguardas se degrada 14.3 % menos: la pausa ecológica de las reglas (REGLA_02) tiene prioridad sobre el pulso y deja la membrana con impedancia sobre 1500 Ohm mientras la humedad está bajo 30 % (0.100 puntos de cristalización; la REGLA_04 no se activa y no hay pulsos omitidos por energía), mientras que el temporizador limpia por calendario antes de que la impedancia llegue al umbral.
+- **La estimación contable sobrestimaba la ventaja.** La resta de la pérdida térmica del temporizador fijo daba 80.0 % en DIA_NORMAL y 52.7 % en INCRUSTACION_SALINA_RAPIDA; la simulación da 54.6 % y 43.1 %, porque las salvaguardas y el tope también reducen la cristalización del temporizador.
+- **El origen de la ventaja residual cambia con la salinidad.** Con salinidad baja se debe a la fatiga: las reglas aplican de 8 a 47 pulsos frente a 88. Con salinidad alta, las reglas pulsan igual o más, y la ventaja se debe a la menor cristalización (0.830 frente a 1.667 puntos en INCRUSTACION_SALINA_RAPIDA). La reducción frente al temporizador con salvaguardas cae de 90.9 % a 40.6 % entre 20 y 120 Ohm por L/m² y queda en 43.1 % con 240.
+- **Energía y seguridad.** El temporizador con salvaguardas no tiene pérdida térmica, no supera 44.0 °C en ningún pulso y no registra violaciones. Consume menos energía que las reglas en INCRUSTACION_SALINA_RAPIDA y en TORMENTA_DE_SAL_Y_CALOR_EXTREMO, de modo que la ventaja energética de las reglas frente al temporizador fijo se debe en parte a la falta de salvaguardas de este.
+
+**E2. Validación fuera de muestra de H3.** Robustez de la respuesta (`_combinacion_robustez`, con las condiciones de la sección 8.8) con las semillas 101, 202 y 303, ninguna usada para derivar la banda, una por corrida, y con las eficacias de la cuadrícula (0.80, 0.90 y 1.00) más dos fuera de ella (0.85 y 0.95): 45 barridos.
+
+| Semilla | Flujo (L/m²/h) | Cruces interpolados | Rango del cruce (Ohm/día) | Dentro de la banda |
+|---|---|---|---|---|
+| 101 | 6.0 | 5 de 5 | 1710.8 a 1877.9 | 5 de 5 |
+| 101 | 1.83 | 5 de 5 | 1717.2 a 1895.5 | 5 de 5 |
+| 202 | 6.0 | 5 de 5 | 1742.7 a 1905.0 | 5 de 5 |
+| 202 | 1.83 | 5 de 5 | 1747.2 a 1921.6 | 5 de 5 |
+| 303 | 6.0 | 5 de 5 | 1651.1 a 1814.3 | 5 de 5 |
+| 303 | 1.83 | 5 de 5 | 1652.5 a 1830.4 | 5 de 5 |
+
+Con 0.49 L/m²/h los 15 barridos dan `SIN_DATOS`, como con la semilla 42. Los 30 cruces interpolados caen dentro de la banda, y de los 165 puntos con ventaja ninguno contradice su zona: no hay ventaja positiva por debajo de 1171.06 Ohm/día ni ventaja nula o negativa desde 2365.34. H3 no se refuta. El rango de los cruces interpolados, en cambio, se amplía de 1633 a 1867 Ohm/día (sección 8.9) a 1651.1 a 1921.6 Ohm/día: la banda se conserva, pero el rango interpolado de H1-Ciclo 3 debe leerse como una estimación central y no como un intervalo cerrado. Con las eficacias fuera de la cuadrícula (0.85 y 0.95), los 12 cruces van de 1740.8 a 1921.6 Ohm/día.
+
+**E3. Robustez temporal y climática.** Cinco escenarios con humedad inicial de 85 %, tasa ALTA y 8 nodos: a 72 h (tres noches) con la semilla 42, y a 24 h con las semillas 1 a 5.
+
+| Escenario | Reducción del desgaste, 72 h | Pulsos R / T, 72 h | Violaciones R / T, 72 h | Ventaja en recuperación, 72 h (puntos) | Energía R / T, 72 h (Wh) | Reducción del desgaste, 24 h, semillas 1 a 5 | Ventaja en recuperación, 24 h, semillas 1 a 5 (puntos) |
+|---|---|---|---|---|---|---|---|
+| DIA_NORMAL | 94.8 % | 151 / 280 | 0 / 8 | +3.55 | 2162.1 / 3381.9 | 95.3 +/- 0.1 % | +4.18 +/- 0.39 |
+| INCRUSTACION_SALINA_RAPIDA | 75.6 % | 316 / 280 | 0 / 8 | +21.77 | 3465.2 / 3381.9 | 74.3 +/- 0.3 % | +22.65 +/- 0.52 |
+| SEQUIA | 93.8 % | 86 / 280 | 0 / 8 | -0.57 | 1667.9 / 3381.9 | 97.2 +/- 0.1 % | +0.04 +/- 0.29 |
+| TORMENTA_DE_ARENA | 92.9 % | 170 / 256 | 0 / 8 | +4.77 | 2403.7 / 3101.9 | 92.9 +/- 0.1 % | +3.18 +/- 0.48 |
+| TORMENTA_DE_SAL_Y_CALOR_EXTREMO | 93.1 % | 222 / 280 | 0 / 8 | +9.30 | 2787.1 / 3381.9 | 89.4 +/- 0.4 % | +9.86 +/- 0.42 |
+
+Lectura de E3:
+
+- **Desgaste y seguridad no cambian de signo.** A 72 h la reducción del desgaste va de 75.6 % a 94.8 %, las reglas no tienen pérdida térmica ni violaciones y el temporizador registra 8 violaciones, un episodio continuo por nodo. Con las semillas 1 a 5 la desviación de la reducción es de 0.1 a 0.4 puntos y las violaciones son 0 frente a 8 en todas las corridas.
+- **Dos resultados sí cambian.** En INCRUSTACION_SALINA_RAPIDA a 72 h las reglas consumen más energía que el temporizador (3465.2 frente a 3381.9 Wh), porque acumulan 316 pulsos frente a 280: la afirmación de menor consumo en todos los escenarios solo vale a 24 h. En SEQUIA la ventaja en recuperación es prácticamente nula y cambia de signo con la semilla (positiva en dos de las cinco) y con la duración; en los demás escenarios conserva el signo.
+- **Alcance.** El clima sigue siendo sintético y repetido día a día; tres noches no representan la estacionalidad ni episodios extremos de varios días.
+
+**E4. Contexto comparable.** Cereceda et al. (2008) midieron 7.0 L/m² al día con un colector estándar en los acantilados costeros de Atacama. Con `calibrar_flujo_niebla(7.0)` (DIA_NORMAL, humedad inicial de 85 %, semilla 42) el flujo calibrado es 1.261 L/m²/h, y el barrido con ese flujo y la semilla 42 da:
+
+| Carga salina (Ohm por L/m²) | Rendimiento (L/m²/día) | Incrustación diaria (Ohm/día) | Zona | Ventaja en recuperación (puntos) | Reducción del desgaste |
+|---|---|---|---|---|---|
+| 20 | 8.05 | 161.0 | `BAJO_TRANSICION` | sin pulsos | 100.0 % |
+| 40 | 7.56 | 302.4 | `BAJO_TRANSICION` | sin pulsos | 100.0 % |
+| 60 | 7.17 | 430.1 | `BAJO_TRANSICION` | sin pulsos | 100.0 % |
+| 80 | 7.00 | 559.9 | `BAJO_TRANSICION` | -7.62 | 99.2 % |
+| 120 | 6.88 | 825.1 | `BAJO_TRANSICION` | -5.94 | 98.9 % |
+| 240 | 6.75 | 1619.6 | `TRANSICION` | -0.99 | 96.7 % |
+
+Con el rendimiento de un sitio costero real, cinco de los seis niveles de carga salina quedan por debajo de la banda y el de 240 Ohm por L/m² queda dentro, con ventaja todavía negativa (estado de cruce `SIN_CRUCE_NEURO_INFERIOR`). Es coherente con H1-Ciclo 3: en un sitio con niebla costera abundante, la ventaja esperada del control por reglas es la reducción del desgaste y no la recuperación, salvo con cargas salinas por litro muy altas. El cálculo usa el ciclo térmico y de humedad de Cabo de la Vela con un flujo equivalente al de Atacama, y la carga salina de ese sitio no se conoce: indica en qué zona caería el sitio para cada carga, no cuál es su carga.
+
+Reproducción (desde la raíz del repositorio):
+
+```python
+from backend import config
+from backend.analisis import _combinacion_robustez, calibrar_flujo_niebla, ejecutar_barrido
+from backend.schemas import BarridoConfig, Escenario, ModoOperacion, RobustezConfig, SimulationConfig, TasaSalinizacion
+from backend.simulador import generar_entorno, simular_modo
+
+def corrida(escenario, semilla=42, horas=24):
+    entorno = generar_entorno(SimulationConfig(duracion_horas=horas, escenario=escenario, humedad_ambiente_inicial_pct=85.0,
+                                               tasa_salinizacion=TasaSalinizacion.ALTA, semilla=semilla))
+    return (simular_modo(entorno, ModoOperacion.NEURO_SIMBOLICO),
+            simular_modo(entorno, ModoOperacion.TEMPORIZADOR_FIJO),
+            simular_modo(entorno, ModoOperacion.TEMPORIZADOR_FIJO, config.FRACCION_MAXIMA_EXTRACCION,
+                         salvaguardas_temporizador=True))
+
+e1 = {escenario: corrida(escenario) for escenario in Escenario}  # E1
+e2 = [_combinacion_robustez(RobustezConfig(semillas=[semilla]), flujo, eficacia).barrido.cruce
+      for semilla in (101, 202, 303) for flujo in (6.0, 1.83, 0.49) for eficacia in (0.80, 0.85, 0.90, 0.95, 1.00)]  # E2
+e3 = {escenario: corrida(escenario, horas=72) for escenario in Escenario}  # E3 a 72 h; a 24 h, semilla=1 a 5
+flujo_atacama = calibrar_flujo_niebla(7.0)  # E4
+e4 = ejecutar_barrido(BarridoConfig(semillas=[42], flujo_niebla_maximo_l_m2_h=flujo_atacama))
+```
