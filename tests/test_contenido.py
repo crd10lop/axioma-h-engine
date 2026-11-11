@@ -580,6 +580,13 @@ def test_lectura_breve_conserva_las_cifras_clave(cifra):
     assert cifra in unido
 
 
+def test_lectura_breve_incluye_temporizador_con_salvaguardas():
+    hallazgo = contenido.LECTURA_BREVE["hallazgo"]
+    assert "mismos límites de temperatura y de humedad" in hallazgo
+    assert "40.6 % a 90.9 %" in hallazgo
+    assert "en la sequía desaparece" in hallazgo
+
+
 def test_veredictos_cubren_las_cuatro_partes_de_la_respuesta():
     assert [item["parte"] for item in contenido.VEREDICTOS] == list(contenido.PARTES_RESPUESTA)
     for item in contenido.VEREDICTOS:

@@ -582,7 +582,10 @@ LECTURA_BREVE: dict[str, str] = {
     ),
     "hallazgo": (
         "En la simulación, el control por reglas desgasta la membrana entre 61 % y 100 % menos que el "
-        "temporizador en todas las condiciones probadas. Recuperar más agua después de cada limpieza solo lo "
+        "temporizador en todas las condiciones probadas. Frente a un temporizador con los mismos límites de "
+        "temperatura y de humedad, la diferencia es menor, de 40.6 % a 90.9 % en el barrido de sal (y de "
+        "14.8 % a 94.4 % al variar el intervalo entre 1 y 4 horas), y en la sequía desaparece con el intervalo "
+        "de 2 horas. Recuperar más agua después de cada limpieza solo lo "
         "logra cuando entra mucha sal cada día; con la niebla que se mide en proyectos reales, eso ocurre solo "
         "con el aire más salino."
     ),
@@ -592,7 +595,8 @@ LECTURA_BREVE: dict[str, str] = {
     ),
     "comunidad": (
         "Con la niebla típica de los proyectos reales, de 3 a 10 L por m² al día, abastecer a 50 personas con "
-        "20 L diarios necesita entre 100 y 333 m² de malla. Para igualar la entrega mensual de 1000 L por "
+        "20 L diarios necesita entre 100 y 333 m² de malla (cifras que salen de aplicar directamente ese rango "
+        "de la literatura; el modelo calibrado pide de 100 a 332 nodos de 1 m²). Para igualar la entrega mensual de 1000 L por "
         "comunidad con carrotanque del ICBF hacen falta de 3 a 4 m² con 10 L/m² al día y de 11 a 13 m² con "
         "3 L/m² al día. Esa entrega acompaña las raciones de alimentos y no es toda el agua de la comunidad: la "
         "batería de nodos sería un complemento, no un reemplazo."
