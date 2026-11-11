@@ -3,20 +3,18 @@
 
 Esta secci\'on resume en lenguaje cotidiano el prop\'osito, los hallazgos y las limitaciones del proyecto, sin unidades el\'ectricas ni nombres internos del programa. Reproduce fielmente la versi\'on de lectura breve disponible en las vistas 1 y 4 del tablero p\'ublico.
 
-\section*{1. ?`Qu\'e pregunta busca responder este estudio?}
+\section*{1. Pregunta}
 ?`Un control que decide con sensores cuida mejor la membrana de un captador de niebla, y le saca m\'as agua, que un temporizador fijo, cuando el aire trae mucha sal?
 
-\section*{2. ?`Qu\'e se encontr\'o en la simulaci\'on?}
-En la simulaci\'on por computador, el control basado en sensores y reglas desgasta la membrana entre 61\,\% y 100\,\% menos que el temporizador fijo en todas las condiciones probadas, porque solo aplica calor cuando la malla est\'a sucia de sal y limita la temperatura a un nivel seguro. En cambio, recuperar m\'as agua despu\'es de cada limpieza solo lo logra cuando entra mucha sal cada d\'ia; con la niebla que se mide en proyectos reales, eso ocurre \'unicamente en el ambiente m\'as salino.
+\section*{2. Hallazgo principal}
+En la simulaci\'on, el control por reglas desgasta la membrana entre 61\,\% y 100\,\% menos que el temporizador en todas las condiciones probadas. Frente a un temporizador con los mismos l\'imites de temperatura y de humedad, la diferencia es menor, de 40.6\,\% a 90.9\,\% en el barrido de sal (y de 14.8\,\% a 94.4\,\% al variar el intervalo entre 1 y 4 horas), y en la sequ\'ia desaparece con el intervalo de 2 horas. Recuperar m\'as agua despu\'es de cada limpieza solo lo logra cuando entra mucha sal cada d\'ia; con la niebla que se mide en proyectos reales, eso ocurre solo con el aire m\'as salino.
 
-\section*{3. ?`Qu\'e tan seguro es este resultado?}
-Es un resultado de computador, no una prueba en el territorio. Su validez depende sobre todo de dos valores que todav\'ia hay que medir en un laboratorio: cu\'anto limpia realmente un pulso de calor suave y cu\'anto desgasta la malla cada vez que se calienta.
+\section*{3. Nivel de certeza}
+Es un resultado de computador, no de campo. Depende sobre todo de cu\'anto limpia un pulso de calor y de cu\'anto desgasta cada pulso, dos valores que hay que medir en laboratorio.
 
-\section*{4. ?`Qu\'e significa para una comunidad en La Guajira?}
-Con la niebla t\'ipica medida en proyectos reales de captaci\'on (entre 3 y 10 litros de agua por cada metro cuadrado de malla al d\'ia), abastecer a una comunidad de 50 personas con 20 litros diarios por persona necesita entre 100 y 333 metros cuadrados de malla. En el caso de la entrega mensual de 1000 litros por comunidad con carrotanque que reporta el Bienestar Familiar en La Guajira, igualar esa cantidad de agua toma entre 3 y 4 metros cuadrados de malla cuando hay buena niebla (10 litros por metro cuadrado al d\'ia) y entre 11 y 13 metros cuadrados cuando la niebla es baja (3 litros por metro cuadrado al d\'ia).
+\section*{4. Qu\'e significa para una comunidad}
+Con la niebla t\'ipica de los proyectos reales, de 3 a 10 L por m$^2$ al d\'ia, abastecer a 50 personas con 20 L diarios necesita entre 100 y 333 m$^2$ de malla (cifras que salen de aplicar directamente ese rango de la literatura; el modelo calibrado pide de 100 a 332 nodos de 1 m$^2$). Para igualar la entrega mensual de 1000 L por comunidad con carrotanque del ICBF hacen falta de 3 a 4 m$^2$ con 10 L/m$^2$ al d\'ia y de 11 a 13 m$^2$ con 3 L/m$^2$ al d\'ia. Esa entrega acompa\~na las raciones de alimentos y no es toda el agua de la comunidad: la bater\'ia de nodos ser\'ia un complemento, no un reemplazo.
 
-Es indispensable tener presente el alcance de esa comparaci\'on: la entrega mensual de 1000 litros del Bienestar Familiar acompa\~na las raciones de alimentos y no representa toda el agua que necesita ni que usa la comunidad. Por tanto, una bater\'ia peque\~na de captadores de niebla ser\'ia un complemento local para el hogar o la rancher\'ia, no un reemplazo de las fuentes de agua del territorio ni de la obligaci\'on estatal de garantizar el acceso al agua potable.
-
-\section*{5. ?`Qu\'e falta antes de llevarlo al territorio?}
-Antes de construir o instalar cualquier prototipo en campo hacen falta dos pasos obligatorios: primero, medir en laboratorio el efecto real del pulso de calor sobre la membrana y la cantidad de sal que trae la brisa en el sitio; segundo, realizar una consulta previa y concertar con la comunidad wayuu las reglas de uso, el cuidado de las plantas locales y la gesti\'on comunitaria de los equipos. Adem\'as, este informe y el tablero est\'an escritos en espa\~nol (con resumen en ingl\'es), por lo que una versi\'on en wayuunaiki validada con hablantes de la comunidad es indispensable antes de cualquier actividad en el territorio.
+\section*{5. Qu\'e falta antes de ir a campo}
+Medir en laboratorio el efecto del pulso de calor, y consultar a la comunidad antes de cualquier piloto: el dise\~no no se ha probado en campo.
 

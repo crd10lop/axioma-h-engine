@@ -1,7 +1,7 @@
 \chapter{Resultados experimentales y an\'alisis cuantitativo}
 \label{cap:resultados}
 
-Todas las cifras de este cap\'itulo provienen de los datos abiertos del repositorio, generados con las condiciones del \cref{sec:metodo}, salvo las que se se\~nalan expresamente como an\'alisis exploratorios, documentados con su c\'odigo de reproducci\'on en el documento 04 del repositorio \parencite[doc.~04, \S\S~8.1--8.13]{axioma2026engine}.
+Todas las cifras de este cap\'itulo provienen de los datos abiertos del repositorio, generados con las condiciones del \cref{sec:metodo}, salvo las que se se\~nalan expresamente como an\'alisis exploratorios, documentados con su c\'odigo de reproducci\'on en el documento 04 del repositorio \parencite[doc.~04, \S\S~8.1--8.14]{axioma2026engine} y resumidos en la \cref{tab:exploratorios}.
 
 \section{Contraste de las conjeturas iniciales}
 \label{sec:conjeturas_resultados}
@@ -89,7 +89,7 @@ Incrustaci\'on r\'apida & Reglas & 97 & 0.243 & 0.000 & 0.830 & 1.073 \\
 \end{tabularx}
 \end{table}
 
-La descomposici\'on muestra que la fatiga por pulso, la variable que suele asociarse al desgaste por ciclado, es una parte menor de la degradaci\'on del temporizador. En el d\'ia normal, el $76\,\%$ de su degradaci\'on es t\'ermica y procede de los pulsos que superan $45\;\si{\celsius}$; la exposici\'on solar de la matriz no aporta p\'erdida en estos escenarios. Esto explica la aparente paradoja de la incrustaci\'on r\'apida, donde las reglas aplican m\'as pulsos que el temporizador (97 frente a 88) y aun as\'i se degradan menos: su fatiga es apenas mayor ($0.243$ frente a $0.220$), pero no tienen p\'erdida t\'ermica y su membrana permanece menos tiempo por encima de $1500\;\Omega$, lo que reduce la cristalizaci\'on de $2.046$ a $0.830$ puntos.
+La descomposici\'on muestra que la fatiga por pulso, la variable que suele asociarse al desgaste por ciclado, es una parte menor de la degradaci\'on del temporizador. En el d\'ia normal, el $76\,\%$ de su degradaci\'on es t\'ermica y procede de los pulsos que superan $45\;\si{\celsius}$; la exposici\'on solar de la matriz no aporta p\'erdida en estos escenarios. Esto explica la aparente paradoja de la incrustaci\'on r\'apida, donde las reglas aplican m\'as pulsos que el temporizador (97 frente a 88) y aun as\'i se degradan menos: su fatiga es apenas mayor ($0.243$ frente a $0.220$), pero no tienen p\'erdida t\'ermica y su membrana permanece menos tiempo por encima de $1500\;\Omega$, lo que reduce la cristalizaci\'on de $2.046$ a $0.830$ puntos. Como el volumen dejado de captar depende directamente del tope ecol\'ogico de $0.33$, si la comunidad acordara en la consulta previa un tope distinto $f_{\text{com}}$, en el Ciclo 3 habr\'ia que comparar el volumen diario captado por las reglas y por un temporizador con ese mismo tope $f_{\text{com}}$, midiendo tambi\'en la humedad relativa del suelo bajo el colector para cuantificar el intercambio entre litros entregados y conservaci\'on microclim\'atica.
 
 \section{Comparaci\'on con un temporizador con salvaguardas}
 \label{sec:salvaguardas}
@@ -142,6 +142,37 @@ El origen de esa ventaja residual cambia con la salinidad. Con poca sal, el temp
 
 La sequ\'ia es la excepci\'on, y su mecanismo es instructivo. All\'i el temporizador con salvaguardas se degrada un $14.3\,\%$ menos que las reglas ($0.140$ frente a $0.160$ puntos). La pausa ecol\'ogica tiene prioridad sobre el pulso, de modo que cuando la impedancia supera el umbral con la humedad por debajo de $30\,\%$, las reglas dejan la membrana incrustada hasta que la humedad se recupera y acumulan $0.100$ puntos por cristalizaci\'on; el temporizador, que limpia por calendario, nunca deja que la impedancia llegue al umbral. La prioridad de R2, que protege el territorio, tiene as\'i un costo de desgaste que el dise\~no original no anticipaba. Dos resultados complementan el contraste. En energ\'ia, el temporizador con salvaguardas consume menos que las reglas en la incrustaci\'on r\'apida y en la tormenta de sal con calor extremo, lo que indica que parte de la ventaja energ\'etica frente al temporizador fijo proven\'ia de los pulsos sin l\'imite de este. En recuperaci\'on, el temporizador con salvaguardas se comporta como el fijo: $88.25\,\%$ frente a $88.78\,\%$ de las reglas en el d\'ia normal y $70.32\,\%$ frente a $85.92\,\%$ en la incrustaci\'on r\'apida.
 
+Para verificar si estos resultados dependen del intervalo fijo de $120\;\text{min}$ elegido para el temporizador, el an\'alisis exploratorio E6 eval\'ua el temporizador con salvaguardas con intervalos de 60, 120, 180 y $240\;\text{min}$ en los cinco escenarios y en el barrido con las semillas 1 a 5 \parencite[doc.~04, \S~8.14]{axioma2026engine}. La \cref{tab:sensibilidad_intervalo} resume ambos conjuntos.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{2pt}
+\caption{Sensibilidad al intervalo del temporizador con salvaguardas (TS, valores en orden 60 / 120 / 180 / 240 min; HR inicial $85\,\%$, 24 h, 8 nodos). En el barrido (semillas 1 a 5), TS aplica 144 / 88 / 56 / 40 pulsos y consume en promedio 1236.8 / 826.1 / 534.5 / 389.2 Wh.}
+\label{tab:sensibilidad_intervalo}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrr@{}}
+\toprule
+\textbf{Escenario (semilla 42) o} & \textbf{Pulsos} & \textbf{Energ\'ia} & \textbf{Reducci\'on desgaste} & \textbf{$\bar{G}$ R / TS} \\
+\textbf{barrido (semillas 1--5)} & \textbf{R / TS} & \textbf{R (Wh)} & \textbf{frente a TS (\%)} & \textbf{(\%)} \\
+\midrule
+D\'ia normal & 46 / 144--40 & 664.5 & 82.6/54.6/79.1/88.1 & 76.65 / 84.00/80.93/75.07/70.57 \\
+Incrustaci\'on r\'apida & 97 / 144--40 & 1013.7 & 15.4/43.1/52.6/53.8 & 67.12 / 67.60/60.96/53.28/48.47 \\
+Sequ\'ia & 24 / 80--24 & 491.9 & 63.5/$-14.3$/86.2/88.0 & 76.99 / 80.34/81.98/71.71/69.43 \\
+Tormenta de arena & 53 / 144--40 & 752.1 & 80.0/47.7/78.0/88.4 & 76.00 / 81.32/78.98/73.63/69.34 \\
+Sal y calor extremo & 64 / 144--40 & 780.8 & 50.8/42.8/68.7/76.8 & 74.56 / 78.81/74.46/67.61/62.68 \\
+\midrule
+$20\;\Omega\text{ por L/m}^2$ & 8.0 / 144--40 & 149.7 & 94.4/90.9/85.7/80.0 & 80.77 / 94.73/94.15/91.81/89.73 \\
+$40\;\Omega\text{ por L/m}^2$ & 20.8 / 144--40 & 347.9 & 85.6/76.4/62.9/48.0 & 77.94 / 90.54/89.14/85.18/81.86 \\
+$60\;\Omega\text{ por L/m}^2$ & 34.2 / 144--40 & 513.2 & 83.8/61.1/56.3/80.1 & 77.14 / 87.01/84.77/79.66/75.60 \\
+$80\;\Omega\text{ por L/m}^2$ & 46.8 / 144--40 & 666.8 & 82.3/51.6/78.6/88.0 & 76.62 / 83.93/80.92/75.01/70.49 \\
+$120\;\Omega\text{ por L/m}^2$ & 65.4 / 144--40 & 856.1 & 49.8/40.6/68.2/76.4 & 74.50 / 78.72/74.42/67.53/62.58 \\
+$240\;\Omega\text{ por L/m}^2$ & 98.4 / 144--40 & 1011.0 & 14.8/43.1/52.4/53.4 & 67.02 / 67.46/60.88/53.16/48.34 \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+En el barrido de salinidad, ning\'un intervalo entre 60 y $240\;\text{min}$ logra que el temporizador con salvaguardas iguale o supere a las reglas en desgaste: la reducci\'on de la degradaci\'on de las reglas va de $14.8\,\%$ a $94.4\,\%$ en las 24 combinaciones de carga e intervalo. En los escenarios, la \'unica inversi\'on sigue siendo la sequ\'ia con $120\;\text{min}$ ($-14.3\,\%$); con 60, 180 y $240\;\text{min}$ la excepci\'on desaparece ($63.5\,\%$, $86.2\,\%$ y $88.0\,\%$), porque con $60\;\text{min}$ el temporizador acumula m\'as fatiga y con 180 o $240\;\text{min}$ deja crecer la impedancia por encima de $1500\;\Omega$ y acumula cristalizaci\'on. Adem\'as, el intervalo que m\'as acerca el temporizador a las reglas cambia con la salinidad: es $240\;\text{min}$ con 20 y $40\;\Omega\text{ por L/m}^2$ ($80.0\,\%$ y $48.0\,\%$), $180\;\text{min}$ con $60$ ($56.3\,\%$), $120\;\text{min}$ con 80 y $120$ ($51.6\,\%$ y $40.6\,\%$) y $60\;\text{min}$ con $240$ ($14.8\,\%$). Un calendario fijo puede ajustarse a una salinidad conocida, pero no a todas a la vez; y cuando m\'as se acerca en desgaste ($60\;\text{min}$ con $240\;\Omega\text{ por L/m}^2$, reducci\'on de $14.8\,\%$), lo hace a costa de aplicar 144 pulsos frente a $98.4$ y consumir $1236.8$ frente a $1011.0\;\text{Wh}$. Con intervalos largos (180 y $240\;\text{min}$), el temporizador ahorra energ\'ia en todos los escenarios ($539.5$ y $392.3\;\text{Wh}$ en el d\'ia normal), pero sufre mayor degradaci\'on y una conductancia media en el tiempo $\bar{G}$ menor desde cargas moderadas (\cref{sec:metrica_homogenea}).
+
 \section{Tablero sint\'etico de veredictos}
 La \cref{tab:veredictos} sintetiza los veredictos para las cuatro subpreguntas a partir de los datos abiertos del proyecto.
 
@@ -154,9 +185,9 @@ La \cref{tab:veredictos} sintetiza los veredictos para las cuatro subpreguntas a
 \toprule
 \textbf{Dimensi\'on de evaluaci\'on} & \textbf{Veredicto sint\'etico} & \textbf{Evidencia cuantitativa de soporte} \\
 \midrule
-\textbf{Parte a: Desgaste de la membrana} & \textbf{Robusto a favor del control por reglas dentro del modelo} & Reducci\'on de la degradaci\'on acumulada de $\SI{73.3}{\percent}$ a $\SI{100}{\percent}$ en los 54 puntos de la robustez de la respuesta, y de al menos $\SI{61.5}{\percent}$ en las 18 combinaciones de fatiga y degradaci\'on t\'ermica (semilla 42). La ventaja persiste con una fatiga de $\SI{2.0}{\percent}$ por pulso, cien veces el supuesto. Frente a un temporizador con las mismas salvaguardas, la reducci\'on es de $\SI{40.6}{\percent}$ a $\SI{90.9}{\percent}$ en el barrido, con una excepci\'on en la sequ\'ia (\cref{sec:salvaguardas}). \\
+\textbf{Parte a: Desgaste de la membrana} & \textbf{Robusto a favor del control por reglas dentro del modelo} & Reducci\'on de la degradaci\'on acumulada de $\SI{73.3}{\percent}$ a $\SI{100}{\percent}$ en los 54 puntos de la robustez de la respuesta, y de al menos $\SI{61.5}{\percent}$ en las 18 combinaciones de fatiga y degradaci\'on t\'ermica (semilla 42). La ventaja persiste con una fatiga de $\SI{2.0}{\percent}$ por pulso, cien veces el supuesto. Frente a un temporizador con las mismas salvaguardas, la reducci\'on es de $\SI{40.6}{\percent}$ a $\SI{90.9}{\percent}$ en el barrido con $120\;\text{min}$ y de $\SI{14.8}{\percent}$ a $\SI{94.4}{\percent}$ entre 60 y $240\;\text{min}$, con una sola excepci\'on en la sequ\'ia a $120\;\text{min}$ (\cref{sec:salvaguardas}). \\
 \midrule
-\textbf{Parte b: Recuperaci\'on post-pulso} & \textbf{Condicional a la incrustaci\'on diaria} & Cruce interpolado entre $1633$ y $1867\;\Omega\text{/d\'ia}$, dentro de la banda de transici\'on (\cref{sec:banda}); con semillas no usadas, 30 de 30 cruces caen dentro de la banda (\cref{sec:validacion}). Con flujos calibrados, el control solo supera al temporizador en 3 de 62 muestras de incertidumbre. \\
+\textbf{Parte b: Recuperaci\'on post-pulso} & \textbf{Condicional a la incrustaci\'on diaria} & Cruce interpolado entre $1633$ y $1867\;\Omega\text{/d\'ia}$, dentro de la banda de transici\'on (\cref{sec:banda}); con semillas no usadas, 30 de 30 cruces caen dentro de la banda (\cref{sec:validacion}). Con la conductancia media en el tiempo $\bar{G}$, el cruce sube a $2474.5\;\Omega\text{/d\'ia}$ frente al temporizador fijo y a $3513.0\;\Omega\text{/d\'ia}$ frente al temporizador con salvaguardas (\cref{sec:metrica_homogenea}). Con flujos calibrados, el control solo supera al temporizador en 3 de 62 muestras de incertidumbre. \\
 \midrule
 \textbf{Parte c: Seguridad y viabilidad} & \textbf{Cumplimiento por construcci\'on dentro del modelo} & Ning\'un pulso de las reglas super\'o $45\;\si{\celsius}$ y su p\'erdida t\'ermica fue nula en las 10 corridas; 0 violaciones ecol\'ogicas frente a 8 del temporizador fijo. Menor consumo de energ\'ia que el temporizador fijo en todos los escenarios a 24 h, pero no a 72 h en la incrustaci\'on r\'apida ni frente al temporizador con salvaguardas en dos escenarios (\cref{tab:modos,tab:salvaguardas,tab:robustez_temporal}). \\
 \midrule
@@ -199,6 +230,33 @@ Con esa banda, los 54 puntos se ordenan en tres zonas. Por debajo de la banda de
 La figura sostiene la afirmaci\'on central de la hip\'otesis derivada: en carga salina por litro, los intervalos de cruce de los dos flujos no se solapan (de 40 a $60\;\Omega\text{ por L/m}^2$ con el flujo supuesto y de 120 a $240$ con el calibrado), mientras que en incrustaci\'on diaria los seis se solapan. La variable que ordena la ventaja es, por tanto, la sal que recibe la membrana por d\'ia y no la concentraci\'on salina de la niebla. Una comprobaci\'on con valores fuera de la cuadr\'icula apunta en la misma direcci\'on: en las muestras de la propagaci\'on de incertidumbre, que var\'ian la eficacia y el flujo de forma continua, la ventaja es negativa en todas las que tienen $1628.9\;\Omega\text{/d\'ia}$ o menos y positiva en las tres que tienen $2014.9\;\Omega\text{/d\'ia}$ o m\'as; con flujos calibrados, solo 3 de 62 muestras muestran ventaja \parencite[doc.~04, \S~8.8]{axioma2026engine}. La implicaci\'on para la pregunta es que la ventaja en eficiencia del control reactivo es una propiedad del sitio, no del controlador: depende de cu\'anta agua y cu\'anta sal recibe la membrana cada d\'ia.
 
 Un contraste con un sitio real comparable ilustra lo que esa dependencia implica fuera del modelo. En los acantilados costeros de Atacama se midieron $7.0\;\text{L/m}^2\text{/d\'ia}$ con colectores est\'andar \parencite{cereceda2008spatial}. En el an\'alisis exploratorio E4, calibrar el flujo del modelo para ese rendimiento da $1.261\;\text{L/m}^2\text{/h}$, y con \'el la incrustaci\'on diaria va de $161.0\;\Omega\text{/d\'ia}$ con la carga salina m\'as baja a $1619.6\;\Omega\text{/d\'ia}$ con la m\'as alta \parencite[doc.~04, \S~8.13]{axioma2026engine}. Cinco de los seis niveles quedan por debajo de la banda de transici\'on y el m\'as alto queda dentro, con ventaja todav\'ia negativa ($-0.99$ puntos), mientras que la reducci\'on del desgaste se mantiene entre $96.7\,\%$ y $100\,\%$. En un sitio con niebla costera abundante, el modelo predice, por tanto, que el beneficio del control ser\'ia la protecci\'on de la membrana, salvo con cargas salinas por litro muy altas. El c\'alculo usa el ciclo clim\'atico de Cabo de la Vela con un flujo equivalente al de Atacama y no conoce la carga salina de ese sitio: indica en qu\'e zona caer\'ia para cada carga, no cu\'al es su carga.
+
+\section{Una m\'etrica homog\'enea de recuperaci\'on}
+\label{sec:metrica_homogenea}
+La recuperaci\'on post-pulso se mide solo cuando un modo ejecuta un pulso: tras un umbral de impedancia alta en las reglas y a intervalos fijos en el temporizador. Para comparar todos los modos con la misma regla de medici\'on y en todo instante, el an\'alisis exploratorio E5 define la conductancia relativa media en el tiempo como $\bar{G} = \text{media}_t\min(1,\,Z_{\text{nom}}/\bar{Z}_t)$, expresada en porcentaje, donde $\bar{Z}_t$ es la impedancia media de la red en cada paso \parencite[doc.~04, \S~8.14]{axioma2026engine}. En los cinco escenarios con humedad inicial de $85\,\%$ y semilla 42, $\bar{G}$ de las reglas, del temporizador fijo y del temporizador con salvaguardas ($120\;\text{min}$) vale $76.65 / 76.14 / 80.93\,\%$ en el d\'ia normal (ventajas de $+0.51$ y $-4.28$ puntos), $67.12 / 54.39 / 60.96\,\%$ en la incrustaci\'on r\'apida ($+12.73$ y $+6.16$), $76.99 / 83.71 / 81.98\,\%$ en la sequ\'ia ($-6.71$ y $-4.99$), $76.00 / 74.61 / 78.98\,\%$ en la tormenta de arena ($+1.39$ y $-2.98$) y $74.56 / 68.83 / 74.46\,\%$ en la tormenta de sal con calor extremo ($+5.73$ y $+0.10$). La \cref{tab:metrica_homogenea} presenta el barrido con las semillas 1 a 5.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{2pt}
+\caption{Conductancia relativa media en el tiempo $\bar{G}$ en el barrido de salinidad (semillas 1 a 5, HR inicial $85\,\%$, 24 h, 8 nodos): media y desviaci\'on est\'andar para reglas (R), temporizador fijo (T) y temporizador con salvaguardas de $120\;\text{min}$ (TS).}
+\label{tab:metrica_homogenea}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}rrlrrrrrr@{}}
+\toprule
+\textbf{Carga} & \textbf{Incrust.} & \textbf{Zona frente} & \textbf{$\bar{G}$ R} & \textbf{$\bar{G}$ T} & \textbf{$\bar{G}$ TS} & \textbf{Ventaja $\bar{G}$} & \textbf{Ventaja $\bar{G}$} & \textbf{Ventaja} \\
+\textbf{($\Omega$/L$\cdot$m$^2$)} & \textbf{($\Omega$/d\'ia)} & \textbf{a la banda} & \textbf{(\%)} & \textbf{(\%)} & \textbf{(\%)} & \textbf{R$-$T (pts)} & \textbf{R$-$TS (pts)} & \textbf{post-pulso} \\
+\midrule
+20 & 669.0 & Bajo & $80.77 \pm 0.07$ & $92.26 \pm 0.17$ & $94.15 \pm 0.13$ & $-11.50 \pm 0.13$ & $-13.39 \pm 0.10$ & $-7.06$ \\
+40 & 1296.0 & Transici\'on & $77.94 \pm 0.07$ & $85.94 \pm 0.27$ & $89.14 \pm 0.22$ & $-8.00 \pm 0.33$ & $-11.20 \pm 0.28$ & $-3.12$ \\
+60 & 1926.9 & Transici\'on & $77.14 \pm 0.13$ & $80.63 \pm 0.33$ & $84.77 \pm 0.28$ & $-3.49 \pm 0.22$ & $-7.64 \pm 0.18$ & $+0.65$ \\
+80 & 2554.6 & Sobre & $76.62 \pm 0.08$ & $76.11 \pm 0.37$ & $80.92 \pm 0.33$ & $+0.51 \pm 0.38$ & $-4.30 \pm 0.34$ & $+4.18$ \\
+120 & 3530.2 & Sobre & $74.50 \pm 0.21$ & $68.74 \pm 0.42$ & $74.42 \pm 0.39$ & $+5.76 \pm 0.22$ & $+0.08 \pm 0.18$ & $+9.88$ \\
+240 & 5574.6 & Sobre & $67.02 \pm 0.22$ & $54.30 \pm 0.46$ & $60.88 \pm 0.45$ & $+12.72 \pm 0.24$ & $+6.13 \pm 0.23$ & $+22.65$ \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+La m\'etrica homog\'enea confirma la forma cualitativa del veredicto b): la ventaja de las reglas es negativa con incrustaci\'on baja, cambia de signo una sola vez y crece de forma mon\'otona con la incrustaci\'on diaria, tanto frente a T como frente a TS. Sin embargo, el punto en que cambia de signo se desplaza hacia arriba y sale por encima de la banda $[1171.06,\,2365.34)\;\Omega\text{/d\'ia}$: el cruce interpolado de $\bar{G}$ frente a T est\'a en $2474.5\;\Omega\text{/d\'ia}$ ($77.4\;\Omega\text{ por L/m}^2$, entre $1926.9$ y $2554.6\;\Omega\text{/d\'ia}$, frente a $1818.4\;\Omega\text{/d\'ia}$ de la recuperaci\'on post-pulso) y frente a TS sube a $3513.0\;\Omega\text{/d\'ia}$ ($119.3\;\Omega\text{ por L/m}^2$, donde la ventaja de $+0.08 \pm 0.18$ puntos es indistinguible de cero y solo con $5574.6\;\Omega\text{/d\'ia}$ alcanza $+6.13$ puntos). Adem\'as, con E6 el cruce de $\bar{G}$ frente a TS depende del intervalo del temporizador: no hay cruce con $60\;\text{min}$ (ventaja de $-13.96$ a $-0.44$ puntos) y baja a $2310.9\;\Omega\text{/d\'ia}$ con $180\;\text{min}$ y a $1748.8\;\Omega\text{/d\'ia}$ con $240\;\text{min}$. La raz\'on f\'isica es que la recuperaci\'on post-pulso solo observa el instante inmediato a la limpieza, mientras que $\bar{G}$ incluye la rampa en que las reglas dejan subir la impedancia hasta $1500\;\Omega$ antes de pulsar. Esta m\'etrica tiene una limitaci\'on propia: se calcula con la impedancia media de la red $\bar{Z}_t$ y no con la de cada nodo, por lo que, debido a la convexidad de $1/Z$, subestima ligeramente la conductancia media por nodo cuando las impedancias se dispersan entre nodos.
 
 \section{Robustez de la reducci\'on de desgaste ante variaciones mec\'anicas}
 \label{sec:robustez_desgaste}
@@ -287,4 +345,34 @@ Sal y calor extremo & 93.1\,\% & $+9.30$ & 2787.1 / 3381.9 & $89.4 \pm 0.4\,\%$ 
 
 Con tres noches, la reducci\'on del desgaste va de $75.6\,\%$ a $94.8\,\%$, las reglas no tienen p\'erdida t\'ermica ni violaciones y el temporizador mantiene sus 8 violaciones, de modo que los veredictos de las partes a) y c) sobre desgaste y seguridad conservan su signo; con las semillas 1 a 5, la reducci\'on var\'ia apenas entre $0.1$ y $0.4$ puntos. Dos resultados, en cambio, no resisten la extensi\'on. En la incrustaci\'on r\'apida a 72 horas, las reglas consumen m\'as energ\'ia que el temporizador ($3465.2$ frente a $3381.9\;\text{Wh}$) porque acumulan 316 pulsos frente a 280, de modo que el menor consumo en todos los escenarios solo vale para corridas de un d\'ia. En la sequ\'ia, la ventaja en recuperaci\'on es pr\'acticamente nula y cambia de signo con la duraci\'on y con la semilla, positiva en dos de las cinco; en los dem\'as escenarios conserva el signo.
 
-Estos dos an\'alisis cierran el cap\'itulo de resultados. El cap\'itulo siguiente discute qu\'e significan, qu\'e parte de la ventaja es atribuible al control reactivo y qu\'e amenazas quedan resueltas o acotadas.
+Estos an\'alisis cierran el cap\'itulo de resultados. Para que el lector no dependa de consultar el repositorio, la \cref{tab:exploratorios} re\'une todos los an\'alisis exploratorios citados en el informe, la pregunta que responde cada uno, su resultado cuantitativo principal y la secci\'on del documento 04 donde est\'a su c\'odigo de reproducci\'on. El cap\'itulo siguiente discute qu\'e significan estos hallazgos y qu\'e amenazas quedan resueltas o acotadas.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\caption{An\'alisis exploratorios del estudio y su resultado clave \parencite[doc.~04]{axioma2026engine}.}
+\label{tab:exploratorios}
+\begin{tabularx}{\textwidth}{@{}L{2.5cm}L{4.0cm}Y L{1.5cm}@{}}
+\toprule
+\textbf{An\'alisis} & \textbf{Pregunta que responde} & \textbf{Resultado principal} & \textbf{Doc.~04} \\
+\midrule
+Eficacia m\'inima (C1 y C2) & ?`Qu\'e $\eta_{\text{m\'ax}}$ validar\'ia C1 y C2 en la corrida de referencia? & C1 exige $\eta_{\text{m\'ax}} \ge 0.94$ y C2 exige $\eta_{\text{m\'ax}} \ge 0.97$ ($t_{95} = 64.4\;\text{s}$ con $\eta_{\text{m\'ax}} = 0.90$). & \S\S~5.6, 6.2, 8.5 \\
+\addlinespace[2pt]
+Descomposici\'on y quiebre de fatiga & ?`Qu\'e parte del desgaste es t\'ermica y qu\'e fatiga invierte la ventaja? & El $76\,\%$ del desgaste de T en d\'ia normal es t\'ermico; con $2.0\,\%$ de fatiga por pulso (100$\times$) las reglas a\'un reducen el desgaste de $10.2\,\%$ a $91.3\,\%$. & \S~8.11 \\
+\addlinespace[2pt]
+Semillas 1--3 en robustez & ?`Cambian el cruce o el m\'inimo de desgaste al promediar 3 semillas? & Cruces interpolados de $1682.1$ a $1866.6\;\Omega\text{/d\'ia}$; reducci\'on m\'inima del desgaste de $61.7\,\%$. & \S\S~8.8, 8.11 \\
+\addlinespace[2pt]
+E1: Temporizador con salvaguardas & ?`Persiste la ventaja en desgaste si T tiene corte t\'ermico y pausa (H2)? & Reducci\'on de $40.6\,\%$ a $90.9\,\%$ en el barrido y de $42.8\,\%$ a $54.6\,\%$ en 4 escenarios; se invierte en sequ\'ia ($-14.3\,\%$). & \S~8.13 \\
+\addlinespace[2pt]
+E2: Fuera de muestra (H3) & ?`Se conserva la banda con semillas 101, 202, 303 y 5 eficacias? & 30 de 30 cruces caen en $[1171.06,\,2365.34)\;\Omega\text{/d\'ia}$ (rango interpolado de $1651.1$ a $1921.6\;\Omega\text{/d\'ia}$); 0 de 165 puntos contradicen su zona. & \S~8.13 \\
+\addlinespace[2pt]
+E3: Robustez temporal (72 h) & ?`Cambian los veredictos a 72 h o con las semillas 1 a 5 en escenarios? & Reducci\'on de $75.6\,\%$ a $94.8\,\%$ y 0 violaciones a 72 h; en incrustaci\'on r\'apida a 72 h las reglas consumen m\'as energ\'ia ($3465.2$ vs. $3381.9\;\text{Wh}$). & \S~8.13 \\
+\addlinespace[2pt]
+E4: Contexto Atacama & ?`En qu\'e zona cae un sitio con $7.0\;\text{L/m}^2\text{/d\'ia}$ \parencite{cereceda2008spatial}? & Flujo calibrado de $1.261\;\text{L/m}^2\text{/h}$; incrustaci\'on de $161.0$ a $1619.6\;\Omega\text{/d\'ia}$ (5 niveles bajo la banda y 1 en transici\'on con $-0.99$ pts). & \S~8.13 \\
+\addlinespace[2pt]
+E5: M\'etrica homog\'enea $\bar{G}$ & ?`Cambia el veredicto b) si la conductancia se mide en todos los pasos? & La ventaja sigue creciendo con la incrustaci\'on diaria, pero el cruce sube por encima de la banda: $2474.5\;\Omega\text{/d\'ia}$ vs. T y $3513.0\;\Omega\text{/d\'ia}$ vs. TS. & \S~8.14 \\
+\addlinespace[2pt]
+E6: Intervalo de TS (60--240 min) & ?`Alg\'un intervalo de TS iguala a las reglas en desgaste? & Ninguno en el barrido: reducci\'on de $14.8\,\%$ a $94.4\,\%$; la excepci\'on de sequ\'ia solo ocurre con $120\;\text{min}$. & \S~8.14 \\
+\bottomrule
+\end{tabularx}
+\end{table}

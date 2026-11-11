@@ -25,7 +25,8 @@ R6 & Operaci\'on nominal & \texttt{REGLA\_05\_OPERACION\_NOMINAL}; \texttt{FILTR
 
 La supervisi\'on humana conserva en el c\'odigo el n\'umero 06 del PRD aunque se eval\'ua en tercer lugar. Las zonas de incrustaci\'on que el texto denomina \emph{por debajo}, \emph{dentro} y \emph{por encima de la banda de transici\'on} corresponden en los datos abiertos a \texttt{BAJO\_TRANSICION}, \texttt{TRANSICION} y \texttt{SOBRE\_TRANSICION}.
 
-\begin{longtable}{@{}L{4.3cm}L{2.5cm}L{2.3cm}L{6.2cm}@{}}
+{\footnotesize
+\begin{longtable}{@{}L{4.7cm}L{2.7cm}L{2.0cm}L{5.3cm}@{}}
 \caption{Matriz exhaustiva de trazabilidad de par\'ametros del modelo Axioma-H.}
 \label{tab:anexo_trazabilidad} \\
 \toprule
@@ -38,46 +39,47 @@ La supervisi\'on humana conserva en el c\'odigo el n\'umero 06 del PRD aunque se
 \endhead
 \bottomrule
 \endfoot
-\texttt{UMBRAL\_TEMPERATURA\_CORTE\_C} & $45.0\;\si{\celsius}$ & PRD / D1 & L\'imite t\'ermico absoluto (R1). \\
-\texttt{TEMPERATURA\_OBJETIVO\_PULSO\_C} & $44.0\;\si{\celsius}$ & Matriz / D1 & Consigna t\'ermica de regeneraci\'on (R5). \\
-\texttt{UMBRAL\_HUMEDAD\_ECOLOGICA\_PCT} & $30.0\,\%$ & PRD & L\'imite para suspensi\'on por sequ\'ia (R2). \\
-\texttt{UMBRAL\_RESERVA\_CRITICA\_PCT} & $30.0\,\%$ & PRD / D2 & L\'imite de bater\'ia para inhibir pulso (R4). \\
-\texttt{UMBRAL\_IMPEDANCIA\_OHMS} & $1500.0\;\Omega$ & PRD & Detecci\'on de cristalizaci\'on salina. \\
-\texttt{IMPEDANCIA\_NOMINAL\_OHMS} & $1000.0\;\Omega$ & PRD & Resistencia superficial de membrana limpia. \\
+\texttt{UMBRAL\_TEMPERATURA\_\allowbreak CORTE\_C} & $45.0\;\si{\celsius}$ & PRD / D1 & L\'imite t\'ermico absoluto (R1). \\
+\texttt{TEMPERATURA\_OBJETIVO\_\allowbreak PULSO\_C} & $44.0\;\si{\celsius}$ & Matriz / D1 & Consigna t\'ermica de regeneraci\'on (R5). \\
+\texttt{UMBRAL\_HUMEDAD\_\allowbreak ECOLOGICA\_PCT} & $30.0\,\%$ & PRD & L\'imite para suspensi\'on por sequ\'ia (R2). \\
+\texttt{UMBRAL\_RESERVA\_\allowbreak CRITICA\_PCT} & $30.0\,\%$ & PRD / D2 & L\'imite de bater\'ia para inhibir pulso (R4). \\
+\texttt{UMBRAL\_IMPEDANCIA\_\allowbreak OHMS} & $1500.0\;\Omega$ & PRD & Detecci\'on de cristalizaci\'on salina. \\
+\texttt{IMPEDANCIA\_NOMINAL\_\allowbreak OHMS} & $1000.0\;\Omega$ & PRD & Resistencia superficial de membrana limpia. \\
 \texttt{DURACION\_PULSO\_SEG} & $90.0\;\text{s}$ & PRD & Duraci\'on del calentamiento resistivo. \\
-\texttt{FRACCION\_MAXIMA\_EXTRACCION} & $0.33$ ($33.0\,\%$) & Matriz / D3 & Tope de extracci\'on ecol\'ogica (Conjetura 3). \\
-\texttt{CAUDAL\_DURANTE\_PULSO\_PCT} & $80.0\,\%$ & PRD & Caudal permitido durante pulso t\'ermico. \\
-\texttt{CAUDAL\_RESERVA\_CRITICA\_PCT} & $50.0\,\%$ & PRD & Caudal restringido sin pulso (R4). \\
+\texttt{FRACCION\_MAXIMA\_\allowbreak EXTRACCION} & $0.33$ ($33.0\,\%$) & Matriz / D3 & Tope de extracci\'on ecol\'ogica (Conjetura 3). \\
+\texttt{CAUDAL\_DURANTE\_\allowbreak PULSO\_PCT} & $80.0\,\%$ & PRD & Caudal permitido durante pulso t\'ermico. \\
+\texttt{CAUDAL\_RESERVA\_\allowbreak CRITICA\_PCT} & $50.0\,\%$ & PRD & Caudal restringido sin pulso (R4). \\
 \texttt{CAUDAL\_NOMINAL\_PCT} & $100.0\,\%$ & PRD & Operaci\'on nominal continua (R6). \\
-\texttt{RECUPERACION\_MINIMA\_PCT} & $90.0\,\%$ & Matriz & Umbral de \'exito de Conjetura 1. \\
-\texttt{AHORRO\_ENERGIA\_MINIMO\_PCT} & $35.0\,\%$ & Matriz & Umbral de \'exito energ\'etico de Conjetura 1. \\
-\texttt{TIEMPO\_REGENERACION\_MAX\_SEG} & $120.0\;\text{s}$ & Matriz & Umbral temporal cin\'etico de Conjetura 2. \\
-\texttt{FACTOR\_IMPEDANCIA\_REGENERADA} & $1.10$ ($1100\;\Omega$) & Criterio equipo & Criterio de membrana limpia tras pulso. \\
-\texttt{PERDIDA\_TERMICA\_MAXIMA\_PCT} & $0.0\,\%$ & Matriz & Tolerancia cero de degradaci\'on t\'ermica (C2). \\
-\texttt{VIOLACIONES\_ECOLOGICAS\_MAXIMAS} & $0$ & Matriz & Tolerancia cero de extracci\'on con $\text{HR}<30\,\%$ (C3). \\
-\texttt{RENDIMIENTO\_MINIMO\_L\_M2\_NOCHE} & $12.0\;\text{L/m}^2\text{/noche}$ & Matriz & Umbral de rendimiento de Conjetura 3. \\
-\texttt{FLUJO\_NIEBLA\_MAXIMO\_L\_M2\_H} & $6.0\;\text{L/m}^2\text{/h}$ & Supuesto (D5) & Flujo saturado l\'inea base; optimista vs. literatura. \\
-\texttt{FLUJO\_NIEBLA\_CALIBRADO\_MIN\_L\_M2\_H} & $0.49\;\text{L/m}^2\text{/h}$ & Calibraci\'on & Inversi\'on num\'erica a $3\;\text{L/m}^2\text{/d\'ia}$ \parencite{klemm2012fog}. \\
-\texttt{FLUJO\_NIEBLA\_CALIBRADO\_MAX\_L\_M2\_H} & $1.83\;\text{L/m}^2\text{/h}$ & Calibraci\'on & Inversi\'on num\'erica a $10\;\text{L/m}^2\text{/d\'ia}$ \parencite{klemm2012fog}. \\
+\texttt{RECUPERACION\_\allowbreak MINIMA\_PCT} & $90.0\,\%$ & Matriz & Umbral de \'exito de Conjetura 1. \\
+\texttt{AHORRO\_ENERGIA\_\allowbreak MINIMO\_PCT} & $35.0\,\%$ & Matriz & Umbral de \'exito energ\'etico de Conjetura 1. \\
+\texttt{TIEMPO\_REGENERACION\_\allowbreak MAX\_SEG} & $120.0\;\text{s}$ & Matriz & Umbral temporal cin\'etico de Conjetura 2. \\
+\texttt{FACTOR\_IMPEDANCIA\_\allowbreak REGENERADA} & $1.10$ ($1100\;\Omega$) & Criterio equipo & Criterio de membrana limpia tras pulso. \\
+\texttt{PERDIDA\_TERMICA\_\allowbreak MAXIMA\_PCT} & $0.0\,\%$ & Matriz & Tolerancia cero de degradaci\'on t\'ermica (C2). \\
+\texttt{VIOLACIONES\_ECOLOGICAS\_\allowbreak MAXIMAS} & $0$ & Matriz & Tolerancia cero de extracci\'on con $\text{HR}<30\,\%$ (C3). \\
+\texttt{RENDIMIENTO\_MINIMO\_\allowbreak L\_M2\_NOCHE} & $12.0\;\text{L/m}^2\text{/noche}$ & Matriz & Umbral de rendimiento de Conjetura 3. \\
+\texttt{FLUJO\_NIEBLA\_MAXIMO\_\allowbreak L\_M2\_H} & $6.0\;\text{L/m}^2\text{/h}$ & Supuesto (D5) & Flujo saturado l\'inea base; optimista vs. literatura. \\
+\texttt{FLUJO\_NIEBLA\_CALIBRADO\_\allowbreak MIN\_L\_M2\_H} & $0.49\;\text{L/m}^2\text{/h}$ & Calibraci\'on & Inversi\'on num\'erica a $3\;\text{L/m}^2\text{/d\'ia}$ \parencite{klemm2012fog}. \\
+\texttt{FLUJO\_NIEBLA\_CALIBRADO\_\allowbreak MAX\_L\_M2\_H} & $1.83\;\text{L/m}^2\text{/h}$ & Calibraci\'on & Inversi\'on num\'erica a $10\;\text{L/m}^2\text{/d\'ia}$ \parencite{klemm2012fog}. \\
 \texttt{EFICACIA\_MAXIMA\_PULSO} & $0.90$ & Supuesto & Fracci\'on m\'axima de ensuciamiento removido. \\
-\texttt{CARGA\_SALINA\_REFERENCIA\_OHMS} & $2500.0\;\Omega$ & Supuesto & Escala de saturaci\'on de remoci\'on por pulso. \\
-\texttt{CONSTANTE\_TIEMPO\_DISOLUCION\_SEG}& $25.0\;\text{s}$ & Supuesto & Constante cin\'etica $\tau_0$ a saturaci\'on t\'ermica. \\
-\texttt{CAPACIDAD\_TERMICA\_MATRIZ\_J\_K} & $800.0\;\text{J/K}$ & Supuesto & Inercia t\'ermica de la superficie colectora. \\
-\texttt{CONDUCTANCIA\_PERDIDAS\_W\_K} & $30.0\;\text{W/K}$ & Supuesto & Coeficiente de convecci\'on y disipaci\'on t\'ermica. \\
+\texttt{CARGA\_SALINA\_\allowbreak REFERENCIA\_OHMS} & $2500.0\;\Omega$ & Supuesto & Escala de saturaci\'on de remoci\'on por pulso. \\
+\texttt{CONSTANTE\_TIEMPO\_\allowbreak DISOLUCION\_SEG}& $25.0\;\text{s}$ & Supuesto & Constante cin\'etica $\tau_0$ a saturaci\'on t\'ermica. \\
+\texttt{CAPACIDAD\_TERMICA\_\allowbreak MATRIZ\_J\_K} & $800.0\;\text{J/K}$ & Supuesto & Inercia t\'ermica de la superficie colectora. \\
+\texttt{CONDUCTANCIA\_\allowbreak PERDIDAS\_W\_K} & $30.0\;\text{W/K}$ & Supuesto & Coeficiente de convecci\'on y disipaci\'on t\'ermica. \\
 \texttt{CONSUMO\_BASE\_NEURO\_W} & $0.6\;\text{W}$ & Supuesto & Potencia de electr\'onica y sensores de reglas. \\
-\texttt{CONSUMO\_BASE\_TEMPORIZADOR\_W} & $0.2\;\text{W}$ & Supuesto & Potencia el\'ectrica base de circuito temporizador. \\
-\texttt{INTERVALO\_PULSO\_TEMPORIZADOR\_MIN}& $120.0\;\text{min}$ & Supuesto & Per\'iodo invariable de activaci\'on del temporizador. \\
+\texttt{CONSUMO\_BASE\_\allowbreak TEMPORIZADOR\_W} & $0.2\;\text{W}$ & Supuesto & Potencia el\'ectrica base de circuito temporizador. \\
+\texttt{INTERVALO\_PULSO\_\allowbreak TEMPORIZADOR\_MIN}& $120.0\;\text{min}$ & Supuesto & Per\'iodo invariable de activaci\'on del temporizador. \\
 \texttt{FATIGA\_POR\_PULSO\_PCT} & $\SI{0.02}{\percent}$ & Supuesto & P\'erdida mec\'anica por ciclado t\'ermico suave. \\
-\texttt{DEGRADACION\_TERMICA\_PCT\_POR\_C\_MIN} & $\SI{0.05}{\percent\per(\celsius\cdot\minute)}$ & Supuesto & Tasa de da\~no por exceso t\'ermico ($>45\;\si{\celsius}$). \\
-\texttt{DEGRADACION\_CRISTALIZACION\_PCT\_H}& $\SI{0.10}{\percent\per\hour}$ & Supuesto & Da\~no por permanencia prolongada de salitre. \\
-\texttt{CONSUMO\_SUPERVIVENCIA\_L\_PERSONA\_DIA} & $15.0\;\text{L/p/d\'ia}$ & Referencia & Est\'andar humanitario Sphere \parencite{sphere2018handbook}. \\
-\texttt{CONSUMO\_ACCESO\_BASICO\_L\_PERSONA\_DIA} & $20.0\;\text{L/p/d\'ia}$ & Referencia & Est\'andar acceso b\'asico OMS \parencite{howard2020domestic}. \\
-\texttt{RENDIMIENTO\_LITERATURA\_MIN\_L\_M2\_DIA} & $3.0\;\text{L/m}^2\text{/d\'ia}$ & Referencia & M\'inimo operacional t\'ipico de \textcite{klemm2012fog}. \\
-\texttt{RENDIMIENTO\_LITERATURA\_MAX\_L\_M2\_DIA} & $10.0\;\text{L/m}^2\text{/d\'ia}$ & Referencia & M\'aximo operacional t\'ipico de \textcite{klemm2012fog}. \\
-\texttt{ENTREGA\_CARROTANQUE\_L\_COMUNIDAD\_MES} & $1000.0\;\text{L/com/mes}$ & Referencia & Asignaci\'on mensual asistencial ICBF \parencite{icbf2025agua}. \\
-\texttt{INCRUSTACION\_TRANSICION\_MIN\_OHM\_DIA} & $1171.06\;\Omega\text{/d\'ia}$ & Modelo & L\'imite inferior de la banda de cruce (semilla 42). \\
-\texttt{INCRUSTACION\_TRANSICION\_MAX\_OHM\_DIA} & $2365.34\;\Omega\text{/d\'ia}$ & Modelo & L\'imite superior de la banda de cruce (semilla 42). \\
+\texttt{DEGRADACION\_TERMICA\_\allowbreak PCT\_POR\_C\_MIN} & $\SI{0.05}{\percent\per(\celsius\cdot\minute)}$ & Supuesto & Tasa de da\~no por exceso t\'ermico ($>45\;\si{\celsius}$). \\
+\texttt{DEGRADACION\_\allowbreak CRISTALIZACION\_PCT\_H}& $\SI{0.10}{\percent\per\hour}$ & Supuesto & Da\~no por permanencia prolongada de salitre. \\
+\texttt{CONSUMO\_SUPERVIVENCIA\_\allowbreak L\_PERSONA\_DIA} & $15.0\;\text{L/p/d\'ia}$ & Referencia & Est\'andar humanitario Sphere \parencite{sphere2018handbook}. \\
+\texttt{CONSUMO\_ACCESO\_BASICO\_\allowbreak L\_PERSONA\_DIA} & $20.0\;\text{L/p/d\'ia}$ & Referencia & Est\'andar acceso b\'asico OMS \parencite{howard2020domestic}. \\
+\texttt{RENDIMIENTO\_LITERATURA\_\allowbreak MIN\_L\_M2\_DIA} & $3.0\;\text{L/m}^2\text{/d\'ia}$ & Referencia & M\'inimo operacional t\'ipico de \textcite{klemm2012fog}. \\
+\texttt{RENDIMIENTO\_LITERATURA\_\allowbreak MAX\_L\_M2\_DIA} & $10.0\;\text{L/m}^2\text{/d\'ia}$ & Referencia & M\'aximo operacional t\'ipico de \textcite{klemm2012fog}. \\
+\texttt{ENTREGA\_CARROTANQUE\_\allowbreak L\_COMUNIDAD\_MES} & $1000.0\;\text{L/com/mes}$ & Referencia & Asignaci\'on mensual asistencial ICBF \parencite{icbf2025agua}. \\
+\texttt{INCRUSTACION\_TRANSICION\_\allowbreak MIN\_OHM\_DIA} & $1171.06\;\Omega\text{/d\'ia}$ & Modelo & L\'imite inferior de la banda de cruce (semilla 42). \\
+\texttt{INCRUSTACION\_TRANSICION\_\allowbreak MAX\_OHM\_DIA} & $2365.34\;\Omega\text{/d\'ia}$ & Modelo & L\'imite superior de la banda de cruce (semilla 42). \\
 \end{longtable}
+}
 
 La tabla permite leer la procedencia de los 39 par\'ametros que lista. Doce son supuestos de orden de magnitud sin fuente experimental, entre ellos los que fijan la cuant\'ia de los resultados: la eficacia del pulso, la fatiga por pulso, la degradaci\'on t\'ermica, la degradaci\'on por cristalizaci\'on y el flujo de niebla por defecto. Diecisiete provienen del PRD o de la Matriz de operacionalizaci\'on del proyecto, es decir, son decisiones de dise\~no y umbrales de \'exito, no mediciones. Cinco proceden de referencias externas, dos de la calibraci\'on contra la literatura, dos del propio modelo y uno es un criterio del equipo. A ellos se suman los par\'ametros del clima sint\'etico descritos en el \cref{sec:metodo}, que tambi\'en son supuestos. La implicaci\'on para la confiabilidad es directa: los umbrales de control son verificables en el c\'odigo y la direcci\'on de los resultados resiste las variaciones exploradas en los an\'alisis de robustez, pero sus magnitudes dependen de supuestos que solo la medici\'on del siguiente ciclo puede reemplazar.
 
@@ -86,16 +88,16 @@ La tabla permite leer la procedencia de los 39 par\'ametros que lista. Doce son 
 
 El repositorio publica los datos de referencia en formato abierto bajo el est\'andar Frictionless Data Package (\texttt{docs/datos/datapackage.json}). El conjunto comprende cinco archivos tabulares:
 \begin{enumerate}[leftmargin=*]
-  \item \textbf{\texttt{barrido\_salinidad.csv} (6 registros):} describe el comportamiento promediado en las semillas 1 a 5 para cargas salinas de 20 a $240\;\Omega\text{ por L/m}^2$. Campos principales: recuperaci\'on media y desviaci\'on de ambos controles (\texttt{recuperacion\_neuro\_media}, \texttt{recuperacion\_temporizador\_media}), degradaci\'on de integridad acumulada (\texttt{degradacion\_neuro\_media}, \texttt{degradacion\_temporizador\_media}), porcentaje de reducci\'on de desgaste (\texttt{reduccion\_desgaste\_pct}), tasa de incrustaci\'on diaria (\texttt{incrustacion\_diaria\_ohm\_media}) y ventaja neta en puntos porcentuales (\texttt{ventaja\_recuperacion\_pts}).
-  \item \textbf{\texttt{robustez\_respuesta.csv} (54 registros):} matriz factorial completa combinando flujos de niebla ($6.0$, $1.83$, $0.49\;\text{L/m}^2\text{/h}$), eficacias de pulso ($0.80$, $0.90$, $1.00$) y las 6 tasas de salinizaci\'on, con la semilla 42. Incluye el valor del cruce interpolado (\texttt{cruce\_incrustacion\_diaria\_ohm}) y los niveles de la cuadr\'icula entre los que se ubica (\texttt{cruce\_incrustacion\_inferior\_ohm}, \texttt{cruce\_incrustacion\_superior\_ohm}).
-  \item \textbf{\texttt{robustez\_desgaste.csv} (18 registros):} evaluaci\'on de sensibilidad mec\'anica variando fatiga por pulso ($0.01\,\%$, $0.02\,\%$, $0.04\,\%$) y degradaci\'on t\'ermica ($0.025$, $0.05$, $0.10\,\%/(\si{\celsius}\cdot\text{min})$), con la semilla 42. Registra la reducci\'on m\'inima y m\'axima de desgaste observada (\texttt{reduccion\_desgaste\_min\_pct}, \texttt{reduccion\_desgaste\_max\_pct}) y la fracci\'on de escenarios favorables (\texttt{puntos\_con\_menor\_desgaste}/\texttt{puntos\_totales}).
-  \item \textbf{\texttt{impacto\_entornos.csv} (18 registros):} matriz de dimensionamiento comunitario que cruza 3 reg\'imenes de niebla por 6 cargas salinas. Registra el rendimiento diario (\texttt{rendimiento\_neuro\_l\_m2\_dia}), clasificaci\'on frente al cruce (\texttt{zona\_incrustacion}), colectores requeridos para 50 personas a $20\;\text{L/d\'ia}$ (\texttt{nodos\_requeridos}) y nodos necesarios para igualar los $1000\;\text{L/mes}$ del carrotanque (\texttt{nodos\_equivalentes\_entrega}).
+  \item \textbf{\texttt{barrido\_salinidad.csv} (6 registros):} describe el comportamiento promediado en las semillas 1 a 5 para cargas salinas de 20 a $240\;\Omega\text{ por L/m}^2$. Campos principales: recuperaci\'on media y desviaci\'on de ambos controles (\texttt{recuperacion\_\allowbreak neuro\_\allowbreak media}, \texttt{recuperacion\_\allowbreak temporizador\_\allowbreak media}), degradaci\'on de integridad acumulada (\texttt{degradacion\_\allowbreak neuro\_\allowbreak media}, \texttt{degradacion\_\allowbreak temporizador\_\allowbreak media}), porcentaje de reducci\'on de desgaste (\texttt{reduccion\_\allowbreak desgaste\_\allowbreak pct}), tasa de incrustaci\'on diaria (\texttt{incrustacion\_\allowbreak diaria\_\allowbreak ohm\_\allowbreak media}) y ventaja neta en puntos porcentuales (\texttt{ventaja\_\allowbreak recuperacion\_\allowbreak pts}).
+  \item \textbf{\texttt{robustez\_respuesta.csv} (54 registros):} matriz factorial completa combinando flujos de niebla ($6.0$, $1.83$, $0.49\;\text{L/m}^2\text{/h}$), eficacias de pulso ($0.80$, $0.90$, $1.00$) y las 6 tasas de salinizaci\'on, con la semilla 42. Incluye el valor del cruce interpolado (\texttt{cruce\_\allowbreak incrustacion\_\allowbreak diaria\_ohm}) y los niveles de la cuadr\'icula entre los que se ubica (\texttt{cruce\_\allowbreak incrustacion\_\allowbreak inferior\_ohm}, \texttt{cruce\_\allowbreak incrustacion\_\allowbreak superior\_ohm}).
+  \item \textbf{\texttt{robustez\_desgaste.csv} (18 registros):} evaluaci\'on de sensibilidad mec\'anica variando fatiga por pulso ($0.01\,\%$, $0.02\,\%$, $0.04\,\%$) y degradaci\'on t\'ermica ($0.025$, $0.05$, $0.10\,\%/(\si{\celsius}\cdot\text{min})$), con la semilla 42. Registra la reducci\'on m\'inima y m\'axima de desgaste observada (\texttt{reduccion\_\allowbreak desgaste\_min\_pct}, \texttt{reduccion\_\allowbreak desgaste\_max\_pct}) y la fracci\'on de escenarios favorables (\texttt{puntos\_\allowbreak con\_menor\_desgaste}/\texttt{puntos\_totales}).
+  \item \textbf{\texttt{impacto\_entornos.csv} (18 registros):} matriz de dimensionamiento comunitario que cruza 3 reg\'imenes de niebla por 6 cargas salinas. Registra el rendimiento diario (\texttt{rendimiento\_\allowbreak neuro\_l\_m2\_dia}), clasificaci\'on frente al cruce (\texttt{zona\_\allowbreak incrustacion}), colectores requeridos para 50 personas a $20\;\text{L/d\'ia}$ (\texttt{nodos\_requeridos}) y nodos necesarios para igualar los $1000\;\text{L/mes}$ del carrotanque (\texttt{nodos\_\allowbreak equivalentes\_entrega}).
   \item \textbf{\texttt{resultados\_escenarios.csv} (10 registros):} resultados detallados de la simulaci\'on en los diez escenarios de operaci\'on y perturbaci\'on clim\'atica (sequ\'ia, tormenta de arena, calor extremo y combinaciones) con humedad inicial de $85\,\%$ y $45\,\%$, para los tres modos de control.
 \end{enumerate}
 
 Todas las corridas usan 24 horas, paso de 5 minutos y 8 nodos; las condiciones completas est\'an en el campo \texttt{condiciones} de \texttt{resultados\_completos.json}.
 
-El diccionario muestra el alcance de los datos abiertos. Cuatro de los cinco archivos se calcularon con una sola semilla, la 42, y solo el barrido de salinidad promedia cinco; por eso la validez de la banda de transici\'on y de los veredictos frente a otras semillas y a corridas m\'as largas se examin\'o con los an\'alisis exploratorios E2 y E3. Esos an\'alisis, como E1 y E4, no forman parte de los datos abiertos: se documentan con sus tablas y su c\'odigo de reproducci\'on en el documento 04 del repositorio \parencite[doc.~04, \S~8.13]{axioma2026engine}, de modo que cualquier lector puede regenerarlos con las mismas funciones del modelo.
+El diccionario muestra el alcance de los datos abiertos. Cuatro de los cinco archivos se calcularon con una sola semilla, la 42, y solo el barrido de salinidad promedia cinco; por eso la validez de la banda de transici\'on y de los veredictos frente a otras semillas y a corridas m\'as largas se examin\'o con los an\'alisis exploratorios E2 y E3. Esos an\'alisis, junto con E1, E4, E5 y E6, no forman parte de los datos abiertos: se documentan con sus tablas y su c\'odigo de reproducci\'on en el documento 04 del repositorio \parencite[doc.~04, \S\S~8.13--8.14]{axioma2026engine}, de modo que cualquier lector puede regenerarlos con las mismas funciones del modelo. Para que una estaci\'on experimental en Cabo de la Vela alimente este mismo diccionario en el Ciclo 3, tendr\'ia que registrar en cada paso (\texttt{minuto}) la humedad relativa (\texttt{humedad\_\allowbreak relativa\_pct}), la temperatura ambiente (\texttt{temperatura\_c}), la impedancia superficial antes y despu\'es de cada pulso (\texttt{impedancia\_\allowbreak promedio\_\allowbreak neuro\_ohms}), los litros colectados por metro cuadrado (\texttt{rendimiento\_\allowbreak neuro\_l\_m2\_dia}) y la energ\'ia acumulada (\texttt{energia\_\allowbreak acumulada\_\allowbreak neuro\_wh}), de los cuales se derivan directamente \texttt{incrustacion\_\allowbreak diaria\_\allowbreak ohm\_media} y \texttt{recuperacion\_\allowbreak neuro\_media}.
 
 \chapter{Documentaci\'on del artefacto}
 \label[appendix]{anexo:documentacion}
@@ -110,7 +112,7 @@ La API publica su especificaci\'on bajo el est\'andar OpenAPI 3.1 en \texttt{doc
 \small
 \caption{Cat\'alogo de rutas REST de la API de Axioma-H Engine (versi\'on 0.5.0).}
 \label{tab:rutas_api}
-\begin{tabularx}{\textwidth}{@{}L{1.8cm}L{5.4cm}Y@{}}
+\begin{tabularx}{\textwidth}{@{}L{1.6cm}L{6.2cm}Y@{}}
 \toprule
 \textbf{M\'etodo} & \textbf{Ruta} & \textbf{Descripci\'on funcional} \\
 \midrule
@@ -137,7 +139,7 @@ El tablero organiza los resultados en cinco vistas. La vista 1, \emph{Investigac
 Un selector lateral de nivel de lectura adapta las vistas 1 y 4 a tres p\'ublicos: la comunidad, con una s\'intesis en lenguaje cotidiano sin unidades el\'ectricas; el evaluador no t\'ecnico, con un resumen centrado en la respuesta y en la seguridad de los equipos; y el investigador, opci\'on por defecto, con la presentaci\'on t\'ecnica completa, gr\'aficos interactivos y acceso a los datos abiertos.
 
 \section{Verificaci\'on del software e integraci\'on continua}
-La suite de 828 pruebas automatizadas, escrita con pytest \parencite{pytest} y httpx \parencite{httpx}, combina pruebas unitarias, de integraci\'on y de contrato, y la medici\'on con pytest-cov \parencite{pytestcov} registra una cobertura del $\SI{100}{\percent}$ de l\'ineas y ramas en los m\'odulos medidos del backend y de la l\'ogica del frontend. El script \texttt{scripts/generar\_resultados\_referencia.py} regenera los archivos de \texttt{docs/datos/} y, en modo de comprobaci\'on, verifica num\'ericamente que coinciden con la ejecuci\'on determinista del modelo.
+La suite de 849 pruebas automatizadas, escrita con pytest \parencite{pytest} y httpx \parencite{httpx}, combina pruebas unitarias, de integraci\'on y de contrato, y la medici\'on con pytest-cov \parencite{pytestcov} registra una cobertura del $\SI{100}{\percent}$ de l\'ineas y ramas en los m\'odulos medidos del backend y de la l\'ogica del frontend. El script \texttt{scripts/generar\_resultados\_referencia.py} regenera los archivos de \texttt{docs/datos/} y, en modo de comprobaci\'on, verifica num\'ericamente que coinciden con la ejecuci\'on determinista del modelo.
 
 Cada cambio en la rama principal activa un flujo de GitHub Actions que ejecuta las pruebas, mide la cobertura y env\'ia el an\'alisis a SonarQube Cloud, cuya Quality Gate exige cero incidencias nuevas. El servicio de despliegue publica la API y el tablero solo cuando todas esas comprobaciones est\'an en verde. Sobre las instancias p\'ublicas, el script \texttt{scripts/verificar\_despliegue.py} ejecuta 31 comprobaciones de conectividad, c\'alculo y contrato, que resultaron exitosas en la versi\'on 0.5.0 (commit \texttt{5ea4015}).
 
@@ -177,7 +179,7 @@ La \cref{tab:disciplinas} detalla c\'omo abordar el artefacto desde cuatro campo
 \toprule
 \textbf{Disciplina} & \textbf{Vistas y par\'ametros clave} & \textbf{Pregunta cient\'ifica que permite explorar} \\
 \midrule
-\textbf{Hidrolog\'ia e Ingenier\'ia ambiental} & Vista 4 (partes b y d); Vista 5 (perfil de sitio y calibraci\'on). Campos: \texttt{rendimiento\_neuro\_media}, \texttt{incrustacion\_diaria} y \texttt{area\_colector\_m2}. & ?`El r\'egimen de niebla medido en un sitio espec\'ifico, calibrado con el modelo, genera con el aerosol marino local una incrustaci\'on superior al umbral de cruce de H1-Ciclo 3? \\
+\textbf{Hidrolog\'ia e Ingenier\'ia ambiental} & Vista 4 (partes b y d); Vista 5 (perfil de sitio y calibraci\'on). Campos: \texttt{rendimiento\_\allowbreak neuro\_media}, \texttt{incrustacion\_\allowbreak diaria} y \texttt{area\_colector\_m2}. & ?`El r\'egimen de niebla medido en un sitio espec\'ifico, calibrado con el modelo, genera con el aerosol marino local una incrustaci\'on superior al umbral de cruce de H1-Ciclo 3? \\
 \textbf{Salud p\'ublica y Epidemiolog\'ia} & Vista 3 (impacto comunitario); Vista 4 (parte d: dimensionamiento). Campos: \texttt{personas\_acceso\_basico} y \texttt{nodos\_requeridos}. & ?`Cu\'antos captadores pasivos se requieren para abastecer de forma segura a una rancher\'ia de 50 personas bajo el est\'andar b\'asico OMS ($20\;\text{L/d\'ia}$)? \\
 \textbf{Ecolog\'ia y Biolog\'ia de la conservaci\'on} & Vista 2 (pausa ecol\'ogica); Vista 3 (violaciones ecol\'ogicas y l\'imite del $33\,\%$). Campos: \texttt{violaciones\_ecologicas}. & ?`Limitar la extracci\'on al $33\,\%$ y pausar con $\text{HR} < 30\,\%$ previene el desecamiento del microclima en ecosistemas xerof\'iticos litorales? \\
 \textbf{Ciencias sociales y Antropolog\'ia} & Vista 1 (perspectivas \'eticas y supuestos); Vista 4 (costo ecol\'ogico en personas abastecidas). & ?`C\'omo conciliar el principio precautorio del tope ecol\'ogico con las urgencias comunitarias, y qu\'e modelos de gobernanza comunitaria aseguran la autonom\'ia de la gesti\'on del agua? \\
