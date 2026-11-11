@@ -1,8 +1,95 @@
 \chapter{Resultados experimentales y an\'alisis cuantitativo}
 \label{cap:resultados}
 
+Todas las cifras de este cap\'itulo provienen de los datos abiertos del repositorio, generados con las condiciones del \cref{sec:metodo}, salvo las que se se\~nalan expresamente como an\'alisis exploratorios documentados en el documento 04 del repositorio \parencite{axioma2026engine}.
+
+\section{Contraste de las conjeturas iniciales}
+\label{sec:conjeturas_resultados}
+La \cref{tab:conjeturas} contrasta las tres conjeturas del \cref{sec:conjeturas} con la corrida de referencia para la que se formularon: escenario de d\'ia normal, humedad relativa inicial de $85\,\%$, 24 horas, 8 nodos y semilla 42. Una conjetura se valida solo si todos sus indicadores cumplen.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Contraste de las conjeturas iniciales en la corrida de referencia (d\'ia normal, HR inicial $85\,\%$, semilla 42).}
+\label{tab:conjeturas}
+\begin{tabularx}{\textwidth}{@{}L{1.9cm}Y L{2.5cm}L{3.0cm}L{1.6cm}@{}}
+\toprule
+\textbf{Conjetura} & \textbf{Indicador} & \textbf{Umbral} & \textbf{Valor en la corrida} & \textbf{?`Cumple?} \\
+\midrule
+C1 & Recuperaci\'on post-pulso & $\ge 90\,\%$ & $88.78\,\%$ & No \\
+   & Ahorro de energ\'ia en pulsos & $\ge 35\,\%$ & $46.50\,\%$ & S\'i \\
+   & \textbf{Conjetura 1} & & & \textbf{No validada} \\
+\midrule
+C2 & Tiempo de regeneraci\'on hasta $1100\;\Omega$ & $< 120\;\text{s}$ & $11934.8\;\text{s}$ (0 de 46 pulsos regenerados) & No \\
+   & P\'erdida de integridad t\'ermica & $= 0\,\%$ & $0.00\,\%$ & S\'i \\
+   & \textbf{Conjetura 2} & & & \textbf{No validada} \\
+\midrule
+C3 & Violaciones ecol\'ogicas & $= 0$ & $0$ & S\'i \\
+   & Rendimiento nocturno & $\ge 12\;\text{L/m}^2\text{/noche}$ & $16.97\;\text{L/m}^2\text{/noche}$ & S\'i \\
+   & \textbf{Conjetura 3} & & & \textbf{Validada} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+La Conjetura 1 no se cumple por la recuperaci\'on, y el motivo es mec\'anico. El control dispara el pulso apenas la impedancia supera $1500\;\Omega$, es decir, con unos $500\;\Omega$ de carga salina sobre el valor nominal. Con la eficacia m\'axima supuesta de $0.90$, atenuada por esa carga seg\'un la \cref{eq:eficacia}, cada pulso remueve cerca del $75\,\%$ de la costra y deja la impedancia alrededor de $1126\;\Omega$, lo que equivale a una conductancia de $88.8\,\%$, justo por debajo del umbral. Superar el $90\,\%$ exigir\'ia una eficacia m\'axima de al menos $0.94$ (documento 04 del repositorio, \S 5.6), un valor sin respaldo experimental. El ahorro de energ\'ia, en cambio, s\'i cumple, porque el control pulsa 46 veces frente a 88 del temporizador. El resultado no depende del escenario: la Conjetura 1 no se valida en ninguna de las 10 corridas, y en todas la causa registrada es la dependencia de la eficacia del pulso, un par\'ametro supuesto.
+
+La Conjetura 2 contiene dos afirmaciones que el modelo eval\'ua de forma distinta. Su componente t\'ermico se sostiene: la p\'erdida de integridad t\'ermica del control por reglas es nula en las 10 corridas, porque el pulso apunta a $44\;\si{\celsius}$ y la regla R1 impide superar $45\;\si{\celsius}$. Su componente de regeneraci\'on falla por la misma causa que la recuperaci\'on: ning\'un pulso devuelve la impedancia a $1100\;\Omega$, de modo que cada evento se mide hasta el pulso siguiente y el promedio sube a horas. La cin\'etica no es el problema, ya que el pulso logra el $95\,\%$ de su remoci\'on en $64.4\;\text{s}$, por debajo de los $120\;\text{s}$ del enunciado; lo que falta es extensi\'on de la limpieza, que en el modelo exigir\'ia una eficacia m\'axima de al menos $0.97$.
+
+La Conjetura 3 se valida en la corrida de referencia y en cuatro de los cinco escenarios con humedad inicial de $85\,\%$, pero ese resultado descansa en el flujo de niebla supuesto. Con el flujo calibrado m\'aximo, el rendimiento nocturno cae a $5.47\;\text{L/m}^2\text{/noche}$ y la conjetura deja de cumplirse (documento 04 del repositorio, \S 8.6); con humedad inicial de $45\,\%$ no se cumple en ning\'un escenario, aunque el temporizador tampoco alcanza el umbral. Lo que s\'i se mantiene en todas las condiciones es su componente normativo: el control por reglas no registra violaciones ecol\'ogicas.
+
+Este contraste explica por qu\'e la hip\'otesis de trabajo tuvo que reformularse. Las conjeturas 1 y 2 miden el desempe\~no del control contra umbrales absolutos que dependen de un par\'ametro no medido, la eficacia del pulso, y no comparan directamente con el temporizador. Cuando la comparaci\'on se hace entre modos, las dos variables de la pregunta se comportan de forma distinta: el desgaste favorece a las reglas en todas las condiciones evaluadas, mientras que la recuperaci\'on relativa cambia de signo con la salinidad. Esa asimetr\'ia es la que recoge la hip\'otesis derivada H1-Ciclo 3 (\cref{sec:hipotesis}) y la que examinan las secciones siguientes.
+
+\section{Comparaci\'on por modo: pulsos, energ\'ia, agua y violaciones}
+\label{sec:comparacion_modos}
+La \cref{tab:modos} compara los tres modos en los cinco escenarios con humedad inicial de $85\,\%$. Todos los conteos se refieren a la red de 8 nodos durante 24 horas.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\caption{Comparaci\'on por modo con HR inicial $85\,\%$ (red de 8 nodos, 24 h, semilla 42). R: reglas; T: temporizador fijo; T33: temporizador con tope ecol\'ogico.}
+\label{tab:modos}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrrr@{}}
+\toprule
+ & \textbf{Pulsos} & \textbf{Energ\'ia (Wh)} & \textbf{Agua (L)} & \textbf{Violaciones} & \textbf{Degradaci\'on (\%)} \\
+\textbf{Escenario} & R / T & R / T & R / T / T33 & R / T / T33 & R / T / T33 \\
+\midrule
+D\'ia normal & 46 / 88 & 664.5 / 1065.1 & 254.6 / 340.4 / 266.1 & 0 / 8 / 0 & 0.115 / 2.427 / 2.104 \\
+Incrustaci\'on r\'apida & 97 / 88 & 1013.7 / 1065.1 & 185.4 / 240.9 / 198.6 & 0 / 8 / 0 & 1.073 / 4.117 / 3.728 \\
+Sequ\'ia & 24 / 88 & 491.9 / 1065.1 & 149.4 / 204.4 / 158.7 & 0 / 8 / 8 & 0.160 / 2.224 / 2.077 \\
+Tormenta de arena & 53 / 88 & 752.1 / 1065.1 & 232.4 / 306.4 / 239.3 & 0 / 8 / 0 & 0.133 / 1.817 / 1.483 \\
+Sal y calor extremo & 64 / 88 & 780.8 / 1065.1 & 235.0 / 305.8 / 243.7 & 0 / 8 / 0 & 0.408 / 3.903 / 3.400 \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+La tabla responde la subpregunta c), que pide comparar la seguridad t\'ermica, la viabilidad energ\'etica y el respeto de las restricciones ecol\'ogicas con el control tradicional. En seguridad t\'ermica, ning\'un pulso del control por reglas super\'o $44.30\;\si{\celsius}$ y su p\'erdida t\'ermica fue nula en las 10 corridas, mientras que los pulsos del temporizador alcanzaron $52.9\;\si{\celsius}$ en el d\'ia normal y $55.9\;\si{\celsius}$ con calor extremo. En energ\'ia, las reglas consumen menos que el temporizador en los cinco escenarios, aunque en la incrustaci\'on r\'apida la diferencia es peque\~na ($1013.7$ frente a $1065.1\;\text{Wh}$), porque all\'i el control pulsa m\'as veces y, de noche, cada pulso eleva la matriz unos $18\;\si{\celsius}$ frente a los $12\;\si{\celsius}$ del temporizador; en ese escenario y en el de calor extremo, la regla de reserva cr\'itica posterg\'o pulsos cuando la bater\'ia estaba baja (documento 04 del repositorio, \S 8.5). En el plano ecol\'ogico, las reglas no registran violaciones, mientras que el temporizador acumula 8 en todos los escenarios, un episodio continuo por nodo, porque extrae siempre un $45\,\%$ de la niebla disponible. El temporizador con tope ecol\'ogico elimina esas violaciones salvo en la sequ\'ia, donde sigue extrayendo con humedad inferior al $30\,\%$: el tope por s\'i solo no sustituye a la pausa ecol\'ogica.
+
+Estas salvaguardas tienen un costo h\'idrico. Las reglas captan entre $23\,\%$ y $27\,\%$ menos agua que el temporizador fijo; entre el $76\,\%$ y el $91\,\%$ de esa brecha se debe al tope de extracci\'on de 0.33, como muestra la comparaci\'on con el temporizador con tope (documento 04 del repositorio, \S 8.4). El menor volumen del control por reglas es, por tanto, sobre todo una consecuencia de la decisi\'on ecol\'ogica y no de la l\'ogica de control.
+
+Para entender de d\'onde proviene la diferencia de desgaste, la \cref{tab:descomposicion} descompone la degradaci\'on acumulada en sus tres t\'erminos (\cref{sec:ecuaciones}) para dos escenarios. La descomposici\'on se obtuvo en un an\'alisis exploratorio con las funciones de simulaci\'on del repositorio, sin modificarlas y con las mismas condiciones de los datos abiertos; la fatiga es el n\'umero de pulsos por nodo multiplicado por $0.02\,\%$, la p\'erdida t\'ermica la registra el simulador y la cristalizaci\'on es el resto.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Descomposici\'on de la degradaci\'on acumulada por nodo (HR inicial $85\,\%$, 24 h, 8 nodos, semilla 42), en puntos porcentuales de integridad.}
+\label{tab:descomposicion}
+\begin{tabularx}{\textwidth}{@{}Y L{2.4cm}R{1.3cm}R{1.3cm}R{1.5cm}R{2.4cm}R{1.3cm}@{}}
+\toprule
+\textbf{Escenario} & \textbf{Modo} & \textbf{Pulsos} & \textbf{Fatiga} & \textbf{T\'ermica} & \textbf{Cristalizaci\'on} & \textbf{Total} \\
+\midrule
+D\'ia normal & Reglas & 46 & 0.115 & 0.000 & 0.000 & 0.115 \\
+             & Temporizador & 88 & 0.220 & 1.851 & 0.356 & 2.427 \\
+\midrule
+Incrustaci\'on r\'apida & Reglas & 97 & 0.243 & 0.000 & 0.830 & 1.073 \\
+                        & Temporizador & 88 & 0.220 & 1.851 & 2.046 & 4.117 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+La descomposici\'on muestra que la fatiga por pulso, la variable que suele asociarse al desgaste por ciclado, es una parte menor de la degradaci\'on del temporizador. En el d\'ia normal, el $76\,\%$ de su degradaci\'on es t\'ermica y procede de los pulsos que superan $45\;\si{\celsius}$; la exposici\'on solar de la matriz no aporta p\'erdida en estos escenarios. Esto explica la aparente paradoja de la incrustaci\'on r\'apida, donde las reglas aplican m\'as pulsos que el temporizador (97 frente a 88) y aun as\'i se degradan menos: su fatiga es apenas mayor ($0.243$ frente a $0.220$), pero no tienen p\'erdida t\'ermica y su membrana permanece menos tiempo por encima de $1500\;\Omega$, lo que reduce la cristalizaci\'on de $2.046$ a $0.830$ puntos.
+
 \section{Tablero sint\'etico de veredictos}
-La evaluaci\'on multivariada del artefacto permite articular una respuesta integral a la pregunta de investigaci\'on. El \cref{tab:veredictos} sintetiza los cuatro veredictos obtenidos a partir de los datos abiertos del proyecto.
+La \cref{tab:veredictos} sintetiza los veredictos para las cuatro subpreguntas a partir de los datos abiertos del proyecto.
 
 \begin{table}[htbp]
 \centering
@@ -13,64 +100,67 @@ La evaluaci\'on multivariada del artefacto permite articular una respuesta integ
 \toprule
 \textbf{Dimensi\'on de evaluaci\'on} & \textbf{Veredicto sint\'etico} & \textbf{Evidencia cuantitativa de soporte} \\
 \midrule
-\textbf{Parte a: Desgaste mec\'anico y t\'ermico} & \textbf{Robusto a favor del control por reglas} & Reducci\'on de degradaci\'on acumulada entre el $\SI{73.3}{\percent}$ y el $\SI{100}{\percent}$ en el barrido de salinidad, y entre el $\SI{61.5}{\percent}$ y el $\SI{100}{\percent}$ en 18 combinaciones de fatiga y degradaci\'on t\'ermica (semillas 42 y 1 a 3). El punto de empate mec\'anico exigir\'ia una fatiga por pulso de $\SI{2.0}{\percent}$ (100 veces el supuesto). \\
+\textbf{Parte a: Desgaste de la membrana} & \textbf{Robusto a favor del control por reglas dentro del modelo} & Reducci\'on de la degradaci\'on acumulada de $\SI{73.3}{\percent}$ a $\SI{100}{\percent}$ en los 54 puntos de la robustez de la respuesta, y de al menos $\SI{61.5}{\percent}$ en las 18 combinaciones de fatiga y degradaci\'on t\'ermica (semilla 42). La ventaja persiste con una fatiga de $\SI{2.0}{\percent}$ por pulso, cien veces el supuesto; parte de ella se debe a la ausencia de corte t\'ermico en el temporizador (\cref{sec:validez}). \\
 \midrule
-\textbf{Parte b: Recuperaci\'on post-pulso} & \textbf{Condicional a la incrustaci\'on diaria} & El cruce de ventaja se ubica entre $1633$ y $1867\;\Omega\text{/d\'ia}$ (estimaci\'on interpolada en cuadr\'icula con niveles separados entre $617$ y $1165\;\Omega\text{/d\'ia}$ en $[1171.06,\,2365.34)\;\Omega\text{/d\'ia}$). Con flujos calibrados ($3\text{ a }10\;\text{L/m}^2\text{/d\'ia}$), el control solo supera al temporizador en 3 de 62 muestras de incertidumbre. \\
+\textbf{Parte b: Recuperaci\'on post-pulso} & \textbf{Condicional a la incrustaci\'on diaria} & Cruce interpolado entre $1633$ y $1867\;\Omega\text{/d\'ia}$, dentro de la banda de transici\'on (\cref{sec:banda}). Con flujos calibrados, el control solo supera al temporizador en 3 de 62 muestras de incertidumbre. \\
 \midrule
-\textbf{Parte c: Seguridad y viabilidad} & \textbf{Cumplimiento total por construcci\'on} & Cero emergencias t\'ermicas, cero violaciones ecol\'ogicas ($\text{HR}<30\,\%$) y preservaci\'on de la reserva de bater\'ia en todos los escenarios evaluados. \\
+\textbf{Parte c: Seguridad y viabilidad} & \textbf{Cumplimiento por construcci\'on dentro del modelo} & Ning\'un pulso de las reglas super\'o $45\;\si{\celsius}$ y su p\'erdida t\'ermica fue nula en las 10 corridas; 0 violaciones ecol\'ogicas frente a 8 del temporizador; menor consumo de energ\'ia en todos los escenarios (\cref{tab:modos}). \\
 \midrule
-\textbf{Parte d: Impacto comunitario e ICBF} & \textbf{Complemento local, no reemplazo} & Para 50 personas con $20\;\text{L/d\'ia}$, se requieren 32 nodos con flujo supuesto y entre 100 y 332 nodos con flujo calibrado. Para igualar la entrega mensual de $1000\;\text{L}$ del ICBF se requieren 2 nodos (flujo supuesto) o entre 3 y 13 nodos (flujo calibrado). \\
+\textbf{Parte d: Impacto comunitario e ICBF} & \textbf{Complemento local, no reemplazo} & Para 50 personas con $20\;\text{L/d\'ia}$: 32 nodos con flujo supuesto y de 100 a 332 con flujo calibrado en la corrida de referencia. Para igualar la entrega mensual de $1000\;\text{L}$ del ICBF: 2 nodos con flujo supuesto o de 3 a 13 con flujo calibrado. \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
+Los cuatro veredictos no tienen el mismo grado de solidez. El de la parte a) se apoya en una regularidad que se mantiene en todos los an\'alisis de robustez, pero su magnitud depende de supuestos no medidos y de c\'omo se model\'o el temporizador. El de la parte b) depende de la incrustaci\'on diaria y, por tanto, del sitio. El de la parte c) es una propiedad de dise\~no: se cumple porque las reglas R1 y R2 se eval\'uan antes que cualquier otra, y vale mientras los sensores midan correctamente. El de la parte d) es una estimaci\'on de escala, cuya validez depende del rendimiento real de niebla del sitio. Las secciones siguientes presentan la evidencia de cada uno.
+
 \section{Barrido de salinidad y recuperaci\'on frente al desgaste}
-El barrido en seis escenarios de salinidad creciente (promediando cinco semillas estoc\'asticas) ilustra el comportamiento divergente entre la recuperaci\'on hidr\'aulica y la integridad f\'isica de la membrana (\cref{fig:barrido_salinidad}).
+El barrido en seis niveles de salinidad creciente, con la media de cinco semillas, muestra que la recuperaci\'on hidr\'aulica y la integridad de la membrana responden de forma divergente (\cref{fig:barrido_salinidad}).
 
 \begin{figure}[htbp]
 \centering
 \input{figuras/barrido_recuperacion_desgaste.tex}
-\caption{Barrido de salinidad (promedio de 5 semillas): (a) recuperaci\'on post-pulso media mostrando el cruce de ventaja en $56.2\;\Omega\text{ por L/m}^2$; (b) degradaci\'on acumulada de integridad.}
+\caption{Barrido de salinidad (media de las semillas 1 a 5): (a) recuperaci\'on post-pulso media, con el cruce de ventaja en $56.6\;\Omega\text{ por L/m}^2$; (b) degradaci\'on acumulada de integridad.}
 \label{fig:barrido_salinidad}
 \end{figure}
 
-En baja salinidad ($20\;\Omega\text{ por L/m}^2$), el temporizador fijo recupera $95.9\,\%$ de flujo aplicando 36 pulsos ciegos, frente al $88.9\,\%$ del control por reglas que solo activa 8 pulsos. Sin embargo, el costo de esa recuperaci\'on marginal es una degradaci\'on del $2.15\,\%$ en el temporizador frente a solo $0.02\,\%$ en el control por reglas ($\SI{99.1}{\percent}$ de reducci\'on de desgaste). En alta salinidad ($240\;\Omega\text{ por L/m}^2$), la acumulaci\'on salina es tan r\'apida que el temporizador colapsa en recuperaci\'on ($63.2\,\%$) mientras el control por reglas preserva $85.9\,\%$ con una reducci\'on de desgaste del $\SI{74.3}{\percent}$.
+En baja salinidad ($20\;\Omega\text{ por L/m}^2$), el temporizador recupera $95.9\,\%$ de la conductancia con 88 pulsos de la red en 24 horas, frente al $88.9\,\%$ del control por reglas, que aplica en promedio 8 pulsos. El costo de esa recuperaci\'on adicional es una degradaci\'on de $2.15\,\%$ en el temporizador frente a $0.02\,\%$ en las reglas, una reducci\'on del desgaste de $\SI{99.1}{\percent}$. En alta salinidad ($240\;\Omega\text{ por L/m}^2$), la sal se acumula entre dos pulsos programados m\'as r\'apido de lo que el temporizador puede retirarla, y su recuperaci\'on cae a $63.2\,\%$, mientras que las reglas mantienen $85.9\,\%$ con 98.4 pulsos en promedio, m\'as que el temporizador, y una reducci\'on del desgaste de $\SI{74.3}{\percent}$.
 
-\section{Robustez de la respuesta y la banda de transici\'on de incrustaci\'on}
-Para evaluar la generalidad del cruce, se analizaron 54 combinaciones factoriales de flujo, eficacia de pulso y salinidad. La \cref{fig:robustez_respuesta} grafica la ventaja en recuperaci\'on como funci\'on de la tasa diaria de incrustaci\'on.
+La figura condensa el mecanismo que organiza todo el cap\'itulo. Las reglas pulsan siempre con una carga salina parecida, por lo que su recuperaci\'on es casi constante; la del temporizador depende de cu\'anta sal se acumul\'o en las dos horas entre pulsos y cae con la salinidad. Las curvas se cruzan en $56.6\;\Omega\text{ por L/m}^2$, que con el flujo supuesto equivale a $1818.4\;\Omega\text{/d\'ia}$. La degradaci\'on, en cambio, es siempre menor con las reglas, aunque la ventaja se estrecha con la salinidad porque el control necesita cada vez m\'as pulsos y la membrana pasa m\'as tiempo con impedancia alta. Para la pregunta, esto significa que la eficiencia y la protecci\'on de la membrana no se optimizan juntas en todo el rango: la segunda se obtiene siempre y la primera solo con salinidad suficiente. La dispersi\'on entre semillas es peque\~na frente a la diferencia entre modos, salvo en el punto de cruce, donde la ventaja de $0.65$ puntos equivale a unas dos desviaciones est\'andar del temporizador (documento 04 del repositorio, \S 7.5).
+
+\section{Robustez de la respuesta y banda de transici\'on de incrustaci\'on}
+\label{sec:banda}
+Para evaluar si el cruce depende de los dos supuestos que m\'as influyen en \'el, el flujo de niebla y la eficacia del pulso, se repiti\'o el barrido para las nueve combinaciones de tres flujos y tres eficacias, con un total de 54 puntos. La \cref{fig:robustez_respuesta} representa la ventaja en recuperaci\'on de cada punto frente a su incrustaci\'on diaria.
 
 \begin{figure}[htbp]
 \centering
 \input{figuras/robustez_cruce_incrustacion.tex}
-\caption{Robustez del cruce de recuperaci\'on en 54 combinaciones factoriales (semilla 42). La zona sombreada delimita la banda de transici\'on $[1171.06,\, 2365.34)\;\Omega\text{/d\'ia}$.}
+\caption{Robustez del cruce de recuperaci\'on en 54 puntos (9 combinaciones de flujo y eficacia por 6 niveles de salinidad, semilla 42). La zona sombreada es la banda de transici\'on $[1171.06,\, 2365.34)\;\Omega\text{/d\'ia}$.}
 \label{fig:robustez_respuesta}
 \end{figure}
 
-Se evidencia con precisi\'on que la ventaja en recuperaci\'on no depende de la carga salina volum\'etrica sino de la incrustaci\'on diaria acumulada:
-\begin{itemize}[leftmargin=*]
-  \item Por debajo de $1171.06\;\Omega\text{/d\'ia}$ (\texttt{BAJO\_TRANSICION}), el temporizador siempre obtiene mayor recuperaci\'on debido a la mayor frecuencia de lavado.
-  \item Entre $1171.06$ y $2365.34\;\Omega\text{/d\'ia}$ (\texttt{TRANSICION}), ocurre el cruce f\'isico para todas las combinaciones analizadas.
-  \item Por encima de $2365.34\;\Omega\text{/d\'ia}$ (\texttt{SOBRE\_TRANSICION}), el control reactivo supera holgadamente al temporizador en todos los casos.
-\end{itemize}
+En seis de las nueve combinaciones la ventaja cambia de signo dentro del barrido, y el punto de cruce se estima por interpolaci\'on lineal entre los dos niveles de salinidad vecinos en que cambia el signo. Con la semilla 42, esos cruces interpolados van de $1632.9$ a $1839.2\;\Omega\text{/d\'ia}$; repetido con la media de las semillas 1 a 3, un an\'alisis exploratorio del documento 04 del repositorio (\S 8.8), van de $1682.1$ a $1866.6\;\Omega\text{/d\'ia}$. De ah\'i procede el rango de $1633$ a $1867\;\Omega\text{/d\'ia}$ que se cita en este informe. Ese rango no es un umbral resuelto. Los niveles entre los que se interpola est\'an separados por $617$ a $1165\;\Omega\text{/d\'ia}$, entre tres y seis veces el ancho del propio rango, de modo que lo \'unico que el barrido garantiza es que el cruce real de cada combinaci\'on est\'a en alg\'un punto de su intervalo. La uni\'on de esos intervalos es la \emph{banda de transici\'on} $[1171.06,\, 2365.34)\;\Omega\text{/d\'ia}$: su l\'imite inferior es el menor nivel inferior y su l\'imite superior, el mayor nivel superior, entre las seis combinaciones con cruce. Las tres combinaciones restantes, con el flujo calibrado m\'inimo, no alcanzan la banda en ning\'un nivel de salinidad: su incrustaci\'on diaria no pasa de $659\;\Omega\text{/d\'ia}$ y en ellas el temporizador recupera m\'as.
+
+Con esa banda, los 54 puntos se ordenan en tres zonas. Por debajo de la banda de transici\'on, el temporizador obtiene mayor recuperaci\'on en todos los puntos en que ambos modos pulsan, porque limpia una membrana que apenas acumul\'o sal. Dentro de la banda ocurre el cruce de las seis combinaciones, y el signo depende de la eficacia del pulso y de la discretizaci\'on. Por encima de la banda, el control reactivo supera al temporizador en todos los puntos. Las dem\'as secciones del informe remiten a esta definici\'on.
+
+La figura sostiene la afirmaci\'on central de la hip\'otesis derivada: en carga salina por litro, los intervalos de cruce de los dos flujos no se solapan (de 40 a $60\;\Omega\text{ por L/m}^2$ con el flujo supuesto y de 120 a $240$ con el calibrado), mientras que en incrustaci\'on diaria los seis se solapan. La variable que ordena la ventaja es, por tanto, la sal que recibe la membrana por d\'ia y no la concentraci\'on salina de la niebla. Una comprobaci\'on con valores fuera de la cuadr\'icula apunta en la misma direcci\'on: en las muestras de la propagaci\'on de incertidumbre, que var\'ian la eficacia y el flujo de forma continua, la ventaja es negativa en todas las que tienen $1628.9\;\Omega\text{/d\'ia}$ o menos y positiva en las tres que tienen $2014.9\;\Omega\text{/d\'ia}$ o m\'as; con flujos calibrados, solo 3 de 62 muestras muestran ventaja (documento 04 del repositorio, \S 8.8). La implicaci\'on para la pregunta es que la ventaja en eficiencia del control reactivo es una propiedad del sitio, no del controlador: depende de cu\'anta agua y cu\'anta sal recibe la membrana cada d\'ia.
 
 \section{Robustez de la reducci\'on de desgaste ante variaciones mec\'anicas}
-La \cref{fig:robustez_desgaste} presenta la reducci\'on de desgaste al variar la fatiga por pulso ($\SI{0.01}{\percent}$ a $\SI{0.04}{\percent}$) y la degradaci\'on t\'ermica ($\SI{0.025}{\percent}$ a $\SI{0.100}{\percent\per(\celsius\cdot\minute)}$).
+\label{sec:robustez_desgaste}
+La \cref{fig:robustez_desgaste} presenta la reducci\'on m\'inima del desgaste al variar la fatiga por pulso ($\SI{0.01}{\percent}$ a $\SI{0.04}{\percent}$) y la degradaci\'on t\'ermica ($\SI{0.025}{\percent}$ a $\SI{0.100}{\percent\per(\celsius\cdot\minute)}$), es decir, entre la mitad y el doble de los valores supuestos.
 
 \begin{figure}[htbp]
 \centering
 \input{figuras/robustez_desgaste_fatiga.tex}
-\caption{Robustez de la reducci\'on de desgaste frente a par\'ametros mec\'anicos y t\'ermicos en 18 combinaciones: (a) flujo supuesto ($6.0\;\text{L/m}^2\text{/h}$); (b) flujo calibrado m\'aximo ($1.83\;\text{L/m}^2\text{/h}$).}
+\caption{Robustez de la reducci\'on de desgaste frente a par\'ametros mec\'anicos y t\'ermicos en 18 combinaciones (semilla 42): (a) flujo supuesto ($6.0\;\text{L/m}^2\text{/h}$); (b) flujo calibrado m\'aximo ($1.83\;\text{L/m}^2\text{/h}$).}
 \label{fig:robustez_desgaste}
 \end{figure}
 
-En las 18 combinaciones y en las 4 semillas analizadas (42, 1, 2 y 3), la reducci\'on de desgaste es estrictamente positiva ($\ge \SI{61.5}{\percent}$ y alcanzando el $\SI{100}{\percent}$ cuando no se activan pulsos innecesarios con flujo calibrado). Para que el control por reglas iguale el desgaste del temporizador en la corrida base (36 pulsos del temporizador vs. 8 pulsos de reglas), la fatiga individual deber\'ia satisfacer:
-\begin{equation}
-  \Delta I_{\text{fatiga,empate}} \approx \frac{2.15\,\% - 0.0\,\%}{36 - 8} \approx 0.0768\,\% \implies \SI{2.0}{\percent}\text{ por pulso en el peor escenario}
-\end{equation}
-lo que demuestra una tolerancia de dos \'ordenes de magnitud frente al par\'ametro nominal asumido.
+En las 18 combinaciones, que suman 108 puntos, el control por reglas se degrada menos que el temporizador en todos los puntos, con una reducci\'on de $\SI{61.5}{\percent}$ a $\SI{100}{\percent}$; la reducci\'on vale $\SI{100}{\percent}$ en los niveles en que las reglas no llegan a pulsar. Repetido con la media de las semillas 1 a 3, el m\'inimo es $\SI{61.7}{\percent}$ y aparece en la misma combinaci\'on (documento 04 del repositorio, \S 8.11). La figura muestra dos tendencias opuestas: m\'as fatiga reduce la ventaja, porque las reglas tambi\'en pulsan, y m\'as degradaci\'on t\'ermica la aumenta, porque solo el temporizador lleva la matriz por encima de $45\;\si{\celsius}$. El m\'inimo de $\SI{61.5}{\percent}$ corresponde a la combinaci\'on menos favorable: fatiga doble y degradaci\'on t\'ermica a la mitad, con el flujo supuesto.
+
+Como la fatiga es el par\'ametro que podr\'ia invertir el resultado, se busc\'o su punto de quiebre en esa combinaci\'on menos favorable, en un an\'alisis exploratorio documentado en el documento 04 del repositorio (\S 8.11). La b\'usqueda parti\'o del intervalo de $0.04\,\%$ a $0.08\,\%$, duplic\'o el extremo superior hasta un m\'aximo de $2.0\,\%$ por pulso, cien veces el valor supuesto, y estaba preparada para refinar por bisecci\'on si encontraba el quiebre. No lo encontr\'o: incluso con $2.0\,\%$ por pulso, el control por reglas se degrada menos en los seis niveles de salinidad, con una reducci\'on de $\SI{10.2}{\percent}$ a $\SI{91.3}{\percent}$. El punto en que la reducci\'on deja de ser positiva est\'a, por tanto, por encima del rango explorado, y ese valor desconocido es el criterio de refutaci\'on del ensayo de fatiga (\cref{sec:hipotesis}). La implicaci\'on es que la conclusi\'on sobre el desgaste no depende de conocer con precisi\'on la fatiga por pulso, aunque s\'i su magnitud.
 
 \section{Impacto comunitario en 18 entornos y comparaci\'on con el ICBF}
-La \cref{fig:impacto_entornos} sintetiza el dimensionamiento de captadores en 18 entornos y su contraste con la asignaci\'on del ICBF \parencite{icbf2025agua}.
+La \cref{fig:impacto_entornos} sintetiza el dimensionamiento de captadores en los 18 entornos que resultan de cruzar los tres flujos de niebla con los seis niveles de salinidad, y su contraste con la asignaci\'on del ICBF \parencite{icbf2025agua}.
 
 \begin{figure}[htbp]
 \centering
@@ -79,5 +169,8 @@ La \cref{fig:impacto_entornos} sintetiza el dimensionamiento de captadores en 18
 \label{fig:impacto_entornos}
 \end{figure}
 
-Bajo flujos reales calibrados ($0.49\text{ a }1.83\;\text{L/m}^2\text{/h}$, equivalentes a rendimientos de $3\text{ a }10\;\text{L/m}^2\text{/d\'ia}$ seg\'un \textcite{klemm2012fog}), abastecer un asentamiento t\'ipico de 50 personas demanda entre 100 y 332 nodos de $1\;\text{m}^2$. Por su parte, complementar o igualar la cuota asistencial mensual de $1000\;\text{L}$ reportada por el ICBF requiere \'unicamente entre 3 y 4 nodos bajo buen r\'egimen de niebla, y entre 11 y 13 nodos bajo r\'egimen bajo.
+Con los flujos calibrados ($0.49$ a $1.83\;\text{L/m}^2\text{/h}$, que reproducen los rendimientos de $3$ a $10\;\text{L/m}^2\text{/d\'ia}$ de \textcite{klemm2012fog}), abastecer a 50 personas con $20\;\text{L}$ diarios demanda entre 100 y 332 nodos de $1\;\text{m}^2$ en la corrida de referencia, y entre 89 y 368 nodos en el conjunto de los 18 entornos. Las cifras de la corrida de referencia coinciden con los $100$ a $333.3\;\text{m}^2$ que resultan de aplicar directamente el rango de la literatura; la diferencia en el extremo superior se debe a que el rendimiento calibrado m\'inimo del modelo es $3.02$ y no $3.0\;\text{L/m}^2\text{/d\'ia}$, y la coincidencia no es una validaci\'on independiente, porque el flujo se calibr\'o en esa misma corrida. Igualar la cuota asistencial mensual de $1000\;\text{L}$ del ICBF requiere, en cambio, entre 3 y 4 nodos con el flujo calibrado m\'aximo y entre 11 y 13 con el m\'inimo.
 
+La figura muestra que la escala del problema la fija la niebla y no el controlador. Para un mismo flujo, la salinidad mueve los nodos necesarios en un factor peque\~no, mientras que pasar del flujo supuesto al calibrado m\'inimo los multiplica por diez. La diferencia entre los dos paneles tiene una explicaci\'on aritm\'etica: los $1000\;\text{L}$ mensuales del ICBF equivalen a $33.3\;\text{L}$ diarios para toda la comunidad, mientras que el est\'andar de la OMS para 50 personas exige $1000\;\text{L}$ diarios. Para la subpregunta d), esto implica que una bater\'ia peque\~na de captadores podr\'ia complementar la entrega asistencial actual, pero que abastecer a una comunidad al nivel de acceso b\'asico exigir\'ia superficies del orden de cientos de metros cuadrados con la niebla que reporta la literatura.
+
+Estos resultados describen qu\'e ocurre en el modelo. El cap\'itulo siguiente discute qu\'e significan, qu\'e parte de la ventaja es atribuible al control reactivo y qu\'e amenazas limitan la validez de la comparaci\'on.

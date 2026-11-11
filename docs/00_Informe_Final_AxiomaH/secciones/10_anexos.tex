@@ -2,7 +2,28 @@
 \chapter{Trazabilidad de par\'ametros de modelado}
 \label{anexo:trazabilidad}
 
-La \cref{tab:anexo_trazabilidad} recopila la totalidad de constantes f\'isicas y de control parametrizadas en \texttt{backend/config.py}, se\~nalando su valor num\'erico, origen metodol\'ogico y documento de soporte seg\'un el documento 06 (\S 3).
+La \cref{tab:anexo_trazabilidad} recopila las constantes f\'isicas y de control parametrizadas en \texttt{backend/config.py}, se\~nalando su valor num\'erico, origen metodol\'ogico y fuente seg\'un el documento 06 del repositorio (\S 3) \parencite{axioma2026engine}. La \cref{tab:equivalencia_reglas} da antes la equivalencia entre la numeraci\'on de las reglas usada en el informe y los identificadores del c\'odigo.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Equivalencia entre la numeraci\'on de las reglas del informe y los identificadores del c\'odigo.}
+\label{tab:equivalencia_reglas}
+\begin{tabularx}{\textwidth}{@{}L{1.2cm}L{4.2cm}Y@{}}
+\toprule
+\textbf{Informe} & \textbf{Descripci\'on} & \textbf{Identificador en el c\'odigo y acci\'on} \\
+\midrule
+R1 & L\'imite t\'ermico & \texttt{REGLA\_01\_LIMITE\_TERMICO\_ABSOLUTO}; \texttt{CORTE\_DE\_EMERGENCIA} \\
+R2 & L\'imite ecol\'ogico & \texttt{REGLA\_02\_LIMITE\_ECOLOGICO\_TERRITORIAL}; \texttt{PAUSA\_ECOLOGICA} \\
+R3 & Supervisi\'on humana & \texttt{REGLA\_06\_SUPERVISION\_HUMANA}; \texttt{SUSPENSION\_MANUAL} o \texttt{REDUCIR\_CAUDAL\_SIN\_PULSO} \\
+R4 & Reserva cr\'itica & \texttt{REGLA\_04\_PROTECCION\_RESERVA\_CRITICA}; \texttt{REDUCIR\_CAUDAL\_SIN\_PULSO} \\
+R5 & Desprendimiento por impedancia & \texttt{REGLA\_03\_DESPRENDIMIENTO\_SAL\_POR\_IMPEDANCIA}; \texttt{APLICAR\_PULSO\_RESISTIVO} \\
+R6 & Operaci\'on nominal & \texttt{REGLA\_05\_OPERACION\_NOMINAL}; \texttt{FILTRACION\_PASIVA\_CONTINUA} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+La supervisi\'on humana conserva en el c\'odigo el n\'umero 06 del PRD aunque se eval\'ua en tercer lugar. Las zonas de incrustaci\'on que el texto denomina \emph{por debajo}, \emph{dentro} y \emph{por encima de la banda de transici\'on} corresponden en los datos abiertos a \texttt{BAJO\_TRANSICION}, \texttt{TRANSICION} y \texttt{SOBRE\_TRANSICION}.
 
 \begin{longtable}{@{}L{4.3cm}L{2.5cm}L{2.3cm}L{6.2cm}@{}}
 \caption{Matriz exhaustiva de trazabilidad de par\'ametros del modelo Axioma-H.}
@@ -17,17 +38,17 @@ La \cref{tab:anexo_trazabilidad} recopila la totalidad de constantes f\'isicas y
 \endhead
 \bottomrule
 \endfoot
-\texttt{UMBRAL\_TEMPERATURA\_CORTE\_C} & $45.0\;\si{\celsius}$ & PRD / D1 & L\'imite t\'ermico absoluto (REGLA 01). \\
-\texttt{TEMPERATURA\_OBJETIVO\_PULSO\_C} & $44.0\;\si{\celsius}$ & Matriz / D1 & Consigna t\'ermica de regeneraci\'on (REGLA 03). \\
-\texttt{UMBRAL\_HUMEDAD\_ECOLOGICA\_PCT} & $30.0\,\%$ & PRD & L\'imite para suspensi\'on por sequ\'ia (REGLA 02). \\
-\texttt{UMBRAL\_RESERVA\_CRITICA\_PCT} & $30.0\,\%$ & PRD / D2 & L\'imite de bater\'ia para inhibir pulso (REGLA 04). \\
+\texttt{UMBRAL\_TEMPERATURA\_CORTE\_C} & $45.0\;\si{\celsius}$ & PRD / D1 & L\'imite t\'ermico absoluto (R1). \\
+\texttt{TEMPERATURA\_OBJETIVO\_PULSO\_C} & $44.0\;\si{\celsius}$ & Matriz / D1 & Consigna t\'ermica de regeneraci\'on (R5). \\
+\texttt{UMBRAL\_HUMEDAD\_ECOLOGICA\_PCT} & $30.0\,\%$ & PRD & L\'imite para suspensi\'on por sequ\'ia (R2). \\
+\texttt{UMBRAL\_RESERVA\_CRITICA\_PCT} & $30.0\,\%$ & PRD / D2 & L\'imite de bater\'ia para inhibir pulso (R4). \\
 \texttt{UMBRAL\_IMPEDANCIA\_OHMS} & $1500.0\;\Omega$ & PRD & Detecci\'on de cristalizaci\'on salina. \\
 \texttt{IMPEDANCIA\_NOMINAL\_OHMS} & $1000.0\;\Omega$ & PRD & Resistencia superficial de membrana limpia. \\
 \texttt{DURACION\_PULSO\_SEG} & $90.0\;\text{s}$ & PRD & Duraci\'on del calentamiento resistivo. \\
 \texttt{FRACCION\_MAXIMA\_EXTRACCION} & $0.33$ ($33.0\,\%$) & Matriz / D3 & Tope de extracci\'on ecol\'ogica (Conjetura 3). \\
 \texttt{CAUDAL\_DURANTE\_PULSO\_PCT} & $80.0\,\%$ & PRD & Caudal permitido durante pulso t\'ermico. \\
-\texttt{CAUDAL\_RESERVA\_CRITICA\_PCT} & $50.0\,\%$ & PRD & Caudal restringido sin pulso (REGLA 04). \\
-\texttt{CAUDAL\_NOMINAL\_PCT} & $100.0\,\%$ & PRD & Operaci\'on nominal continua (REGLA 05). \\
+\texttt{CAUDAL\_RESERVA\_CRITICA\_PCT} & $50.0\,\%$ & PRD & Caudal restringido sin pulso (R4). \\
+\texttt{CAUDAL\_NOMINAL\_PCT} & $100.0\,\%$ & PRD & Operaci\'on nominal continua (R6). \\
 \texttt{RECUPERACION\_MINIMA\_PCT} & $90.0\,\%$ & Matriz & Umbral de \'exito de Conjetura 1. \\
 \texttt{AHORRO\_ENERGIA\_MINIMO\_PCT} & $35.0\,\%$ & Matriz & Umbral de \'exito energ\'etico de Conjetura 1. \\
 \texttt{TIEMPO\_REGENERACION\_MAX\_SEG} & $120.0\;\text{s}$ & Matriz & Umbral temporal cin\'etico de Conjetura 2. \\
@@ -63,40 +84,58 @@ La \cref{tab:anexo_trazabilidad} recopila la totalidad de constantes f\'isicas y
 
 El repositorio publica los datos de referencia en formato abierto bajo el est\'andar Frictionless Data Package (\texttt{docs/datos/datapackage.json}). El conjunto comprende cinco archivos tabulares:
 \begin{enumerate}[leftmargin=*]
-  \item \textbf{\texttt{barrido\_salinidad.csv} (6 registros):} describe el comportamiento promediado en cinco semillas estoc\'asticas para cargas salinas de 20 a $240\;\Omega\text{ por L/m}^2$. Campos principales: recuperaci\'on media y desviaci\'on de ambos controles (\texttt{recuperacion\_neuro\_media}, \texttt{recuperacion\_temporizador\_media}), degradaci\'on de integridad acumulada (\texttt{degradacion\_neuro\_media}, \texttt{degradacion\_temporizador\_media}), porcentaje de reducci\'on de desgaste (\texttt{reduccion\_desgaste\_pct}), tasa de incrustaci\'on diaria (\texttt{incrustacion\_diaria\_ohm\_media}) y ventaja neta en puntos porcentuales (\texttt{ventaja\_recuperacion\_pts}).
-  \item \textbf{\texttt{robustez\_respuesta.csv} (54 registros):} matriz factorial completa combinando flujos de niebla ($6.0$, $1.83$, $0.49\;\text{L/m}^2\text{/h}$), eficacias de pulso ($0.80$, $0.90$, $1.00$) y las 6 tasas de salinizaci\'on. Incluye el valor del cruce interpolado (\texttt{cruce\_incrustacion\_diaria\_ohm}) y los niveles de la cuadr\'icula entre los que se ubica (\texttt{cruce\_incrustacion\_inferior\_ohm}, \texttt{cruce\_incrustacion\_superior\_ohm}).
-  \item \textbf{\texttt{robustez\_desgaste.csv} (18 registros):} evaluaci\'on de sensibilidad mec\'anica variando fatiga por pulso ($0.01\,\%$, $0.02\,\%$, $0.04\,\%$) y degradaci\'on t\'ermica ($0.025$, $0.05$, $0.10\,\%/(\si{\celsius}\cdot\text{min})$). Registra la reducci\'on m\'inima y m\'axima de desgaste observada (\texttt{reduccion\_desgaste\_min\_pct}, \texttt{reduccion\_desgaste\_max\_pct}) y la fracci\'on de escenarios favorables (\texttt{puntos\_con\_menor\_desgaste}/\texttt{puntos\_totales}).
+  \item \textbf{\texttt{barrido\_salinidad.csv} (6 registros):} describe el comportamiento promediado en las semillas 1 a 5 para cargas salinas de 20 a $240\;\Omega\text{ por L/m}^2$. Campos principales: recuperaci\'on media y desviaci\'on de ambos controles (\texttt{recuperacion\_neuro\_media}, \texttt{recuperacion\_temporizador\_media}), degradaci\'on de integridad acumulada (\texttt{degradacion\_neuro\_media}, \texttt{degradacion\_temporizador\_media}), porcentaje de reducci\'on de desgaste (\texttt{reduccion\_desgaste\_pct}), tasa de incrustaci\'on diaria (\texttt{incrustacion\_diaria\_ohm\_media}) y ventaja neta en puntos porcentuales (\texttt{ventaja\_recuperacion\_pts}).
+  \item \textbf{\texttt{robustez\_respuesta.csv} (54 registros):} matriz factorial completa combinando flujos de niebla ($6.0$, $1.83$, $0.49\;\text{L/m}^2\text{/h}$), eficacias de pulso ($0.80$, $0.90$, $1.00$) y las 6 tasas de salinizaci\'on, con la semilla 42. Incluye el valor del cruce interpolado (\texttt{cruce\_incrustacion\_diaria\_ohm}) y los niveles de la cuadr\'icula entre los que se ubica (\texttt{cruce\_incrustacion\_inferior\_ohm}, \texttt{cruce\_incrustacion\_superior\_ohm}).
+  \item \textbf{\texttt{robustez\_desgaste.csv} (18 registros):} evaluaci\'on de sensibilidad mec\'anica variando fatiga por pulso ($0.01\,\%$, $0.02\,\%$, $0.04\,\%$) y degradaci\'on t\'ermica ($0.025$, $0.05$, $0.10\,\%/(\si{\celsius}\cdot\text{min})$), con la semilla 42. Registra la reducci\'on m\'inima y m\'axima de desgaste observada (\texttt{reduccion\_desgaste\_min\_pct}, \texttt{reduccion\_desgaste\_max\_pct}) y la fracci\'on de escenarios favorables (\texttt{puntos\_con\_menor\_desgaste}/\texttt{puntos\_totales}).
   \item \textbf{\texttt{impacto\_entornos.csv} (18 registros):} matriz de dimensionamiento comunitario que cruza 3 reg\'imenes de niebla por 6 cargas salinas. Registra el rendimiento diario (\texttt{rendimiento\_neuro\_l\_m2\_dia}), clasificaci\'on frente al cruce (\texttt{zona\_incrustacion}), colectores requeridos para 50 personas a $20\;\text{L/d\'ia}$ (\texttt{nodos\_requeridos}) y nodos necesarios para igualar los $1000\;\text{L/mes}$ del carrotanque (\texttt{nodos\_equivalentes\_entrega}).
-  \item \textbf{\texttt{resultados\_escenarios.csv} (10 registros):} resultados detallados de la simulaci\'on en los diez escenarios de operaci\'on y perturbaci\'on clim\'atica (sequ\'ia, tormenta de arena, calor extremo y combinaciones) con humedad inicial de $85\,\%$ y $45\,\%$.
+  \item \textbf{\texttt{resultados\_escenarios.csv} (10 registros):} resultados detallados de la simulaci\'on en los diez escenarios de operaci\'on y perturbaci\'on clim\'atica (sequ\'ia, tormenta de arena, calor extremo y combinaciones) con humedad inicial de $85\,\%$ y $45\,\%$, para los tres modos de control.
 \end{enumerate}
 
-\chapter{Mapa de evidencias frente a criterios de evaluaci\'on}
-\label{anexo:mapa_evidencias}
+Todas las corridas usan 24 horas, paso de 5 minutos y 8 nodos; las condiciones completas est\'an en el campo \texttt{condiciones} de \texttt{resultados\_completos.json}.
 
-El \cref{tab:mapa_evidencias} vincula de manera objetiva los diez criterios de evaluaci\'on del curso de investigaci\'on con las secciones de este informe y los m\'odulos de c\'odigo fuente del repositorio, facilitando la verificaci\'on acad\'emica independiente.
+\chapter{Documentaci\'on del artefacto}
+\label{anexo:documentacion}
+
+Este anexo re\'une la documentaci\'on t\'ecnica del artefacto que sustenta la reproducibilidad del estudio: el cat\'alogo de rutas de la API, la estructura del tablero y las pr\'acticas de verificaci\'on del software.
+
+\section{Contrato de interfaz OpenAPI y rutas de la API}
+La API publica su especificaci\'on bajo el est\'andar OpenAPI 3.1 en \texttt{docs/api/openapi.json}. La \cref{tab:rutas_api} detalla las 13 rutas implementadas en el servicio.
 
 \begin{table}[htbp]
 \centering
 \small
-\caption{Mapeo objetivo de evidencias t\'ecnicas frente a criterios de evaluaci\'on acad\'emica.}
-\label{tab:mapa_evidencias}
-\begin{tabularx}{\textwidth}{@{}L{2.8cm}L{4.2cm}Y@{}}
+\caption{Cat\'alogo de rutas REST de la API de Axioma-H Engine (versi\'on 0.5.0).}
+\label{tab:rutas_api}
+\begin{tabularx}{\textwidth}{@{}L{1.8cm}L{5.4cm}Y@{}}
 \toprule
-\textbf{Criterio} & \textbf{Secci\'on del informe} & \textbf{Archivo o artefacto en el repositorio} \\
+\textbf{M\'etodo} & \textbf{Ruta} & \textbf{Descripci\'on funcional} \\
 \midrule
-\textbf{Cobertura} & Cap. \ref{cap:planteamiento}, \ref{cap:metodologia}, \ref{cap:diseno_artefacto}, \ref{cap:resultados} & \texttt{docs/01}, \texttt{docs/02}, \texttt{backend/main.py}, \texttt{docs/api/openapi.json} \\
-\textbf{Coherencia} & Cap. \ref{cap:metodologia}, \ref{cap:resultados}, \ref{cap:discusion_calidad} & \texttt{docs/04} (\S 7, \S 8), \texttt{tests/test\_contenido.py}, \texttt{frontend/contenido.py} \\
-\textbf{Profundidad} & Cap. \ref{cap:metodologia}, \ref{cap:resultados} & \texttt{backend/analisis.py}, \texttt{docs/datos/*.csv}, \texttt{docs/04} (\S 8.6 a \S 8.11) \\
-\textbf{S\'intesis} & Resumen, Lectura breve, Cap. \ref{cap:resultados} & \texttt{README.md}, \texttt{frontend/contenido.py} (\texttt{VEREDICTOS}, \texttt{LECTURA\_BREVE}) \\
-\textbf{Originalidad} & Cap. \ref{cap:marco_teorico}, \ref{cap:diseno_artefacto}, \ref{cap:conclusiones} & Arquitectura de reglas (\texttt{backend/motor\_reglas.py}), decisi\'on D5 \\
-\textbf{Fluidez} & Estructura global del informe & Formato \LaTeX{} con hiperv\'inculos internos, tablas Booktabs y gr\'aficas Pgfplots \\
-\textbf{Relevancia} & Cap. \ref{cap:introduccion}, \ref{cap:planteamiento}, \ref{cap:conclusiones} & Contexto territorial de La Guajira, Sentencia T-302, est\'andares OMS/Sphere \\
-\textbf{Claridad} & Lectura breve, Glosario, Cap. \ref{cap:diseno_artefacto} & Selector de niveles de lectura en Streamlit (\texttt{frontend/app.py}) \\
-\textbf{Confiabilidad} & Cap. \ref{cap:discusion_calidad}, Anexo \ref{anexo:trazabilidad} & 828 pruebas automatizadas, 100\,\% cobertura, SonarQube Cloud, Render CI \\
-\textbf{Universalidad} & Cap. \ref{cap:conclusiones}, Anexo \ref{anexo:guias_lectura} & Desacoplamiento REST, formato abierto Frictionless Data, gu\'ia interdisciplinaria \\
+\texttt{GET} & \texttt{/} & Estado general del motor y metadatos de versi\'on. \\
+\texttt{GET} & \texttt{/api/v1/health} & Verificaci\'on de salud de la API. \\
+\texttt{POST} & \texttt{/api/v1/nodo/evaluar} & Evaluaci\'on de telemetr\'ia y decisi\'on puntual de reglas. \\
+\texttt{POST} & \texttt{/api/v1/simulacion/ejecutar} & Simulaci\'on comparativa de 1 a 72 horas (24 horas en los resultados del informe). \\
+\texttt{POST} & \texttt{/api/v1/analisis/barrido-salinidad} & Barrido en 6 niveles de salinidad con 1 a 5 semillas. \\
+\texttt{POST} & \texttt{/api/v1/analisis/sensibilidad} & Sensibilidad a la eficacia del pulso y al flujo de niebla. \\
+\texttt{POST} & \texttt{/api/v1/analisis/incertidumbre} & Propagaci\'on de incertidumbre en flujo y eficacia. \\
+\texttt{POST} & \texttt{/api/v1/analisis/robustez-respuesta} & Robustez del cruce de recuperaci\'on (54 puntos). \\
+\texttt{POST} & \texttt{/api/v1/analisis/robustez-desgaste} & Robustez de la reducci\'on del desgaste (18 combinaciones). \\
+\texttt{POST} & \texttt{/api/v1/analisis/calibracion} & Calibraci\'on inversa del flujo contra la literatura. \\
+\texttt{POST} & \texttt{/api/v1/analisis/dimensionamiento} & C\'alculo de la bater\'ia de nodos seg\'un los est\'andares OMS y Sphere. \\
+\texttt{POST} & \texttt{/api/v1/analisis/impacto-entornos} & Evaluaci\'on en 18 entornos y comparaci\'on con el ICBF. \\
+\texttt{GET} & \texttt{/api/v1/sitios} & Cat\'alogo de perfiles clim\'aticos y salinos de referencia. \\
 \bottomrule
 \end{tabularx}
 \end{table}
+
+\section{Estructura del tablero interactivo y niveles de lectura}
+El tablero organiza los resultados en cinco vistas. La vista 1, \emph{Investigaci\'on y gu\'ia}, presenta la pregunta, los supuestos con la medici\'on que reemplazar\'ia a cada uno y una orientaci\'on interdisciplinaria. La vista 2, de evaluaci\'on manual de nodo, permite introducir un vector de telemetr\'ia y ver qu\'e regla decide. La vista 3, \emph{Simulaci\'on comparativa}, muestra las series temporales de temperatura, humedad, impedancia, reserva y volumen acumulado para una duraci\'on de 1 a 72 horas, con 24 horas por defecto. La vista 4 responde la pregunta en cuatro partes, que corresponden a las subpreguntas a) a d), y la vista 5, \emph{Explorador de hip\'otesis}, permite simular con par\'ametros propios, recalibrar el flujo y formular conjeturas.
+
+Un selector lateral de nivel de lectura adapta las vistas 1 y 4 a tres p\'ublicos: la comunidad, con una s\'intesis en lenguaje cotidiano sin unidades el\'ectricas; el evaluador no t\'ecnico, con un resumen centrado en la respuesta y en la seguridad de los equipos; y el investigador, opci\'on por defecto, con la presentaci\'on t\'ecnica completa, gr\'aficos interactivos y acceso a los datos abiertos.
+
+\section{Verificaci\'on del software e integraci\'on continua}
+La suite de 828 pruebas automatizadas, escrita con pytest \parencite{pytest} y httpx \parencite{httpx}, combina pruebas unitarias, de integraci\'on y de contrato, y la medici\'on con pytest-cov \parencite{pytestcov} registra una cobertura del $\SI{100}{\percent}$ de l\'ineas y ramas en los m\'odulos medidos del backend y de la l\'ogica del frontend. El script \texttt{scripts/generar\_resultados\_referencia.py} regenera los archivos de \texttt{docs/datos/} y, en modo de comprobaci\'on, verifica num\'ericamente que coinciden con la ejecuci\'on determinista del modelo.
+
+Cada cambio en la rama principal activa un flujo de GitHub Actions que ejecuta las pruebas, mide la cobertura y env\'ia el an\'alisis a SonarQube Cloud, cuya Quality Gate exige cero incidencias nuevas. El servicio de despliegue publica la API y el tablero solo cuando todas esas comprobaciones est\'an en verde. Sobre las instancias p\'ublicas, el script \texttt{scripts/verificar\_despliegue.py} ejecuta 31 comprobaciones de conectividad, c\'alculo y contrato, que resultaron exitosas en la versi\'on 0.5.0 (commit \texttt{5ea4015}).
 
 \chapter{Gu\'ias de lectura del artefacto por p\'ublico y disciplina}
 \label{anexo:guias_lectura}
@@ -104,7 +143,7 @@ El \cref{tab:mapa_evidencias} vincula de manera objetiva los diez criterios de e
 Para facilitar la navegaci\'on del software y de la documentaci\'on t\'ecnica seg\'un el perfil del usuario, el proyecto define trayectorias de lectura diferenciadas en el tablero y en los documentos.
 
 \section{Gu\'ia por tipo de p\'ublico}
-El \cref{tab:publicos} orienta la lectura en funci\'on del rol del evaluador o usuario.
+La \cref{tab:publicos} orienta la lectura en funci\'on del rol del evaluador o usuario.
 
 \begin{table}[htbp]
 \centering
@@ -123,7 +162,7 @@ El \cref{tab:publicos} orienta la lectura en funci\'on del rol del evaluador o u
 \end{table}
 
 \section{Gu\'ia de lectura interdisciplinaria}
-El \cref{tab:disciplinas} detalla c\'omo abordar el artefacto desde cuatro campos de conocimiento distintos, articulando las vistas del software con preguntas cient\'ificas de cada \'area.
+La \cref{tab:disciplinas} detalla c\'omo abordar el artefacto desde cuatro campos de conocimiento distintos, articulando las vistas del software con preguntas cient\'ificas de cada \'area.
 
 \begin{table}[htbp]
 \centering

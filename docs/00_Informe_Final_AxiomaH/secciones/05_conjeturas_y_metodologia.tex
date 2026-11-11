@@ -2,7 +2,8 @@
 \label{cap:metodologia}
 
 \section{Conjeturas iniciales del proyecto}
-En la formulaci\'on del Ciclo 2 (documento 01, secciones 2.3 y 2.4), el equipo estableci\'o tres conjeturas iniciales formuladas a priori para evaluar el comportamiento del motor de reglas bajo la corrida de referencia del PRD (escenario \texttt{DIA\_NORMAL}, humedad relativa inicial $85.0\,\%$, semilla 42):
+\label{sec:conjeturas}
+En la formulaci\'on del Ciclo 2 (documento 01 del repositorio, secciones 2.3 y 2.4 \parencite{axioma2026engine}), el equipo estableci\'o tres conjeturas iniciales formuladas a priori para evaluar el comportamiento del motor de reglas bajo la corrida de referencia (escenario de d\'ia normal, humedad relativa inicial $85.0\,\%$, semilla 42). Su contraste con los resultados se presenta en el \cref{sec:conjeturas_resultados}.
 \begin{description}[leftmargin=*]
   \item[\textbf{Conjetura 1 (Eficiencia y energ\'ia):}] En condiciones operativas normales, el sistema basado en reglas supera el $90.0\,\%$ de recuperaci\'on post-pulso ($R_{\text{rec}} \ge 90.0\,\%$) y alcanza un ahorro energ\'etico de al menos el $35.0\,\%$ respecto al temporizador peri\'odico ($A_{\text{en}} \ge 35.0\,\%$).
   \item[\textbf{Conjetura 2 (Cin\'etica y seguridad t\'ermica):}] La aplicaci\'on del pulso t\'ermico a $44.0\;\si{\celsius}$ logra la regeneraci\'on de la impedancia superficial ($Z \le 1.10\,Z_{\text{nom}} = 1100.0\;\Omega$) en un tiempo $t_{95} \le 120.0\;\text{s}$, con una p\'erdida de integridad por degradaci\'on t\'ermica irreversible del $0.0\,\%$.
@@ -10,23 +11,19 @@ En la formulaci\'on del Ciclo 2 (documento 01, secciones 2.3 y 2.4), el equipo e
 \end{description}
 
 \section{Hip\'otesis de trabajo e hip\'otesis derivada H1-Ciclo 3}
+\label{sec:hipotesis}
 La hip\'otesis de trabajo general sosten\'ia que el control reactivo basado en reglas optimiza integralmente tanto el volumen de agua recuperada como la integridad f\'isica de la membrana frente al temporizador peri\'odico en todas las condiciones de salinidad.
 
-Sin embargo, los an\'alisis multiescenario, de robustez y de calibraci\'on obligaron a reformular dicha afirmaci\'on en la \textbf{Hip\'otesis Derivada H1-Ciclo 3}:
+Los an\'alisis multiescenario, de robustez y de calibraci\'on obligaron a reformular esa afirmaci\'on en la \textbf{Hip\'otesis Derivada H1-Ciclo 3}:
 \begin{quote}
 \itshape
-El control reactivo basado en reglas reduce de forma robusta la degradaci\'on acumulada de la membrana frente al temporizador convencional (reducci\'on entre $73.3\,\%$ y $100\,\%$ en el barrido principal y entre $61.5\,\%$ y $100\,\%$ al explorar el espacio de fatiga y degradaci\'on t\'ermica), pero \'unicamente supera al temporizador en recuperaci\'on post-pulso cuando la incrustaci\'on salina diaria excede un umbral cr\'itico situado entre $1633$ y $1867\;\Omega\text{/d\'ia}$ (un rango estimado por interpolaci\'on en una cuadr\'icula con niveles separados entre $617$ y $1165\;\Omega\text{/d\'ia}$, cuyo cruce real en cada combinaci\'on ocurre en alg\'un punto entre $1171.06$ y $2365.34\;\Omega\text{/d\'ia}$). Con los flujos de niebla medidos en proyectos reales ($3$ a $10\;\text{L/m}^2\text{/d\'ia}$), la incrustaci\'on diaria se mantiene t\'ipicamente por debajo de este umbral, por lo que la ventaja principal del control radica en la preservaci\'on de la vida \'util y no en el incremento de agua colectada.
+El control reactivo basado en reglas reduce de forma robusta la degradaci\'on acumulada de la membrana frente al temporizador convencional. Su ventaja en recuperaci\'on post-pulso, en cambio, depende de la incrustaci\'on salina diaria y solo aparece a partir de la banda de transici\'on estimada en el \cref{sec:banda}, que los flujos de niebla reportados en proyectos reales rara vez alcanzan.
 \end{quote}
 
-\noindent\textbf{Criterios expl\'icitos de refutaci\'on de H1-Ciclo 3:}
-\begin{enumerate}
-  \item Si ensayos de fatiga t\'ermica en laboratorio sobre la membrana a $44.0\;\si{\celsius}$ arrojan una tasa de fatiga por pulso superior al $2.0\,\%$ por pulso (punto cr\'itico donde el control pierde su ventaja de desgaste frente a los 36 pulsos del temporizador).
-  \item Si mediciones de campo en Cabo de la Vela evidencian tasas de incrustaci\'on diaria superiores a $2365.34\;\Omega\text{/d\'ia}$ bajo flujos reales de niebla moderados.
-  \item Si la eficacia m\'axima de desprendimiento por pulso resulta experimentalmente inferior a $0.80$.
-\end{enumerate}
+La hip\'otesis se considerar\'ia refutada en cualquiera de tres casos. El primero se dar\'ia si los ensayos de fatiga t\'ermica de la membrana a $44.0\;\si{\celsius}$ arrojaran una fatiga por pulso igual o superior al valor en que la reducci\'on del desgaste deja de ser positiva, que en el modelo es superior a $2.0\,\%$ por pulso (\cref{sec:robustez_desgaste}). El segundo, si las mediciones de campo en Cabo de la Vela mostraran incrustaciones diarias por encima de la banda de transici\'on con flujos de niebla moderados, o si con la misma incrustaci\'on diaria el signo de la ventaja cambiara al variar la carga salina por litro. El tercero, si la eficacia del pulso medida resultara inferior a $0.80$, el extremo inferior del rango con el que se deriv\'o la banda.
 
 \section{Matriz de operacionalizaci\'on de variables}
-La evaluaci\'on cuantitativa articula variables independientes, dependientes y de control, sintetizadas en el \cref{tab:operacionalizacion}.
+La evaluaci\'on cuantitativa articula variables independientes, dependientes y de control, sintetizadas en la \cref{tab:operacionalizacion}.
 
 \begin{table}[htbp]
 \centering
@@ -37,18 +34,18 @@ La evaluaci\'on cuantitativa articula variables independientes, dependientes y d
 \toprule
 \textbf{Categor\'ia} & \textbf{Variable} & \textbf{Unidad} & \textbf{Definici\'on operacional} \\
 \midrule
-\textbf{Independientes} & Estrategia de control & Nominal & Reglas deterministas vs. temporizador fijo de 120 min. \\
-& Carga salina ambiental & $\Omega\text{ por L/m}^2$ & Tasa de aerosol salino depositado: 20 a 240. \\
-& Flujo m\'aximo de niebla & $\text{L/m}^2\text{/h}$ & Flujo con $\text{HR}=100\,\%$: 6.0 (supuesto), 1.83 y 0.49. \\
-& Eficacia de pulso & Adimensional & Fracci\'on de ensuciamiento removido: 0.80 a 1.00. \\
+\textbf{Independientes} & Estrategia de control & Nominal & Reglas deterministas vs. temporizador fijo de 120 min (y temporizador con tope ecol\'ogico como referencia). \\
+& Carga salina ambiental & $\Omega\text{ por L/m}^2$ & Aumento de impedancia por litro captado por m$^2$: 20 a 240. \\
+& Flujo m\'aximo de niebla & $\text{L/m}^2\text{/h}$ & Flujo con $\text{HR}=100\,\%$: 6.0 (supuesto), 1.83 y 0.49 (calibrados). \\
+& Eficacia de pulso & Adimensional & Fracci\'on m\'axima de incrustaci\'on removida: 0.80 a 1.00. \\
 & Par\'ametros mec\'anicos & $\SI{}{\percent}$, $\SI{}{\percent\per(\celsius\cdot\minute)}$ & Fatiga por pulso y degradaci\'on t\'ermica. \\
 \midrule
-\textbf{Dependientes} & Recuperaci\'on post-pulso & $\SI{}{\percent}$ & Fracci\'on media de regeneraci\'on de flujo tras pulso. \\
-& Degradaci\'on acumulada & $\SI{}{\percent}$ & P\'erdida acumulada de integridad f\'isica ($100 - I$). \\
-& Volumen colectado & $\text{L/m}^2$ & Agua total acumulada en el tanque durante 72 h. \\
-& Pulsos t\'ermicos & Conteo entero & N\'umero total de activaciones t\'ermicas en 72 h. \\
-& Consumo energ\'etico & $\text{Wh}$ & Energ\'ia total consumida por electr\'onica y calentamiento. \\
-& Violaciones ecol\'ogicas & Conteo entero & Pasos de tiempo con extracci\'on activa bajo $\text{HR}<30\,\%$. \\
+\textbf{Dependientes} & Recuperaci\'on post-pulso & $\SI{}{\percent}$ & Promedio de $\min(100,\,100\,Z_{\text{nom}}/Z_{\text{tras pulso}})$ sobre los pulsos del modo. \\
+& Degradaci\'on acumulada & $\SI{}{\percent}$ & P\'erdida acumulada de integridad f\'isica ($100 - I$), promedio de los nodos. \\
+& Volumen colectado & $\text{L}$, $\text{L/m}^2\text{/d\'ia}$ & Agua captada por la red de 8 nodos en 24 h. \\
+& Pulsos t\'ermicos & Conteo entero & Pulsos ejecutados por la red de 8 nodos en 24 h. \\
+& Consumo energ\'etico & $\text{Wh}$ & Energ\'ia total de la red: electr\'onica y calentamiento. \\
+& Violaciones ecol\'ogicas & Conteo entero & Episodios por nodo con extracci\'on y $\text{HR}<30\,\%$ o fracci\'on extra\'ida mayor que 0.33. \\
 \midrule
 \textbf{Controladas /} & \'Area del colector & $\text{m}^2$ & $1.0\;\text{m}^2$ por nodo est\'andar. \\
 \textbf{Constantes} & Umbrales de seguridad & $\si{\celsius}$, $\SI{}{\percent}$, $\Omega$, $\text{s}$ & $T_{\text{corte}}=45.0$, $\text{HR}_{\text{min}}=30.0$, $Z_{\text{umb}}=1500.0$, $t_{\text{pulso}}=90$. \\
@@ -56,16 +53,21 @@ La evaluaci\'on cuantitativa articula variables independientes, dependientes y d
 \end{tabularx}
 \end{table}
 
+La matriz hace expl\'icito el dise\~no comparativo. La estrategia de control es la \'unica variable que cambia entre los modos de una misma corrida, porque ambos se simulan sobre el mismo entorno clim\'atico; las dem\'as variables independientes son supuestos del modelo que los an\'alisis de robustez recorren para comprobar si la respuesta depende de ellos. Entre las dependientes, la recuperaci\'on y el volumen representan la eficiencia de captaci\'on, la degradaci\'on representa el desgaste y las violaciones, la energ\'ia y los pulsos permiten responder la subpregunta c). La unidad de conteo es siempre la red de 8 nodos durante 24 horas, de modo que los pulsos de ambos modos son directamente comparables.
+
 \section{Decisi\'on de dise\~no D5: pol\'itica cient\'ifica de no sobreajuste}
-Una decisi\'on metodol\'ogica medular del proyecto es la \textbf{Decisi\'on D5}: mantener intactos los par\'ametros f\'isicos por defecto del modelo (en particular $\text{FLUJO\_NIEBLA\_MAXIMO\_L\_M2\_H} = 6.0\;\text{L/m}^2\text{/h}$) en la l\'inea base. Esta decisi\'on preserva la integridad cient\'ifica de la investigaci\'on: habr\'ia sido trivial ajustar arbitrariamente el flujo por defecto a un valor intermedio para forzar que todas las conjeturas iniciales resultasen verdaderas. Por el contrario, el modelo documenta con rigor d\'onde y por qu\'e el supuesto inicial difiere de los datos de la literatura, utilizando endpoints de an\'alisis y calibraci\'on dedicados sin alterar los resultados por defecto ya auditados.
+Una decisi\'on metodol\'ogica medular del proyecto es la \textbf{Decisi\'on D5}: mantener intactos los par\'ametros f\'isicos por defecto del modelo, en particular el flujo m\'aximo de niebla de $6.0\;\text{L/m}^2\text{/h}$, en la l\'inea base. Esta decisi\'on preserva la integridad cient\'ifica de la investigaci\'on: habr\'ia sido sencillo ajustar el flujo por defecto a un valor intermedio para que las conjeturas iniciales resultaran verdaderas. En su lugar, el modelo documenta d\'onde y por qu\'e el supuesto inicial difiere de los datos de la literatura, y los an\'alisis de calibraci\'on y sensibilidad usan copias inmutables de los par\'ametros sin alterar los resultados por defecto.
 
 \section{Metodolog\'ia de simulaci\'on y dise\~no experimental}
-La simulaci\'on computacional se implement\'o con un paso temporal discreto de $\Delta t = 60\;\text{s}$ sobre un horizonte de $72\;\text{horas}$ continuas ($4320\;\text{pasos}$ por corrida). La evaluaci\'on abarca:
+\label{sec:metodo}
+Todas las corridas de los resultados comparten las condiciones de los datos abiertos del repositorio: un horizonte de 24 horas que inicia a las 18:00, un paso temporal de 5 minutos (288 pasos por corrida), una red de 8 nodos de $1\;\text{m}^2$, tasa de salinizaci\'on alta en los escenarios y los par\'ametros por defecto del modelo salvo el que cada an\'alisis var\'ia. La API admite corridas de hasta 72 horas, pero ning\'un resultado de este informe las usa. En cada corrida se simulan tres modos sobre el mismo entorno clim\'atico: el control por reglas, el temporizador fijo y un temporizador con tope ecol\'ogico, que conserva la programaci\'on del temporizador pero limita la extracci\'on a la misma fracci\'on de 0.33 que las reglas y sirve para separar el efecto de ese tope del de la l\'ogica de control. La evaluaci\'on abarca:
 \begin{enumerate}[leftmargin=*]
-  \item \textbf{Barrido de salinidad (6 escenarios, 5 semillas estoc\'asticas):} evaluaci\'on de 20 a $240\;\Omega\text{ por L/m}^2$ promediando semillas 42, 101, 202, 303 y 404 para aislar el ruido clim\'atico.
-  \item \textbf{An\'alisis global de sensibilidad e incertidumbre (62 muestras):} exploraci\'on por hipercubo latino y cuadr\'icula sobre el espacio de flujo de niebla y eficacia del pulso t\'ermico.
-  \item \textbf{Robustez del cruce de recuperaci\'on (54 combinaciones):} evaluaci\'on factorial completa de 3 flujos de niebla ($6.0$, $1.83$, $0.49\;\text{L/m}^2\text{/h}$), 3 eficacias de pulso ($0.80$, $0.90$, $1.00$) y 6 tasas de salinidad con las semillas 42 y 1 a 3.
-  \item \textbf{Robustez de la reducci\'on de desgaste (18 combinaciones):} exploraci\'on cruzada de 2 flujos, 3 niveles de fatiga mec\'anica ($0.01$, $0.02$, $0.04\,\%$) y 3 tasas de degradaci\'on t\'ermica ($0.025$, $0.05$, $0.10\,\%/(\si{\celsius}\cdot\text{min})$).
-  \item \textbf{Calibraci\'on inversa y dimensionamiento en 18 entornos:} inversi\'on num\'erica contra el rango de \textcite{klemm2012fog} ($3$ a $10\;\text{L/m}^2\text{/d\'ia}$) y estimaci\'on de bater\'ias de colectores para $50$ personas (OMS/Sphere) y equivalencia con la entrega asistencial del ICBF \parencite{icbf2025agua}.
+  \item \textbf{Escenarios de operaci\'on (10 corridas, semilla 42):} cinco escenarios (d\'ia normal, incrustaci\'on salina r\'apida, sequ\'ia, tormenta de arena y tormenta de sal con calor extremo), cada uno con humedad relativa inicial de $45\,\%$ y $85\,\%$, para verificar las conjeturas.
+  \item \textbf{Barrido de salinidad (6 niveles, semillas 1 a 5):} cargas de 20 a $240\;\Omega\text{ por L/m}^2$ con humedad inicial de $85\,\%$, promediando las cinco semillas para estimar la dispersi\'on debida al clima simulado.
+  \item \textbf{Sensibilidad e incertidumbre:} sensibilidad de un par\'ametro a la vez para la eficacia del pulso, y propagaci\'on de incertidumbre con 20 muestras por escenario en los cinco escenarios, tomadas con distribuci\'on uniforme e independiente de la eficacia del pulso (0.80 a 1.00) y del flujo calibrado (0.49 a $1.83\;\text{L/m}^2\text{/h}$), con semilla de muestreo 7 y entorno de semilla 42. De las 100 muestras, 62 registraron recuperaci\'on en ambos modos (documento 04 del repositorio, \S 8.7 \parencite{axioma2026engine}).
+  \item \textbf{Robustez del cruce de recuperaci\'on (54 puntos, semilla 42):} barrido completo de seis niveles de salinidad para cada combinaci\'on de 3 flujos de niebla ($6.0$, $1.83$ y $0.49\;\text{L/m}^2\text{/h}$) y 3 eficacias de pulso ($0.80$, $0.90$ y $1.00$). Como an\'alisis exploratorio documentado en el documento 04 del repositorio (\S 8.8), el mismo an\'alisis se repiti\'o con la media de las semillas 1 a 3.
+  \item \textbf{Robustez de la reducci\'on del desgaste (18 combinaciones, 108 puntos, semilla 42):} barrido completo para cada combinaci\'on de 2 flujos ($6.0$ y $1.83\;\text{L/m}^2\text{/h}$), 3 fatigas por pulso ($0.01$, $0.02$ y $0.04\,\%$) y 3 degradaciones t\'ermicas ($0.025$, $0.05$ y $0.10\,\%/(\si{\celsius}\cdot\text{min})$). La repetici\'on con la media de las semillas 1 a 3 y la b\'usqueda de la fatiga de quiebre son an\'alisis exploratorios del documento 04 del repositorio (\S 8.11).
+  \item \textbf{Calibraci\'on inversa e impacto en 18 entornos:} b\'usqueda por bisecci\'on del flujo que reproduce los extremos del rango de \textcite{klemm2012fog}, y estimaci\'on, para los 3 flujos y los 6 niveles de salinidad, de los nodos necesarios para 50 personas seg\'un el est\'andar de la OMS y para igualar la entrega asistencial del ICBF \parencite{icbf2025agua}.
 \end{enumerate}
 
+Este dise\~no responde las subpreguntas en orden: los escenarios contrastan las conjeturas y la seguridad operativa, el barrido y las dos robusteces responden las subpreguntas a) y b), y la calibraci\'on y el impacto responden la d). Antes de presentar esos resultados, el cap\'itulo siguiente describe el artefacto que los produce: el motor de reglas, el modelo f\'isico y el modelo del temporizador con el que se compara.

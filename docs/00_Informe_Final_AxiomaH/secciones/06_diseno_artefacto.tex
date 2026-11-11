@@ -2,7 +2,7 @@
 \label{cap:diseno_artefacto}
 
 \section{Arquitectura global del sistema}
-El artefacto computacional \emph{Axioma-H Engine} se concibi\'o bajo el patr\'on de separaci\'on estricta entre el n\'ucleo computacional y la capa de presentaci\'on. La l\'ogica f\'isica, el motor de reglas y los algoritmos de an\'alisis operan en una API desacoplada desarrollada con FastAPI \parencite{fastapi}, mientras que el panel interactivo de usuario se implement\'o en Streamlit \parencite{streamlit} consumiendo la API v\'ia HTTP. La \cref{fig:arquitectura} ilustra el flujo de informaci\'on y la estructura modular.
+El artefacto computacional \emph{Axioma-H Engine} \parencite{axioma2026engine} se concibi\'o bajo el patr\'on de separaci\'on estricta entre el n\'ucleo computacional y la capa de presentaci\'on. La l\'ogica f\'isica, el motor de reglas y los algoritmos de an\'alisis operan en una API desacoplada desarrollada con FastAPI \parencite{fastapi}, mientras que el tablero interactivo se implement\'o en Streamlit \parencite{streamlit} y consume la API v\'ia HTTP. La \cref{fig:arquitectura} ilustra el flujo de informaci\'on y la estructura modular.
 
 \begin{figure}[htbp]
 \centering
@@ -12,17 +12,19 @@ El artefacto computacional \emph{Axioma-H Engine} se concibi\'o bajo el patr\'on
 \end{figure}
 
 \section{Motor de control reactivo basado en reglas deterministas}
-El n\'ucleo de decisi\'on simb\'olico eval\'ua el vector de telemetr\'ia $\mathbf{t} = (T, \text{HR}, Z, E_{\text{bat}}, A_{\text{man}})$ seg\'un una jerarqu\'ia estricta de prioridades. La primera regla que se satisface determina la acci\'on de control ejecutada:
-\begin{enumerate}[label=\textbf{Regla \arabic*:},leftmargin=*]
-  \item \textbf{\texttt{REGLA\_01\_LIMITE\_TERMICO\_ABSOLUTO}:} si $T \ge 45.0\;\si{\celsius}$, se activa \texttt{CORTE\_DE\_EMERGENCIA}. Se cancela cualquier pulso y se anula el caudal ($0\,\%$) para evitar el colapso t\'ermico de la membrana. Prevalece sobre cualquier intervenci\'on humana.
-  \item \textbf{\texttt{REGLA\_02\_LIMITE\_ECOLOGICO\_TERRITORIAL}:} si $\text{HR} < 30.0\,\%$, se activa \texttt{PAUSA\_ECOLOGICA}. Se suspende la extracci\'on ($0\,\%$) para evitar deshidratar el microclima o competir con la vegetaci\'on local durante sequ\'ias diurnas. Prevalece sobre intervenciones manuales.
-  \item \textbf{\texttt{REGLA\_06\_SUPERVISION\_HUMANA}:} si existe una consigna manual de un operador, solo se ejecuta si es m\'as conservadora que la decisi\'on autom\'atica (\texttt{SUSPENDER\_EXTRACCION} lleva el caudal a $0\,\%$; \texttt{INHIBIR\_PULSO} ante alta impedancia sustituye el pulso por caudal reducido al $50\,\%$).
-  \item \textbf{\texttt{REGLA\_04\_PROTECCION\_RESERVA\_CRITICA}:} si $Z > 1500.0\;\Omega$ pero $E_{\text{bat}} < 30.0\,\%$, se activa \texttt{REDUCIR\_CAUDAL\_SIN\_PULSO}. Se restringe el caudal al $50\,\%$ sin aplicar calor, evitando agotar la bater\'ia en horas de oscuridad.
-  \item \textbf{\texttt{REGLA\_03\_DESPRENDIMIENTO\_SAL\_POR\_IMPEDANCIA}:} si $Z > 1500.0\;\Omega$ y $E_{\text{bat}} \ge 30.0\,\%$, se activa \texttt{APLICAR\_PULSO\_RESISTIVO}. Se dispara un pulso t\'ermico de $90\;\text{s}$ hacia la temperatura objetivo de $44.0\;\si{\celsius}$, con caudal operativo ajustado al $80\,\%$.
-  \item \textbf{\texttt{REGLA\_05\_OPERACION\_NOMINAL}:} en cualquier otra condici\'on, el nodo opera en \texttt{FILTRACION\_PASIVA\_CONTINUA} al $100\,\%$ del caudal disponible, respetando el tope m\'aximo de extracci\'on ecol\'ogica ($0.33$).
+\label{sec:motor_reglas}
+El n\'ucleo de decisi\'on simb\'olico eval\'ua el vector de telemetr\'ia $\mathbf{t} = (T, \text{HR}, Z, E_{\text{bat}}, A_{\text{man}})$ seg\'un una jerarqu\'ia estricta de prioridades, en la que la primera regla que se cumple decide la acci\'on. Las reglas se numeran aqu\'i por su orden de evaluaci\'on; su equivalencia con los identificadores del c\'odigo est\'a en el \cref{anexo:trazabilidad}.
+\begin{enumerate}[label=\textbf{R\arabic*},leftmargin=*]
+  \item \textbf{L\'imite t\'ermico:} si $T \ge 45.0\;\si{\celsius}$, se ejecuta un corte de emergencia que cancela cualquier pulso y anula el caudal ($0\,\%$). Prevalece sobre cualquier intervenci\'on humana.
+  \item \textbf{L\'imite ecol\'ogico:} si $\text{HR} < 30.0\,\%$, se activa una pausa ecol\'ogica que suspende la extracci\'on ($0\,\%$) para no competir por humedad con la vegetaci\'on local durante las sequ\'ias diurnas. Tambi\'en prevalece sobre las intervenciones manuales.
+  \item \textbf{Supervisi\'on humana:} una consigna manual del operador solo se acepta si es m\'as conservadora que la decisi\'on autom\'atica. Suspender la extracci\'on lleva el caudal a $0\,\%$; inhibir el pulso con impedancia alta sustituye el pulso por un caudal reducido al $50\,\%$. Esta regla act\'ua solo en la evaluaci\'on individual de un nodo; el simulador no emite consignas manuales.
+  \item \textbf{Reserva cr\'itica:} si $Z > 1500.0\;\Omega$ y $E_{\text{bat}} < 30.0\,\%$, el caudal se reduce al $50\,\%$ sin aplicar calor, para no agotar la bater\'ia en horas de oscuridad.
+  \item \textbf{Desprendimiento por impedancia:} si $Z > 1500.0\;\Omega$ y $E_{\text{bat}} \ge 30.0\,\%$, se dispara un pulso t\'ermico de $90\;\text{s}$ hacia $44.0\;\si{\celsius}$, con el caudal ajustado al $80\,\%$.
+  \item \textbf{Operaci\'on nominal:} en cualquier otra condici\'on, el nodo filtra de forma pasiva al $100\,\%$ del caudal permitido, que nunca supera el tope de extracci\'on ecol\'ogica de $0.33$ de la niebla disponible.
 \end{enumerate}
 
 \section{Ecuaciones del modelo f\'isico continuo}
+\label{sec:ecuaciones}
 El modelo f\'isico reproduce la interacci\'on superficial y termodin\'amica mediante ecuaciones continuas compartidas entre la API y el simulador:
 \begin{align}
   G_{\text{rel}}(Z) &= \min\left(1.0,\, \frac{Z_{\text{nom}}}{Z}\right), \quad Z_{\text{nom}} = 1000.0\;\Omega \label{eq:conductancia} \\
@@ -31,57 +33,19 @@ El modelo f\'isico reproduce la interacci\'on superficial y termodin\'amica medi
   Q_{\text{disp}}(\text{HR}) &= Q_{\text{m\'ax}} \cdot \left[\max\left(0.0,\, \frac{\text{HR} - 20.0}{100.0 - 20.0}\right)\right]^{1.5} \label{eq:flujo} \\
   E_{\text{pulso}}(\Delta T) &= \frac{C_{\text{matriz}} \cdot \Delta T + G_{\text{perd}} \cdot \Delta T \cdot \Delta t_{\text{pulso}}}{3600} \label{eq:energia}
 \end{align}
-donde $C_{\text{matriz}} = 800.0\;\text{J/K}$, $G_{\text{perd}} = 30.0\;\text{W/K}$ y $\Delta t_{\text{pulso}} = 90\;\text{s}$.
+donde $C_{\text{matriz}} = 800.0\;\text{J/K}$, $G_{\text{perd}} = 30.0\;\text{W/K}$ y $\Delta t_{\text{pulso}} = 90\;\text{s}$. La incrustaci\'on crece en proporci\'on al agua procesada: en cada paso, $Z_{\text{sal}}$ aumenta en la carga salina multiplicada por los litros captados por metro cuadrado, y tras un pulso se reduce a $Z_{\text{sal}}(1-\eta)$.
 
-La cin\'etica de degradaci\'on de integridad de la membrana ($I$, expresada en \% con $I_0 = 100\,\%$) se calcula integrando tres t\'erminos:
+La degradaci\'on de la integridad de la membrana ($I$, expresada en \% con $I_0 = 100\,\%$) se calcula sumando tres t\'erminos:
 \begin{equation}
   \Delta I = \Delta I_{\text{fatiga}} + \Delta I_{\text{t\'ermica}} + \Delta I_{\text{crist}}
 \end{equation}
-con fatiga por pulso de $\SI{0.02}{\percent}$ por evento, degradaci\'on t\'ermica de $\SI{0.05}{\percent\per(\celsius\cdot\minute)}$ para $T > 45.0\;\si{\celsius}$, y degradaci\'on por cristalizaci\'on salina continua de $\SI{0.10}{\percent\per\hour} \times (Z_{\text{sal}} / Z_{\text{nom}})$.
+con una fatiga de $\SI{0.02}{\percent}$ por pulso, una degradaci\'on t\'ermica de $\SI{0.05}{\percent}$ por cada $\si{\celsius}$ sobre $45.0\;\si{\celsius}$ y minuto de exposici\'on, aplicada tanto durante el pulso como a la matriz expuesta al sol, y una degradaci\'on por cristalizaci\'on de $\SI{0.10}{\percent\per\hour}$ mientras la impedancia de operaci\'on supera $1500\;\Omega$. Los tres coeficientes son supuestos de orden de magnitud (\cref{anexo:trazabilidad}).
 
-\section{Contrato de interfaz OpenAPI y rutas de la API}
-La API publica su especificaci\'on bajo el est\'andar OpenAPI 3.1 en \texttt{docs/api/openapi.json}. La \cref{tab:rutas_api} detalla los 13 endpoints implementados en el servicio.
+\section{Modelo del temporizador de comparaci\'on}
+\label{sec:modelo_temporizador}
+La validez de la comparaci\'on depende de c\'omo se model\'o la alternativa. El temporizador fijo aplica un pulso cada 120 minutos en cada nodo sin leer sensores, eleva la matriz $12\;\si{\celsius}$ sobre su temperatura de ese momento, no tiene corte t\'ermico ni pausa ecol\'ogica y extrae una fracci\'on fija de 0.45 de la niebla disponible. En consecuencia, de d\'ia sus pulsos superan los $45\;\si{\celsius}$: en la corrida de d\'ia normal alcanzan $52.9\;\si{\celsius}$ y en la tormenta de sal con calor extremo, $55.9\;\si{\celsius}$ (documento 04 del repositorio, \S 5.5 \parencite{axioma2026engine}). El temporizador con tope ecol\'ogico es id\'entico, salvo que extrae la fracci\'on de 0.33 del control por reglas. Ninguno de los dos temporizadores incorpora el corte a $45\;\si{\celsius}$, de modo que la comparaci\'on mide el efecto conjunto de la l\'ogica reactiva y de las salvaguardas; el \cref{sec:validez} discute esa limitaci\'on.
 
-\begin{table}[htbp]
-\centering
-\small
-\caption{Cat\'alogo de rutas REST de la API de Axioma-H Engine (versi\'on 0.5.0).}
-\label{tab:rutas_api}
-\begin{tabularx}{\textwidth}{@{}L{1.8cm}L{5.4cm}Y@{}}
-\toprule
-\textbf{M\'etodo} & \textbf{Ruta} & \textbf{Descripci\'on funcional} \\
-\midrule
-\texttt{GET} & \texttt{/} & Estado general del motor y metadatos de versi\'on. \\
-\texttt{GET} & \texttt{/api/v1/health} & Verificaci\'on de salud de la API. \\
-\texttt{POST} & \texttt{/api/v1/nodo/evaluar} & Evaluaci\'on de telemetr\'ia y decisi\'on puntual de reglas. \\
-\texttt{POST} & \texttt{/api/v1/simulacion/ejecutar} & Simulaci\'on de 72 horas comparando reglas vs. temporizador. \\
-\texttt{POST} & \texttt{/api/v1/analisis/barrido-salinidad} & Barrido en 6 escenarios con 5 semillas estoc\'asticas. \\
-\texttt{POST} & \texttt{/api/v1/analisis/sensibilidad} & An\'alisis de sensibilidad global en par\'ametros clave. \\
-\texttt{POST} & \texttt{/api/v1/analisis/incertidumbre} & Propagaci\'on de incertidumbre en flujo y eficacia. \\
-\texttt{POST} & \texttt{/api/v1/analisis/robustez-respuesta} & Robustez del cruce de recuperaci\'on (54 combinaciones). \\
-\texttt{POST} & \texttt{/api/v1/analisis/robustez-desgaste} & Robustez de reducci\'on de desgaste (18 combinaciones). \\
-\texttt{POST} & \texttt{/api/v1/analisis/calibracion} & Calibraci\'on inversa del flujo contra la literatura. \\
-\texttt{POST} & \texttt{/api/v1/analisis/dimensionamiento} & C\'alculo de bater\'ia de nodos seg\'un est\'andares OMS/Sphere. \\
-\texttt{POST} & \texttt{/api/v1/analisis/impacto-entornos} & Evaluaci\'on en 18 entornos y comparaci\'on con ICBF. \\
-\texttt{GET} & \texttt{/api/v1/sitios} & Cat\'alogo de perfiles clim\'aticos y salinos de referencia. \\
-\bottomrule
-\end{tabularx}
-\end{table}
+\section{Interfaz, tablero y verificaci\'on del artefacto}
+El modelo se expone mediante una API REST de 13 rutas con contrato OpenAPI 3.1 y un tablero de cinco vistas con tres niveles de lectura, cuyo detalle se documenta en el \cref{anexo:documentacion}. En la investigaci\'on cumplen tres funciones. La API hace reproducible cada resultado, porque cualquier tabla del informe puede regenerarse con la misma solicitud y la misma semilla. El tablero permite que un lector repita las corridas, var\'ie los supuestos y formule sus propias conjeturas sin programar. Por \'ultimo, el generador de datos abiertos comprueba que las cifras publicadas coinciden con la ejecuci\'on actual del modelo, lo que vincula el texto del informe con el c\'odigo que lo respalda.
 
-\section{Estructura del tablero interactivo y niveles de lectura}
-El frontend (\texttt{frontend/app.py}) organiza los resultados en cinco vistas conceptuales:
-\begin{itemize}[leftmargin=*]
-  \item \textbf{Vista 1 (Investigaci\'on y gu\'ia):} introducci\'on pedag\'ogica, supuestos con mediciones requeridas y orientaci\'on interdisciplinaria.
-  \item \textbf{Vista 2 (Estado del nodo):} consola interactiva para inyectar vectores de telemetr\'ia y visualizar la regla activada.
-  \item \textbf{Vista 3 (Simulaci\'on de 72 horas):} series temporales comparativas de temperatura, humedad, impedancia, reserva y volumen acumulado.
-  \item \textbf{Vista 4 (Respuesta a la pregunta):} evaluaci\'on estructurada en cuatro partes: a) reducci\'on del desgaste, b) cruce de recuperaci\'on, c) seguridad operativa y d) impacto en entornos reales.
-  \item \textbf{Vista 5 (Explorador de hip\'otesis):} herramienta anal\'itica para ajustar par\'ametros propios, recalibrar el flujo y formular conjeturas.
-\end{itemize}
-
-El tablero incorpora un selector lateral de \textbf{Nivel de lectura}:
-\begin{enumerate}
-  \item \textbf{Comunidad:} s\'intesis en lenguaje natural sin unidades el\'ectricas, enfocada en la entrega de agua y comparaci\'on comunitaria.
-  \item \textbf{Evaluador no t\'ecnico:} resumen ejecutivo enfocado en la respuesta central, decisiones de inversi\'on y seguridad de los equipos.
-  \item \textbf{Investigador (por defecto):} presentaci\'on t\'ecnica exhaustiva con gr\'aficos interactivos de Altair, intervalos de confianza y acceso a los datos abiertos.
-\end{enumerate}
-
+Descritos el motor, el modelo f\'isico y la alternativa con la que se compara, el cap\'itulo siguiente presenta los resultados de las simulaciones, empezando por el contraste de las conjeturas iniciales.

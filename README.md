@@ -50,6 +50,21 @@ Para una lectura integrada y autocontenida del proyecto, empieza por el [Informe
 5. **Lectura crítica.** Conflictos entre indicadores, contraste con la literatura, robustez y transferencia a otro sitio en [docs/04](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md), sección 8.
 6. **Límites y fuentes.** Las [limitaciones](#limitaciones) de este documento y la trazabilidad de cada parámetro en [docs/06](docs/06_Referencias_y_Trazabilidad_AxiomaH.md).
 
+**Mapa de evidencias por criterio de evaluación del curso.** Relaciona cada criterio con el capítulo del informe final (documento 00) y la evidencia del repositorio que lo respalda.
+
+| Criterio | Informe final | Evidencia en el repositorio |
+|---|---|---|
+| Cobertura | Planteamiento, Metodología, Artefacto y Resultados | [docs/01](docs/01_Plan_y_Matriz_Operacionalizacion_Ciclo2_Axioma.md), [docs/02](docs/02_Especificacion_Tecnica_y_PRD_API_AxiomaH.md), `backend/main.py`, `docs/api/openapi.json` |
+| Coherencia | Metodología, Resultados (contraste de conjeturas) y Discusión | [docs/04](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md) (§7 y §8), `frontend/contenido.py`, `tests/test_contenido.py` |
+| Profundidad | Resultados (comparación por modo, banda de transición y robustez) | `backend/analisis.py`, [docs/datos/](docs/datos/README.md), [docs/04](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md) (§8.6 a §8.11) |
+| Síntesis | Resumen, Lectura breve y tablero de veredictos | Sección [Respuesta](#respuesta), `frontend/contenido.py` (`VEREDICTOS`, `LECTURA_BREVE`) |
+| Originalidad | Marco teórico (antecedentes del control basado en condición) y Artefacto | `backend/motor_reglas.py`, decisión D5 de [docs/04](docs/04_Modelo_de_Control_y_Simulacion_AxiomaH.md) |
+| Fluidez | Estructura global del informe | Fuente LaTeX en [docs/00_Informe_Final_AxiomaH/](docs/00_Informe_Final_AxiomaH/README.md) |
+| Relevancia | Introducción, Planteamiento y Conclusiones | Contexto de La Guajira, Sentencia T-302 y estándares OMS y Sphere en [docs/06](docs/06_Referencias_y_Trazabilidad_AxiomaH.md) |
+| Claridad | Lectura breve, Glosario y Artefacto | Selector de nivel de lectura del dashboard (`frontend/app.py`) |
+| Confiabilidad | Discusión (validez de la comparación) y Anexo de trazabilidad | Pruebas en `tests/`, cobertura y SonarQube Cloud (sección [Pruebas y calidad](#pruebas-y-calidad)) |
+| Universalidad | Conclusiones, trabajo futuro y guías de lectura | API REST desacoplada, datos abiertos Frictionless en [docs/datos/](docs/datos/README.md) |
+
 ## Documentación
 
 | N.º | Documento | Contenido |
